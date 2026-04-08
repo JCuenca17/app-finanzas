@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FinanceManager Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+      /* Solo ocultamos la barra de scroll para limpieza visual */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-800 font-sans antialiased">
+    <div id="app" v-cloak>
+      <div
+        v-if="!isLoggedIn"
+        class="min-h-screen flex items-center justify-center"
+      >
+        <div
+          class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 w-96"
+        >
+          <h1 class="text-2xl font-semibold text-slate-900 mb-2">
+            FinanceManager
+          </h1>
+          <p class="text-sm text-slate-500 mb-6">
+            Ingresa tu ID de usuario para continuar.
+          </p>
+
+          <input
+            type="text"
+            v-model="loginId"
+            placeholder="Ej: 550e8400-e29b..."
+            class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-800 mb-4"
+          />
+          <button
+            @click="iniciarSesion"
+            class="w-full bg-slate-900 text-white font-medium py-2.5 rounded-lg hover:bg-slate-800 transition"
+          >
+            Acceder a mis finanzas
+          </button>
+        </div>
+      </div>
+
+      <div v-else class="flex min-h-screen">
+        <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
+          <div class="p-6 border-b border-slate-100">
+            <h2 class="text-xl font-bold text-slate-900 tracking-tight">
+              FinancePro
+            </h2>
+          </div>
+          <nav class="flex-1 p-4 space-y-1">
+            <button
+              @click="tab = 'inicio'"
+              :class="tab === 'inicio' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'"
+              class="w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition"
+            >
+              📊 Panel Principal
+            </button>
+            <button
+              @click="tab = 'ajustes'"
+              :class="tab === 'ajustes' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'"
+              class="w-full flex items-center px-4 py-2.5 text-sm font-medium rounded-lg transition"
+            >
+              ⚙️ Configuración
+            </button>
+          </nav>
+          <div class="p-4 border-t border-slate-200">
+            <button
+              @click="cerrarSesion"
+              class="w-full text-left px-4 py-2 text-sm text-red-600 font-medium hover:bg-red-50 rounded-lg transition"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </aside>
+
+        <main class="flex-1 p-8 max-w-5xl mx-auto w-full">
+          <div class="flex justify-between items-center mb-8">
+            <div>
+              <h1 class="text-2xl font-semibold text-slate-900">Hola, José</h1>
+              <p class="text-sm text-slate-500">
+                Aquí está el resumen de tu dinero hoy.
+              </p>
+            </div>
+            <button
+              @click="showModal = true"
+              class="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm"
+            >
+              + Nuevo Movimiento
+            </button>
+          </div>
+
+          <div v-if="tab === 'inicio'" class="space-y-6">
+            <div
+              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
+            >
+              <p
+                class="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1"
+              >
+                Total Disponible Líquido
+              </p>
+              <h2 class="text-4xl font-bold text-slate-900">
+                S/ {{ saldoTotalLiquido.toFixed(2) }}
+              </h2>
+            </div>
+
+            <div
+              class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"
+            >
+              <div class="px-6 py-4 border-b border-slate-100">
+                <h3 class="font-semibold text-slate-800">
+                  Últimos Movimientos
+                </h3>
+              </div>
+              <div class="divide-y divide-slate-100">
+                <div
+                  v-if="historial.length === 0"
+                  class="p-6 text-center text-slate-500 text-sm"
+                >
+                  No hay operaciones.
+                </div>
+
+                <div
+                  v-for="item in historial"
+                  :key="item.id"
+                  class="px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition"
+                >
+                  <div>
+                    <p class="font-medium text-slate-900">
+                      {{ item.descripcion }}
+                    </p>
+                    <p class="text-xs text-slate-500 mt-0.5">
+                      {{ item.fecha }} • {{ item.cuenta }}
+                    </p>
+                  </div>
+                  <div
+                    :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
+                    class="font-medium"
+                  >
+                    {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} S/ {{
+                    item.monto.toFixed(2) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="tab === 'ajustes'" class="grid grid-cols-2 gap-6">
+            <div
+              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
+            >
+              <h3 class="font-semibold text-slate-800 mb-4 border-b pb-2">
+                Nueva Cuenta
+              </h3>
+              <input
+                type="text"
+                v-model="nuevaCuenta.nombre"
+                placeholder="Nombre"
+                class="w-full mb-3 px-3 py-2 border rounded-lg text-sm"
+              />
+              <select
+                v-model="nuevaCuenta.tipo_cuenta"
+                class="w-full mb-3 px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="Debito">Débito</option>
+                <option value="Credito">Crédito</option>
+              </select>
+              <input
+                type="number"
+                v-model="nuevaCuenta.saldo_inicial"
+                placeholder="Saldo Inicial"
+                class="w-full mb-4 px-3 py-2 border rounded-lg text-sm"
+              />
+              <button
+                @click="guardarCuenta"
+                class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200"
+              >
+                Añadir Cuenta
+              </button>
+            </div>
+
+            <div
+              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
+            >
+              <h3 class="font-semibold text-slate-800 mb-4 border-b pb-2">
+                Nueva Categoría
+              </h3>
+              <input
+                type="text"
+                v-model="nuevaCat.nombre"
+                placeholder="Nombre (Ej: Gimnasio)"
+                class="w-full mb-3 px-3 py-2 border rounded-lg text-sm"
+              />
+              <select
+                v-model="nuevaCat.tipo_flujo"
+                class="w-full mb-4 px-3 py-2 border rounded-lg text-sm"
+              >
+                <option value="Ingreso">Ingreso</option>
+                <option value="Egreso">Egreso</option>
+              </select>
+              <button
+                @click="guardarCategoria"
+                class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200"
+              >
+                Añadir Categoría
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <div
+        v-if="showModal"
+        class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50"
+      >
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+          <div class="flex justify-between items-center mb-5">
+            <h2 class="text-lg font-semibold text-slate-900">
+              Registrar Operación
+            </h2>
+            <button
+              @click="showModal = false"
+              class="text-slate-400 hover:text-slate-600 text-xl"
+            >
+              &times;
+            </button>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1"
+                >Cuenta</label
+              >
+              <select
+                v-model="tx.cuenta_id"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 focus:outline-none"
+              >
+                <option v-for="c in cuentas" :value="c.id_cuenta">
+                  {{ c.nombre }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1"
+                >Categoría</label
+              >
+              <select
+                v-model="tx.categoria_id"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 focus:outline-none"
+              >
+                <option v-for="cat in categorias" :value="cat.id">
+                  {{ cat.nombre }}
+                </option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1"
+                  >Monto (S/)</label
+                >
+                <input
+                  type="number"
+                  v-model="tx.monto"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1"
+                  >Fecha</label
+                >
+                <input
+                  type="date"
+                  v-model="tx.fecha"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1"
+                >Concepto</label
+              >
+              <input
+                type="text"
+                v-model="tx.descripcion"
+                placeholder="¿En qué gastaste?"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm"
+              />
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-3">
+            <button
+              @click="showModal = false"
+              class="flex-1 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              @click="guardarTransaccion"
+              class="flex-1 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, computed } = Vue;
+
+      createApp({
+        setup() {
+          // Configuración
+          const API_URL = "http://127.0.0.1:8000";
+
+          // Estados de la app
+          const isLoggedIn = ref(false);
+          const currentUserId = ref("");
+          const loginId = ref("");
+          const tab = ref("inicio");
+          const showModal = ref(false);
+
+          // Datos
+          const cuentas = ref([]);
+          const categorias = ref([]);
+          const historial = ref([]);
+
+          // Formularios
+          const tx = ref({
+            monto: "",
+            descripcion: "",
+            fecha: new Date().toISOString().split("T")[0],
+            cuenta_id: "",
+            categoria_id: "",
+          });
+          const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
+          const nuevaCuenta = ref({
+            nombre: "",
+            tipo_cuenta: "Debito",
+            saldo_inicial: "",
+          });
+
+          // Cálculos
+          const saldoTotalLiquido = computed(() =>
+            cuentas.value
+              .filter((c) => c.tipo_cuenta !== "Credito")
+              .reduce((acc, c) => acc + c.saldo_actual, 0),
+          );
+
+          // Funciones
+          const iniciarSesion = () => {
+            if (loginId.value.length > 10) {
+              currentUserId.value = loginId.value;
+              isLoggedIn.value = true;
+              cargarDatos();
+            } else {
+              alert("Ingresa un ID válido.");
+            }
+          };
+
+          const cerrarSesion = () => {
+            isLoggedIn.value = false;
+            currentUserId.value = "";
+            loginId.value = "";
+          };
+
+          const cargarDatos = async () => {
+            try {
+              const [resCuentas, resHistorial, resCategorias] =
+                await Promise.all([
+                  fetch(`${API_URL}/cuentas/${currentUserId.value}`),
+                  fetch(`${API_URL}/historial/${currentUserId.value}`),
+                  fetch(`${API_URL}/categorias/`),
+                ]);
+              if (resCuentas.ok)
+                cuentas.value = (await resCuentas.json()).cuentas;
+              if (resHistorial.ok)
+                historial.value = (await resHistorial.json()).historial;
+              if (resCategorias.ok)
+                categorias.value = (await resCategorias.json()).categorias;
+            } catch (error) {
+              console.error("Error conectando:", error);
+            }
+          };
+
+          const guardarTransaccion = async () => {
+            await fetch(`${API_URL}/transacciones/`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...tx.value,
+                cuenta_id: parseInt(tx.value.cuenta_id),
+                categoria_id: parseInt(tx.value.categoria_id),
+                monto: parseFloat(tx.value.monto),
+              }),
+            });
+            showModal.value = false;
+            tx.value.monto = "";
+            tx.value.descripcion = "";
+            cargarDatos();
+          };
+
+          const guardarCategoria = async () => {
+            await fetch(`${API_URL}/categorias/`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nuevaCat.value),
+            });
+            nuevaCat.value.nombre = "";
+            cargarDatos();
+          };
+
+          const guardarCuenta = async () => {
+            await fetch(`${API_URL}/cuentas/`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                ...nuevaCuenta.value,
+                usuario_id: currentUserId.value,
+                saldo_inicial: parseFloat(nuevaCuenta.value.saldo_inicial || 0),
+              }),
+            });
+            nuevaCuenta.value.nombre = "";
+            nuevaCuenta.value.saldo_inicial = "";
+            cargarDatos();
+          };
+
+          return {
+            isLoggedIn,
+            loginId,
+            currentUserId,
+            tab,
+            showModal,
+            cuentas,
+            categorias,
+            historial,
+            saldoTotalLiquido,
+            tx,
+            nuevaCat,
+            nuevaCuenta,
+            iniciarSesion,
+            cerrarSesion,
+            guardarTransaccion,
+            guardarCategoria,
+            guardarCuenta,
+          };
+        },
+      }).mount("#app");
+    </script>
+  </body>
+</html>
