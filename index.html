@@ -4,11 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FinanceManager Pro</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <style>
       ::-webkit-scrollbar {
         width: 6px;
@@ -20,8 +18,6 @@
       [v-cloak] {
         display: none;
       }
-
-      /* Animación de carga profesional */
       .spinner {
         border: 3px solid rgba(15, 23, 42, 0.1);
         width: 36px;
@@ -138,7 +134,7 @@
               @click="showModal = true"
               class="bg-slate-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-slate-800 transition shadow-sm"
             >
-              + Nuevo Movimiento
+              + Registrar Operación
             </button>
           </div>
 
@@ -180,8 +176,12 @@
                     <p class="font-medium text-slate-900">
                       {{ item.descripcion }}
                     </p>
-                    <p class="text-xs text-slate-500 mt-0.5">
-                      {{ item.fecha }} • {{ item.cuenta }}
+                    <p
+                      class="text-xs mt-0.5"
+                      :class="item.categoria_nombre.includes('Transferencia') ? 'text-blue-500 font-medium' : 'text-slate-500'"
+                    >
+                      {{ item.fecha }} • {{ item.cuenta }} • {{
+                      item.categoria_nombre }}
                     </p>
                   </div>
                   <div
@@ -206,15 +206,16 @@
               <input
                 type="text"
                 v-model="nuevaCuenta.nombre"
-                placeholder="Nombre"
+                placeholder="Nombre (Ej: Billetera, Yape)"
                 class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
               />
               <select
                 v-model="nuevaCuenta.tipo_cuenta"
                 class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
               >
-                <option value="Debito">Débito</option>
-                <option value="Credito">Crédito</option>
+                <option value="Efectivo">Efectivo (Dinero físico)</option>
+                <option value="Debito">Débito / App Digital</option>
+                <option value="Credito">Tarjeta de Crédito</option>
               </select>
               <input
                 type="number"
@@ -239,15 +240,15 @@
               <input
                 type="text"
                 v-model="nuevaCat.nombre"
-                placeholder="Nombre (Ej: Gimnasio)"
+                placeholder="Nombre (Ej: Freelance, Gimnasio)"
                 class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
               />
               <select
                 v-model="nuevaCat.tipo_flujo"
                 class="w-full mb-4 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
               >
-                <option value="Ingreso">Ingreso</option>
-                <option value="Egreso">Egreso</option>
+                <option value="Ingreso">Es un Ingreso de dinero</option>
+                <option value="Egreso">Es un Gasto (Egreso)</option>
               </select>
               <button
                 @click="guardarCategoria"
@@ -265,7 +266,7 @@
         class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity"
       >
         <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
-          <div class="flex justify-between items-center mb-5">
+          <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-semibold text-slate-900">
               Registrar Operación
             </h2>
@@ -277,29 +278,53 @@
             </button>
           </div>
 
-          <div class="space-y-4">
+          <div class="flex gap-2 p-1 bg-slate-100 rounded-lg mb-5">
+            <button
+              @click="tipoOperacion = 'Egreso'"
+              :class="tipoOperacion === 'Egreso' ? 'bg-white shadow-sm text-slate-900 font-semibold' : 'text-slate-500'"
+              class="flex-1 py-1.5 text-sm rounded-md transition"
+            >
+              Gasto
+            </button>
+            <button
+              @click="tipoOperacion = 'Ingreso'"
+              :class="tipoOperacion === 'Ingreso' ? 'bg-white shadow-sm text-slate-900 font-semibold' : 'text-slate-500'"
+              class="flex-1 py-1.5 text-sm rounded-md transition"
+            >
+              Ingreso
+            </button>
+            <button
+              @click="tipoOperacion = 'Transferencia'"
+              :class="tipoOperacion === 'Transferencia' ? 'bg-white shadow-sm text-slate-900 font-semibold' : 'text-slate-500'"
+              class="flex-1 py-1.5 text-sm rounded-md transition"
+            >
+              Transferir
+            </button>
+          </div>
+
+          <div v-if="tipoOperacion !== 'Transferencia'" class="space-y-4">
             <div>
               <label class="block text-xs font-medium text-slate-500 mb-1"
                 >Cuenta</label
               >
               <select
                 v-model="tx.cuenta_id"
-                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
               >
                 <option v-for="c in cuentas" :value="c.id_cuenta">
-                  {{ c.nombre }}
+                  {{ c.nombre }} (S/ {{ c.saldo_actual.toFixed(2) }})
                 </option>
               </select>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-500 mb-1"
-                >Categoría</label
+                >Categoría de {{ tipoOperacion }}</label
               >
               <select
                 v-model="tx.categoria_id"
-                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
               >
-                <option v-for="cat in categorias" :value="cat.id">
+                <option v-for="cat in categoriasFiltradas" :value="cat.id">
                   {{ cat.nombre }}
                 </option>
               </select>
@@ -312,7 +337,7 @@
                 <input
                   type="number"
                   v-model="tx.monto"
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
                 />
               </div>
               <div>
@@ -322,7 +347,7 @@
                 <input
                   type="date"
                   v-model="tx.fecha"
-                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
                 />
               </div>
             </div>
@@ -333,8 +358,73 @@
               <input
                 type="text"
                 v-model="tx.descripcion"
-                placeholder="¿En qué gastaste?"
-                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                placeholder="¿De qué trata?"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div v-if="tipoOperacion === 'Transferencia'" class="space-y-4">
+            <p class="text-xs text-slate-500 mb-2">
+              Usa esto para pagos de tarjeta o cambios a efectivo.
+            </p>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1"
+                >Sale de: (Cuenta Origen)</label
+              >
+              <select
+                v-model="txTransf.origen_id"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
+              >
+                <option v-for="c in cuentas" :value="c.id_cuenta">
+                  {{ c.nombre }}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1"
+                >Entra a: (Cuenta Destino)</label
+              >
+              <select
+                v-model="txTransf.destino_id"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
+              >
+                <option v-for="c in cuentas" :value="c.id_cuenta">
+                  {{ c.nombre }}
+                </option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1"
+                  >Monto a mover (S/)</label
+                >
+                <input
+                  type="number"
+                  v-model="txTransf.monto"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-500 mb-1"
+                  >Fecha</label
+                >
+                <input
+                  type="date"
+                  v-model="txTransf.fecha"
+                  class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-500 mb-1"
+                >Concepto (Opcional)</label
+              >
+              <input
+                type="text"
+                v-model="txTransf.descripcion"
+                placeholder="Ej: Pago de tarjeta de crédito"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
               />
             </div>
           </div>
@@ -347,10 +437,10 @@
               Cancelar
             </button>
             <button
-              @click="guardarTransaccion"
+              @click="ejecutarOperacion"
               class="flex-1 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition"
             >
-              Guardar
+              Confirmar
             </button>
           </div>
         </div>

@@ -5,22 +5,22 @@ const { createApp, ref, computed, onMounted } = Vue;
 
 createApp({
   setup() {
-    // Credenciales y Rutas
-    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
-    const API_URL = "https://finanzas-backend-dgv5.onrender.com";
-    // ------------------------------------
+    // --- CREDENCIALES ---
+    const SUPABASE_URL = "https://TU-ID-DE-PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU-ANON-KEY";
+    const API_URL = "https://TU-URL-DE-RENDER.onrender.com";
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Estados
     const cargando = ref(true);
     const isLoggedIn = ref(false);
     const currentUserId = ref("");
     const tab = ref("inicio");
     const showModal = ref(false);
 
-    // Datos
+    // Control del Modal
+    const tipoOperacion = ref("Egreso"); // Puede ser 'Egreso', 'Ingreso', 'Transferencia'
+
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
@@ -33,6 +33,14 @@ createApp({
       cuenta_id: "",
       categoria_id: "",
     });
+    const txTransf = ref({
+      origen_id: "",
+      destino_id: "",
+      monto: "",
+      fecha: new Date().toISOString().split("T")[0],
+      descripcion: "",
+    });
+
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
     const nuevaCuenta = ref({
       nombre: "",
@@ -45,6 +53,15 @@ createApp({
       return cuentas.value
         .filter((c) => c.tipo_cuenta !== "Credito")
         .reduce((acc, c) => acc + c.saldo_actual, 0);
+    });
+
+    // Filtrar categorías según la pestaña del modal
+    const categoriasFiltradas = computed(() => {
+      return categorias.value.filter(
+        (c) =>
+          c.tipo_flujo === tipoOperacion.value &&
+          !c.nombre.includes("Transferencia"),
+      );
     });
 
     // Autenticación
@@ -65,7 +82,6 @@ createApp({
       cargando.value = false;
     };
 
-    // Base de Datos
     const cargarDatos = async () => {
       try {
         const [resCuentas, resHistorial, resCategorias] = await Promise.all([
@@ -75,8 +91,16 @@ createApp({
         ]);
 
         if (resCuentas.ok) cuentas.value = (await resCuentas.json()).cuentas;
-        if (resHistorial.ok)
-          historial.value = (await resHistorial.json()).historial;
+        if (resHistorial.ok) {
+          // Mapear el historial para tener el nombre de la categoría fácilmente
+          const histData = await resHistorial.json();
+          historial.value = histData.historial.map((h) => ({
+            ...h,
+            categoria_nombre:
+              categorias.value.find((c) => c.id == h.categoria)?.nombre ||
+              h.categoria,
+          }));
+        }
         if (resCategorias.ok)
           categorias.value = (await resCategorias.json()).categorias;
       } catch (error) {
@@ -84,29 +108,103 @@ createApp({
       }
     };
 
-    const guardarTransaccion = async () => {
-      if (
-        !tx.value.cuenta_id ||
-        !tx.value.categoria_id ||
-        !tx.value.monto ||
-        !tx.value.descripcion
-      )
-        return;
+    // LÓGICA MAESTRA: Decide si guarda un movimiento normal o doble
+    const ejecutarOperacion = async () => {
+      cargando.value = true;
 
-      await fetch(`${API_URL}/transacciones/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...tx.value,
-          cuenta_id: parseInt(tx.value.cuenta_id),
-          categoria_id: parseInt(tx.value.categoria_id),
-          monto: parseFloat(tx.value.monto),
-        }),
-      });
+      if (tipoOperacion.value === "Transferencia") {
+        if (
+          !txTransf.value.origen_id ||
+          !txTransf.value.destino_id ||
+          !txTransf.value.monto
+        ) {
+          alert("Completa todos los datos de la transferencia");
+          cargando.value = false;
+          return;
+        }
+        if (txTransf.value.origen_id === txTransf.value.destino_id) {
+          alert("No puedes transferir a la misma cuenta");
+          cargando.value = false;
+          return;
+        }
+
+        // Buscamos las categorías del sistema
+        const catSalida = categorias.value.find(
+          (c) => c.nombre === "Transferencia Saliente",
+        );
+        const catEntrada = categorias.value.find(
+          (c) => c.nombre === "Transferencia Entrante",
+        );
+
+        if (!catSalida || !catEntrada) {
+          alert(
+            "Faltan las categorías de sistema en la Base de Datos. Ejecuta el código SQL.",
+          );
+          cargando.value = false;
+          return;
+        }
+
+        const concepto =
+          txTransf.value.descripcion || "Transferencia entre cuentas";
+
+        // 1. Quitar dinero del Origen (Ej. Yape)
+        await fetch(`${API_URL}/transacciones/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cuenta_id: parseInt(txTransf.value.origen_id),
+            categoria_id: catSalida.id,
+            monto: parseFloat(txTransf.value.monto),
+            fecha: txTransf.value.fecha,
+            descripcion: concepto,
+          }),
+        });
+
+        // 2. Ingresar dinero al Destino (Ej. Tarjeta de Crédito)
+        await fetch(`${API_URL}/transacciones/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            cuenta_id: parseInt(txTransf.value.destino_id),
+            categoria_id: catEntrada.id,
+            monto: parseFloat(txTransf.value.monto),
+            fecha: txTransf.value.fecha,
+            descripcion: concepto,
+          }),
+        });
+
+        txTransf.value.monto = "";
+        txTransf.value.descripcion = "";
+      } else {
+        // Operación Normal (Gasto o Ingreso)
+        if (
+          !tx.value.cuenta_id ||
+          !tx.value.categoria_id ||
+          !tx.value.monto ||
+          !tx.value.descripcion
+        ) {
+          alert("Completa todos los datos obligatorios.");
+          cargando.value = false;
+          return;
+        }
+
+        await fetch(`${API_URL}/transacciones/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...tx.value,
+            cuenta_id: parseInt(tx.value.cuenta_id),
+            categoria_id: parseInt(tx.value.categoria_id),
+            monto: parseFloat(tx.value.monto),
+          }),
+        });
+        tx.value.monto = "";
+        tx.value.descripcion = "";
+      }
+
       showModal.value = false;
-      tx.value.monto = "";
-      tx.value.descripcion = "";
       await cargarDatos();
+      cargando.value = false;
     };
 
     const guardarCategoria = async () => {
@@ -136,9 +234,7 @@ createApp({
       await cargarDatos();
     };
 
-    // Lógica de Inicio Optimizada (Rápida y Limpia)
     onMounted(() => {
-      // Revisa sesión inmediata
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
           isLoggedIn.value = true;
@@ -147,15 +243,12 @@ createApp({
             cargando.value = false;
           });
         } else if (window.location.hash.includes("access_token")) {
-          // Viene de Google, espera a que el evento lo atrape
           cargando.value = true;
         } else {
-          // Usuario nuevo / deslogueado
           cargando.value = false;
         }
       });
 
-      // Reacciona a los cambios en tiempo real
       supabase.auth.onAuthStateChange((event, session) => {
         if (session && session.user) {
           isLoggedIn.value = true;
@@ -177,16 +270,19 @@ createApp({
       currentUserId,
       tab,
       showModal,
+      tipoOperacion,
       cuentas,
       categorias,
+      categoriasFiltradas,
       historial,
       saldoTotalLiquido,
       tx,
+      txTransf,
       nuevaCat,
       nuevaCuenta,
       iniciarSesionGoogle,
       cerrarSesion,
-      guardarTransaccion,
+      ejecutarOperacion,
       guardarCategoria,
       guardarCuenta,
     };
