@@ -329,53 +329,27 @@
     </div>
 
     <script>
-      const { createApp, ref, computed } = Vue;
+      // 1. SOLUCIÓN: Agregamos onMounted a la importación
+      const { createApp, ref, computed, onMounted } = Vue;
 
       createApp({
         setup() {
-          // Configuración
-          const API_URL = "https://finanzas-backend-dgv5.onrender.com";
-
-          // Configuración de Supabase
+          // --- TUS CLAVES REALES AQUÍ ---
           const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-          const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY"; // Lo sacas de Project Settings > API
+          const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
+          // Usamos window.supabase porque lo cargamos desde el CDN (Internet)
           const supabase = window.supabase.createClient(
             SUPABASE_URL,
             SUPABASE_KEY,
           );
 
-          const iniciarSesionGoogle = async () => {
-            const { error } = await supabase.auth.signInWithOAuth({
-              provider: "google",
-            });
-            if (error) console.error("Error al iniciar sesión:", error);
-          };
-
-          const cerrarSesion = async () => {
-            await supabase.auth.signOut();
-            isLoggedIn.value = false;
-            currentUserId.value = "";
-          };
-
-          // Verificar la sesión automáticamente al abrir la página
-          onMounted(async () => {
-            // Limpiar iconos del sidebar anterior si quedaron (corrección de historial de usuario)
-            // Escuchar cambios de estado de autenticación
-            supabase.auth.onAuthStateChange((_event, session) => {
-              if (session) {
-                isLoggedIn.value = true;
-                currentUserId.value = session.user.id;
-                cargarDatos();
-              } else {
-                isLoggedIn.value = false;
-              }
-            });
-          });
+          // La URL de tu API en Render
+          const API_URL = "https://finanzas-backend-dgv5.onrender.com";
+          // ------------------------------
 
           // Estados de la app
           const isLoggedIn = ref(false);
           const currentUserId = ref("");
-          const loginId = ref("");
           const tab = ref("inicio");
           const showModal = ref(false);
 
@@ -406,23 +380,26 @@
               .reduce((acc, c) => acc + c.saldo_actual, 0),
           );
 
-          // Funciones
-          const iniciarSesion = () => {
-            if (loginId.value.length > 10) {
-              currentUserId.value = loginId.value;
-              isLoggedIn.value = true;
-              cargarDatos();
-            } else {
-              alert("Ingresa un ID válido.");
+          // --- FUNCIONES DE SESIÓN ---
+          const iniciarSesionGoogle = async () => {
+            const { error } = await supabase.auth.signInWithOAuth({
+              provider: "google",
+            });
+            if (error) {
+              console.error("Error al iniciar sesión:", error);
+              alert("Hubo un error al conectar con Google.");
             }
           };
 
-          const cerrarSesion = () => {
-            isLoggedIn.value = false;
-            currentUserId.value = "";
-            loginId.value = "";
+          const cerrarSesion = async () => {
+            const { error } = await supabase.auth.signOut();
+            if (!error) {
+              isLoggedIn.value = false;
+              currentUserId.value = "";
+            }
           };
 
+          // --- FUNCIONES DE DATOS ---
           const cargarDatos = async () => {
             try {
               const [resCuentas, resHistorial, resCategorias] =
@@ -438,11 +415,20 @@
               if (resCategorias.ok)
                 categorias.value = (await resCategorias.json()).categorias;
             } catch (error) {
-              console.error("Error conectando:", error);
+              console.error("Error conectando con tu API en Render:", error);
             }
           };
 
           const guardarTransaccion = async () => {
+            if (
+              !tx.value.cuenta_id ||
+              !tx.value.categoria_id ||
+              !tx.value.monto ||
+              !tx.value.descripcion
+            ) {
+              alert("Completa todos los datos obligatorios.");
+              return;
+            }
             await fetch(`${API_URL}/transacciones/`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -460,6 +446,7 @@
           };
 
           const guardarCategoria = async () => {
+            if (!nuevaCat.value.nombre) return;
             await fetch(`${API_URL}/categorias/`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -470,6 +457,7 @@
           };
 
           const guardarCuenta = async () => {
+            if (!nuevaCuenta.value.nombre) return;
             await fetch(`${API_URL}/cuentas/`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -484,9 +472,23 @@
             cargarDatos();
           };
 
+          // --- CICLO DE VIDA (Verificar sesión al abrir la página) ---
+          onMounted(() => {
+            supabase.auth.onAuthStateChange((_event, session) => {
+              if (session && session.user) {
+                isLoggedIn.value = true;
+                currentUserId.value = session.user.id;
+                cargarDatos();
+              } else {
+                isLoggedIn.value = false;
+                currentUserId.value = "";
+              }
+            });
+          });
+
+          // 2. SOLUCIÓN: Retornamos iniciarSesionGoogle correctamente
           return {
             isLoggedIn,
-            loginId,
             currentUserId,
             tab,
             showModal,
@@ -497,7 +499,7 @@
             tx,
             nuevaCat,
             nuevaCuenta,
-            iniciarSesion,
+            iniciarSesionGoogle,
             cerrarSesion,
             guardarTransaccion,
             guardarCategoria,
