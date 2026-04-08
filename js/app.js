@@ -7,7 +7,7 @@ createApp({
   setup() {
     // ID REAL Y CONEXIÓN
     const MI_USUARIO_ID = "509eceb0-8893-4907-b345-c6035e190ccf";
-    const API_URL = "http://127.0.0.1:8000";
+    const API_URL = "https://finanzas-backend-dgv5.onrender.com";
 
     // Estados de la aplicación
     const cuentas = ref([]);
