@@ -5,15 +5,26 @@ const { createApp, ref, computed, onMounted } = Vue;
 
 createApp({
   setup() {
-    // ID REAL Y CONEXIÓN
-    const MI_USUARIO_ID = "509eceb0-8893-4907-b345-c6035e190ccf";
+    // Credenciales y Rutas
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const API_URL = "https://finanzas-backend-dgv5.onrender.com";
 
-    // Estados de la aplicación
+    // Inicialización de Supabase
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Estados
+    const isLoggedIn = ref(false);
+    const currentUserId = ref("");
+    const tab = ref("inicio");
+    const showModal = ref(false);
+
+    // Datos
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
 
+    // Formularios
     const tx = ref({
       monto: "",
       descripcion: "",
@@ -28,19 +39,38 @@ createApp({
       saldo_inicial: "",
     });
 
-    // Cálculos Reactivos
+    // Cálculos
     const saldoTotalLiquido = computed(() => {
       return cuentas.value
         .filter((c) => c.tipo_cuenta !== "Credito")
         .reduce((acc, c) => acc + c.saldo_actual, 0);
     });
 
-    // Peticiones al Backend (Python)
+    // Funciones de Sesión
+    const iniciarSesionGoogle = async () => {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+      });
+      if (error) {
+        console.error("Error de conexión con Google:", error);
+        alert("Hubo un error al intentar autenticar.");
+      }
+    };
+
+    const cerrarSesion = async () => {
+      const { error } = await supabase.auth.signOut();
+      if (!error) {
+        isLoggedIn.value = false;
+        currentUserId.value = "";
+      }
+    };
+
+    // Funciones de Base de Datos
     const cargarDatos = async () => {
       try {
         const [resCuentas, resHistorial, resCategorias] = await Promise.all([
-          fetch(`${API_URL}/cuentas/${MI_USUARIO_ID}`),
-          fetch(`${API_URL}/historial/${MI_USUARIO_ID}`),
+          fetch(`${API_URL}/cuentas/${currentUserId.value}`),
+          fetch(`${API_URL}/historial/${currentUserId.value}`),
           fetch(`${API_URL}/categorias/`),
         ]);
 
@@ -50,7 +80,7 @@ createApp({
         if (resCategorias.ok)
           categorias.value = (await resCategorias.json()).categorias;
       } catch (error) {
-        console.error("Error conectando al servidor:", error);
+        console.error("Error conectando con la API:", error);
       }
     };
 
@@ -61,20 +91,20 @@ createApp({
         !tx.value.monto ||
         !tx.value.descripcion
       ) {
-        alert("Completa todos los datos obligatorios.");
+        alert("Completa todos los datos del formulario.");
         return;
       }
       await fetch(`${API_URL}/transacciones/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...tx.value,
           cuenta_id: parseInt(tx.value.cuenta_id),
           categoria_id: parseInt(tx.value.categoria_id),
           monto: parseFloat(tx.value.monto),
-          fecha: tx.value.fecha,
-          descripcion: tx.value.descripcion,
         }),
       });
+      showModal.value = false;
       tx.value.monto = "";
       tx.value.descripcion = "";
       cargarDatos();
@@ -97,9 +127,8 @@ createApp({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          usuario_id: MI_USUARIO_ID,
-          nombre: nuevaCuenta.value.nombre,
-          tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+          ...nuevaCuenta.value,
+          usuario_id: currentUserId.value,
           saldo_inicial: parseFloat(nuevaCuenta.value.saldo_inicial || 0),
         }),
       });
@@ -108,12 +137,26 @@ createApp({
       cargarDatos();
     };
 
-    // Inicialización
+    // Verificación de Autenticación Continua
     onMounted(() => {
-      cargarDatos();
+      supabase.auth.onAuthStateChange((_event, session) => {
+        if (session && session.user) {
+          isLoggedIn.value = true;
+          currentUserId.value = session.user.id;
+          cargarDatos();
+        } else {
+          isLoggedIn.value = false;
+          currentUserId.value = "";
+        }
+      });
     });
 
+    // Exposición de variables y funciones al HTML
     return {
+      isLoggedIn,
+      currentUserId,
+      tab,
+      showModal,
       cuentas,
       categorias,
       historial,
@@ -121,6 +164,8 @@ createApp({
       tx,
       nuevaCat,
       nuevaCuenta,
+      iniciarSesionGoogle,
+      cerrarSesion,
       guardarTransaccion,
       guardarCategoria,
       guardarCuenta,
