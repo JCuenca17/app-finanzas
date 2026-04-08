@@ -17,16 +17,41 @@
         background: #cbd5e1;
         border-radius: 4px;
       }
-      /* Oculta la app hasta que Vue esté listo, evitando parpadeos */
       [v-cloak] {
         display: none;
+      }
+
+      /* Animación de carga simple */
+      .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border-left-color: #0f172a;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
     </style>
   </head>
   <body class="bg-slate-50 text-slate-800 font-sans antialiased">
     <div id="app" v-cloak>
       <div
-        v-if="!isLoggedIn"
+        v-if="cargando"
+        class="min-h-screen flex flex-col items-center justify-center bg-slate-50"
+      >
+        <div class="spinner mb-4"></div>
+        <p class="text-slate-500 font-medium">Verificando credenciales...</p>
+      </div>
+
+      <div
+        v-else-if="!isLoggedIn"
         class="min-h-screen flex items-center justify-center bg-slate-50"
       >
         <div

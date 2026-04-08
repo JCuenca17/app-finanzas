@@ -14,6 +14,7 @@ createApp({
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Estados
+    const cargando = ref(true); // NUEVO ESTADO: Inicia siempre en true
     const isLoggedIn = ref(false);
     const currentUserId = ref("");
     const tab = ref("inicio");
@@ -46,12 +47,11 @@ createApp({
         .reduce((acc, c) => acc + c.saldo_actual, 0);
     });
 
-    // 1. OBLIGAR LA REDIRECCIÓN EXACTA
+    // Funciones de Sesión
     const iniciarSesionGoogle = async () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          // Esto fuerza a Supabase a regresarte exactamente a tu página de Vercel
           redirectTo: window.location.origin,
         },
       });
@@ -60,12 +60,17 @@ createApp({
         alert("Hubo un error al intentar autenticar.");
       }
     };
+
     const cerrarSesion = async () => {
+      cargando.value = true;
       const { error } = await supabase.auth.signOut();
       if (!error) {
         isLoggedIn.value = false;
         currentUserId.value = "";
+        cuentas.value = [];
+        historial.value = [];
       }
+      cargando.value = false;
     };
 
     // Funciones de Base de Datos
@@ -110,7 +115,7 @@ createApp({
       showModal.value = false;
       tx.value.monto = "";
       tx.value.descripcion = "";
-      cargarDatos();
+      await cargarDatos();
     };
 
     const guardarCategoria = async () => {
@@ -121,7 +126,7 @@ createApp({
         body: JSON.stringify(nuevaCat.value),
       });
       nuevaCat.value.nombre = "";
-      cargarDatos();
+      await cargarDatos();
     };
 
     const guardarCuenta = async () => {
@@ -137,35 +142,50 @@ createApp({
       });
       nuevaCuenta.value.nombre = "";
       nuevaCuenta.value.saldo_inicial = "";
-      cargarDatos();
+      await cargarDatos();
     };
 
-    // 2. ATRAPAR LA SESIÓN DE INMEDIATO AL CARGAR
+    // Verificación de Autenticación Continua (Modificado para resolver el Loop)
     onMounted(() => {
-      // Paso A: Revisar si ya traemos una sesión al milisegundo de abrir la página
+      // 1. Verificación inicial de la sesión al cargar la página
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
           isLoggedIn.value = true;
           currentUserId.value = session.user.id;
-          cargarDatos();
+          cargarDatos().then(() => {
+            cargando.value = false;
+          });
+        } else {
+          // Si no hay sesión, revisamos si estamos volviendo de Google (la URL tiene un hash)
+          if (window.location.hash.includes("access_token")) {
+            // Mantenemos cargando=true, el listener de abajo atrapará el evento SIGNED_IN
+            cargando.value = true;
+          } else {
+            // Entró como usuario nuevo normalmente
+            cargando.value = false;
+          }
         }
       });
 
-      // Paso B: Quedarse escuchando por si la sesión cambia
-      supabase.auth.onAuthStateChange((_event, session) => {
-        if (session && session.user) {
+      // 2. Escuchar cambios de estado (incluyendo el regreso desde Google)
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" || session) {
           isLoggedIn.value = true;
           currentUserId.value = session.user.id;
-          cargarDatos();
-        } else {
+          cargarDatos().then(() => {
+            cargando.value = false;
+          });
+        } else if (event === "SIGNED_OUT") {
           isLoggedIn.value = false;
           currentUserId.value = "";
+          cargando.value = false;
         }
       });
     });
 
     // Exposición de variables y funciones al HTML
     return {
+      cargando,
       isLoggedIn,
       currentUserId,
       tab,
