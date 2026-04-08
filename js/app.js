@@ -46,17 +46,20 @@ createApp({
         .reduce((acc, c) => acc + c.saldo_actual, 0);
     });
 
-    // Funciones de Sesión
+    // 1. OBLIGAR LA REDIRECCIÓN EXACTA
     const iniciarSesionGoogle = async () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
+        options: {
+          // Esto fuerza a Supabase a regresarte exactamente a tu página de Vercel
+          redirectTo: window.location.origin,
+        },
       });
       if (error) {
         console.error("Error de conexión con Google:", error);
         alert("Hubo un error al intentar autenticar.");
       }
     };
-
     const cerrarSesion = async () => {
       const { error } = await supabase.auth.signOut();
       if (!error) {
@@ -137,8 +140,18 @@ createApp({
       cargarDatos();
     };
 
-    // Verificación de Autenticación Continua
+    // 2. ATRAPAR LA SESIÓN DE INMEDIATO AL CARGAR
     onMounted(() => {
+      // Paso A: Revisar si ya traemos una sesión al milisegundo de abrir la página
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && session.user) {
+          isLoggedIn.value = true;
+          currentUserId.value = session.user.id;
+          cargarDatos();
+        }
+      });
+
+      // Paso B: Quedarse escuchando por si la sesión cambia
       supabase.auth.onAuthStateChange((_event, session) => {
         if (session && session.user) {
           isLoggedIn.value = true;
