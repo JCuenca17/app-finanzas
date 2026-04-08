@@ -9,12 +9,12 @@ createApp({
     const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
     const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const API_URL = "https://finanzas-backend-dgv5.onrender.com";
+    // ------------------------------------
 
-    // Inicialización de Supabase
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Estados
-    const cargando = ref(true); // NUEVO ESTADO: Inicia siempre en true
+    const cargando = ref(true);
     const isLoggedIn = ref(false);
     const currentUserId = ref("");
     const tab = ref("inicio");
@@ -40,40 +40,32 @@ createApp({
       saldo_inicial: "",
     });
 
-    // Cálculos
+    // Cálculos Reactivos
     const saldoTotalLiquido = computed(() => {
       return cuentas.value
         .filter((c) => c.tipo_cuenta !== "Credito")
         .reduce((acc, c) => acc + c.saldo_actual, 0);
     });
 
-    // Funciones de Sesión
+    // Autenticación
     const iniciarSesionGoogle = async () => {
-      const { error } = await supabase.auth.signInWithOAuth({
+      await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
+        options: { redirectTo: window.location.origin },
       });
-      if (error) {
-        console.error("Error de conexión con Google:", error);
-        alert("Hubo un error al intentar autenticar.");
-      }
     };
 
     const cerrarSesion = async () => {
       cargando.value = true;
-      const { error } = await supabase.auth.signOut();
-      if (!error) {
-        isLoggedIn.value = false;
-        currentUserId.value = "";
-        cuentas.value = [];
-        historial.value = [];
-      }
+      await supabase.auth.signOut();
+      isLoggedIn.value = false;
+      currentUserId.value = "";
+      cuentas.value = [];
+      historial.value = [];
       cargando.value = false;
     };
 
-    // Funciones de Base de Datos
+    // Base de Datos
     const cargarDatos = async () => {
       try {
         const [resCuentas, resHistorial, resCategorias] = await Promise.all([
@@ -98,10 +90,9 @@ createApp({
         !tx.value.categoria_id ||
         !tx.value.monto ||
         !tx.value.descripcion
-      ) {
-        alert("Completa todos los datos del formulario.");
+      )
         return;
-      }
+
       await fetch(`${API_URL}/transacciones/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -145,9 +136,9 @@ createApp({
       await cargarDatos();
     };
 
-    // Verificación de Autenticación Continua (Modificado para resolver el Loop)
+    // Lógica de Inicio Optimizada (Rápida y Limpia)
     onMounted(() => {
-      // 1. Verificación inicial de la sesión al cargar la página
+      // Revisa sesión inmediata
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
           isLoggedIn.value = true;
@@ -155,27 +146,24 @@ createApp({
           cargarDatos().then(() => {
             cargando.value = false;
           });
+        } else if (window.location.hash.includes("access_token")) {
+          // Viene de Google, espera a que el evento lo atrape
+          cargando.value = true;
         } else {
-          // Si no hay sesión, revisamos si estamos volviendo de Google (la URL tiene un hash)
-          if (window.location.hash.includes("access_token")) {
-            // Mantenemos cargando=true, el listener de abajo atrapará el evento SIGNED_IN
-            cargando.value = true;
-          } else {
-            // Entró como usuario nuevo normalmente
-            cargando.value = false;
-          }
+          // Usuario nuevo / deslogueado
+          cargando.value = false;
         }
       });
 
-      // 2. Escuchar cambios de estado (incluyendo el regreso desde Google)
+      // Reacciona a los cambios en tiempo real
       supabase.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" || session) {
+        if (session && session.user) {
           isLoggedIn.value = true;
           currentUserId.value = session.user.id;
           cargarDatos().then(() => {
             cargando.value = false;
           });
-        } else if (event === "SIGNED_OUT") {
+        } else {
           isLoggedIn.value = false;
           currentUserId.value = "";
           cargando.value = false;
@@ -183,7 +171,6 @@ createApp({
       });
     });
 
-    // Exposición de variables y funciones al HTML
     return {
       cargando,
       isLoggedIn,

@@ -21,14 +21,14 @@
         display: none;
       }
 
-      /* Animación de carga simple */
+      /* Animación de carga profesional */
       .spinner {
-        border: 4px solid rgba(0, 0, 0, 0.1);
-        width: 40px;
-        height: 40px;
+        border: 3px solid rgba(15, 23, 42, 0.1);
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         border-left-color: #0f172a;
-        animation: spin 1s linear infinite;
+        animation: spin 0.8s linear infinite;
       }
       @keyframes spin {
         0% {
@@ -44,10 +44,9 @@
     <div id="app" v-cloak>
       <div
         v-if="cargando"
-        class="min-h-screen flex flex-col items-center justify-center bg-slate-50"
+        class="min-h-screen flex flex-col items-center justify-center bg-slate-50 transition-opacity"
       >
-        <div class="spinner mb-4"></div>
-        <p class="text-slate-500 font-medium">Verificando credenciales...</p>
+        <div class="spinner"></div>
       </div>
 
       <div
@@ -225,7 +224,7 @@
               />
               <button
                 @click="guardarCuenta"
-                class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200"
+                class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 transition"
               >
                 Añadir Cuenta
               </button>
@@ -252,7 +251,7 @@
               </select>
               <button
                 @click="guardarCategoria"
-                class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200"
+                class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 transition"
               >
                 Añadir Categoría
               </button>
@@ -263,16 +262,16 @@
 
       <div
         v-if="showModal"
-        class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50"
+        class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 transition-opacity"
       >
-        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
           <div class="flex justify-between items-center mb-5">
             <h2 class="text-lg font-semibold text-slate-900">
               Registrar Operación
             </h2>
             <button
               @click="showModal = false"
-              class="text-slate-400 hover:text-slate-600 text-xl"
+              class="text-slate-400 hover:text-slate-600 text-xl transition"
             >
               &times;
             </button>
@@ -343,13 +342,13 @@
           <div class="mt-6 flex gap-3">
             <button
               @click="showModal = false"
-              class="flex-1 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50"
+              class="flex-1 px-4 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition"
             >
               Cancelar
             </button>
             <button
               @click="guardarTransaccion"
-              class="flex-1 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800"
+              class="flex-1 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition"
             >
               Guardar
             </button>
