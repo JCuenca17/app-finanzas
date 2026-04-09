@@ -6,9 +6,9 @@ const { createApp, ref, computed, onMounted } = Vue;
 createApp({
   setup() {
     // --- CREDENCIALES ---
-    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
-    const API_URL = "https://finanzas-backend-dgv5.onrender.com";
+    const SUPABASE_URL = "https://TU-ID-DE-PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU-ANON-KEY";
+    const API_URL = "https://TU-URL-DE-RENDER.onrender.com";
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -22,7 +22,7 @@ createApp({
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
-    const pagosFijos = ref([]); // NUEVO ESTADO
+    const pagosFijos = ref([]);
 
     const tx = ref({
       monto: "",
@@ -50,7 +50,6 @@ createApp({
       dia_pago: "",
     });
 
-    // NUEVO FORMULARIO
     const nuevoPagoFijo = ref({
       nombre: "",
       monto: "",
@@ -305,7 +304,6 @@ createApp({
       await cargarDatos();
     };
 
-    // NUEVA FUNCIÓN
     const guardarPagoFijo = async () => {
       if (
         !nuevoPagoFijo.value.nombre ||
