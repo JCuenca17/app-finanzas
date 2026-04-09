@@ -80,19 +80,20 @@ createApp({
       return titulos[tab.value] || "FinancePro";
     });
 
-    // Filtros de Cuentas vs Deudas
     const cuentasActivas = computed(() =>
       cuentas.value.filter((c) =>
         ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
       ),
     );
+    const cuentasPorCobrar = computed(() =>
+      cuentas.value.filter((c) => c.tipo_cuenta === "Cobrar"),
+    );
     const deudasActivas = computed(() =>
       cuentas.value.filter((c) =>
-        ["Credito", "Prestamo"].includes(c.tipo_cuenta),
+        ["Credito", "Prestamo", "Pagar"].includes(c.tipo_cuenta),
       ),
     );
 
-    // Filtros de Proyección
     const pagosFijosIngresos = computed(() =>
       pagosFijos.value.filter((p) => p.tipo_flujo === "Ingreso"),
     );
@@ -130,17 +131,13 @@ createApp({
       return saldos;
     });
 
-    // NUEVO: Algoritmo Inteligente de Deuda (Mide Liquidez + Flujo Neto vs Deuda)
     const diagnosticoDeuda = computed(() => {
       const liquidez = saldosLiquidos.value.PEN;
       const ahorro = saldosAhorro.value.PEN;
-
-      // Solo calcula deudas en PEN para simplificar el termómetro por ahora
       const deuda = deudasActivas.value
         .filter((c) => c.moneda === "PEN")
         .reduce((acc, c) => acc + Math.abs(c.saldo_actual), 0);
 
-      // El poder adquisitivo real a fin de mes es lo que tienes ahora + lo que te va a sobrar de tus fijos
       const ingresosProyectados = pagosFijosIngresos.value
         .filter((p) => p.moneda === "PEN")
         .reduce((acc, p) => acc + p.monto, 0);
@@ -171,46 +168,46 @@ createApp({
         result.porcentajeCobertura = 100;
       } else {
         let cob = (poderAdquisitivoLibre / deuda) * 100;
-        if (cob < 0) cob = 0; // Si el poder es negativo, cobertura 0%
+        if (cob < 0) cob = 0;
         if (cob > 100) cob = 100;
         result.porcentajeCobertura = Math.round(cob);
       }
 
       if (deuda === 0) {
-        result.estado = "Sin deudas activas";
+        result.estado = "Sin obligaciones activas";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
-          "bg-emerald-50 text-emerald-800 border-emerald-200";
+          "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
         result.mensaje =
-          "Genial. No tienes deudas en Soles registradas en este momento.";
+          "Excelente estado de solvencia. No existen pasivos registrados en Soles pendientes de pago.";
       } else if (balance >= 0) {
-        result.estado = "Controlado";
+        result.estado = "Superávit Proyectado";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
-          "bg-emerald-50 text-emerald-800 border-emerald-200";
+          "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
-        result.mensaje = `Tienes liquidez y flujo libre suficientes para pagar. Si cancelas todo, aún te sobrarán S/ ${balance.toFixed(2)}.`;
+        result.mensaje = `Tras cubrir las obligaciones de crédito y gastos fijos, existirá un excedente líquido de S/ ${balance.toFixed(2)}.`;
       } else if (balance + ahorro >= 0) {
         result.estado = "Alerta Amarilla";
         result.textColor = "text-amber-600";
         result.iconBg = "bg-amber-500";
         result.borderColor = "border-amber-200";
-        result.alertBoxClasses = "bg-amber-50 text-amber-800 border-amber-200";
+        result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
         result.colorGrafico = "#f59e0b";
-        result.mensaje = `Tu flujo mensual y liquidez no alcanzan. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que usar tus ahorros.`;
+        result.mensaje = `Déficit líquido proyectado de S/ ${Math.abs(balance).toFixed(2)}. Será necesario comprometer capital de la reserva de ahorros para evitar mora.`;
       } else {
-        result.estado = "Peligro Constante";
+        result.estado = "Insolvencia Crítica";
         result.textColor = "text-rose-600";
         result.iconBg = "bg-rose-500";
         result.borderColor = "border-rose-200";
-        result.alertBoxClasses = "bg-rose-50 text-rose-800 border-rose-200";
+        result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
         result.colorGrafico = "#f43f5e";
-        result.mensaje = `Aún vaciando todos tus ahorros, te faltarán S/ ${Math.abs(balance + ahorro).toFixed(2)} para cubrir tus deudas. ¡Cuidado!`;
+        result.mensaje = `El déficit supera la reserva total de ahorros en S/ ${Math.abs(balance + ahorro).toFixed(2)}. Se requiere reestructuración de deuda inmediata.`;
       }
       return result;
     });
@@ -396,33 +393,23 @@ createApp({
         series: [diagnosticoDeuda.value.porcentajeCobertura],
         chart: {
           type: "radialBar",
-          height: 280,
+          height: "100%",
+          width: "100%",
           fontFamily: "inherit",
-          sparkline: { enabled: true },
+          sparkline: { enabled: false },
         },
         plotOptions: {
           radialBar: {
             startAngle: -100,
             endAngle: 100,
             hollow: { size: "65%" },
-            track: {
-              background: "#e2e8f0",
-              strokeWidth: "100%",
-              margin: 0,
-              dropShadow: {
-                enabled: true,
-                top: 0,
-                left: 0,
-                blur: 3,
-                opacity: 0.2,
-              },
-            },
+            track: { background: "#f1f5f9", strokeWidth: "100%", margin: 5 },
             dataLabels: {
               name: {
                 show: true,
                 fontSize: "11px",
                 color: "#64748b",
-                offsetY: 15,
+                offsetY: 30,
                 fontWeight: 700,
               },
               value: {
@@ -439,7 +426,7 @@ createApp({
         },
         fill: { colors: [diagnosticoDeuda.value.colorGrafico] },
         stroke: { lineCap: "round" },
-        labels: ["Cobertura Segura"],
+        labels: ["Cobertura de Deuda"],
       };
 
       chartDeudaInstance = new ApexCharts(chartDeudaRef.value, optionsDeuda);
@@ -580,11 +567,7 @@ createApp({
       if (!nuevaCuenta.value.nombre) return;
 
       let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
-      // Aseguramos que Créditos y Préstamos se guarden como número negativo en la BD para la matemática
-      if (
-        nuevaCuenta.value.tipo_cuenta === "Credito" ||
-        nuevaCuenta.value.tipo_cuenta === "Prestamo"
-      ) {
+      if (["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.tipo_cuenta)) {
         saldo = -Math.abs(saldo);
       }
 
@@ -697,6 +680,7 @@ createApp({
       saldosAhorro,
       pagosFijos,
       cuentasActivas,
+      cuentasPorCobrar,
       deudasActivas,
       pagosFijosIngresos,
       pagosFijosEgresos,

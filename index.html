@@ -48,9 +48,13 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
-      .apexcharts-canvas {
-        margin: 0 auto;
-      } /* Centra el gráfico */
+      .chart-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
     </style>
   </head>
   <body
@@ -179,6 +183,26 @@
               Dashboard
             </button>
             <button
+              @click="tab = 'analitica'"
+              :class="tab === 'analitica' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
+              class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
+            >
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
+              Analítica
+            </button>
+            <button
               @click="tab = 'cuentas'"
               :class="tab === 'cuentas' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
@@ -237,26 +261,6 @@
                 ></path>
               </svg>
               Flujo Fijo
-            </button>
-            <button
-              @click="tab = 'analitica'"
-              :class="tab === 'analitica' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
-              class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                ></path>
-              </svg>
-              Analítica
             </button>
             <button
               @click="tab = 'historial'"
@@ -471,14 +475,22 @@
               <div
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto"
               >
+                <div class="col-span-full">
+                  <h3
+                    class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-2 mb-1"
+                  >
+                    Mi Dinero Líquido y Ahorros
+                  </h3>
+                </div>
+
                 <div
-                  v-if="cuentasActivas.length === 0"
-                  class="col-span-full py-10 text-center text-slate-500 text-sm"
+                  v-if="cuentasLiquidas.length === 0"
+                  class="col-span-full py-6 text-center text-slate-500 text-sm"
                 >
-                  No tienes cuentas o ahorros registrados.
+                  No tienes cuentas registradas.
                 </div>
                 <div
-                  v-for="c in cuentasActivas"
+                  v-for="c in cuentasLiquidas"
                   :key="c.id_cuenta"
                   class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between transition hover:shadow-md"
                   :class="{'border-l-4 border-l-blue-500': c.tipo_cuenta === 'Ahorro', 'border-l-4 border-l-slate-900': c.tipo_cuenta === 'Debito' || c.tipo_cuenta === 'Efectivo'}"
@@ -501,6 +513,48 @@
                     </p>
                   </div>
                 </div>
+
+                <div class="col-span-full">
+                  <h3
+                    class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-6 mb-1"
+                  >
+                    Cuentas Por Cobrar (Me deben)
+                  </h3>
+                </div>
+
+                <div
+                  v-if="cuentasPorCobrar.length === 0"
+                  class="col-span-full py-6 text-center text-slate-500 text-sm"
+                >
+                  Nadie te debe dinero actualmente.
+                </div>
+                <div
+                  v-for="c in cuentasPorCobrar"
+                  :key="c.id_cuenta"
+                  class="bg-white p-4 md:p-5 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 flex flex-col justify-between transition hover:shadow-md border-l-4 border-l-emerald-500"
+                >
+                  <div class="flex justify-between items-start">
+                    <h4 class="font-bold text-slate-900 text-base md:text-lg">
+                      {{ c.nombre }}
+                    </h4>
+                    <span
+                      class="text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md bg-emerald-50 text-emerald-700"
+                      >Por Cobrar • {{ c.moneda }}</span
+                    >
+                  </div>
+                  <div class="mt-5">
+                    <p
+                      class="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold"
+                    >
+                      Saldo a mi favor
+                    </p>
+                    <p
+                      class="text-2xl md:text-3xl font-extrabold text-emerald-600"
+                    >
+                      {{ formatoMoneda(c.saldo_actual, c.moneda) }}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -510,11 +564,9 @@
             >
               <div class="max-w-5xl mx-auto space-y-6">
                 <div
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100"
+                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden"
                 >
-                  <div
-                    class="flex items-center gap-3 mb-4 border-b border-slate-50 pb-4"
-                  >
+                  <div class="flex items-center gap-3 mb-6 relative z-10">
                     <div
                       class="w-10 h-10 rounded-full flex items-center justify-center text-white"
                       :class="diagnosticoDeuda.iconBg"
@@ -538,7 +590,7 @@
                         Termómetro de Deuda (PEN)
                       </h3>
                       <p
-                        class="text-xs font-semibold uppercase tracking-wide"
+                        class="text-xs font-bold uppercase tracking-widest"
                         :class="diagnosticoDeuda.textColor"
                       >
                         {{ diagnosticoDeuda.estado }}
@@ -547,21 +599,20 @@
                   </div>
 
                   <div
-                    class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center"
+                    class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch relative z-10"
                   >
-                    <div>
+                    <div class="flex flex-col justify-between">
                       <div class="grid grid-cols-2 gap-3 mb-4">
                         <div
                           class="bg-slate-50 p-4 rounded-xl border border-slate-100"
                         >
                           <p
-                            class="text-[10px] md:text-xs font-semibold text-slate-500 mb-1 leading-tight"
+                            class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 leading-tight"
                           >
-                            Poder Adquisitivo Libre (Liq + Ingresos Fijos -
-                            Gastos Fijos)
+                            Poder Adquisitivo Libre
                           </p>
                           <p
-                            class="text-lg md:text-xl font-bold text-slate-900"
+                            class="text-xl md:text-2xl font-extrabold text-slate-900"
                           >
                             S/ {{
                             diagnosticoDeuda.poderAdquisitivoLibre.toFixed(2) }}
@@ -571,33 +622,61 @@
                           class="bg-slate-50 p-4 rounded-xl border border-slate-100"
                         >
                           <p
-                            class="text-[10px] md:text-xs font-semibold text-slate-500 mb-1"
+                            class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
                           >
-                            Deuda Total Acomulada
+                            Deuda Total Acumulada
                           </p>
-                          <p class="text-lg md:text-xl font-bold text-rose-600">
+                          <p
+                            class="text-xl md:text-2xl font-extrabold text-rose-600"
+                          >
                             - S/ {{ diagnosticoDeuda.deuda.toFixed(2) }}
                           </p>
                         </div>
                       </div>
+
                       <div
-                        class="p-4 rounded-xl font-medium text-sm border"
+                        class="bg-slate-50 p-4 rounded-xl border flex gap-3 items-start"
                         :class="diagnosticoDeuda.alertBoxClasses"
                       >
-                        {{ diagnosticoDeuda.mensaje }}
+                        <div class="mt-0.5" :class="diagnosticoDeuda.textColor">
+                          <svg
+                            class="w-5 h-5"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                              clip-rule="evenodd"
+                            ></path>
+                          </svg>
+                        </div>
+                        <div>
+                          <p
+                            class="text-[10px] font-bold uppercase tracking-widest mb-0.5 opacity-80"
+                          >
+                            Diagnóstico Inteligente
+                          </p>
+                          <p class="text-sm font-semibold leading-relaxed">
+                            {{ diagnosticoDeuda.mensaje }}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    <div
-                      class="h-[220px] w-full flex items-center justify-center relative -mt-4"
-                      ref="chartDeudaRef"
-                    ></div>
+
+                    <div class="chart-container min-h-[220px]">
+                      <div
+                        ref="chartDeudaRef"
+                        class="w-full flex items-center justify-center"
+                      ></div>
+                    </div>
                   </div>
                 </div>
 
                 <h3
-                  class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1"
+                  class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-4"
                 >
-                  Tarjetas y Préstamos
+                  Mis Obligaciones a Pagar
                 </h3>
                 <div
                   class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
@@ -619,7 +698,8 @@
                       </h4>
                       <span
                         class="text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md bg-rose-50 text-rose-600"
-                        >{{ c.tipo_cuenta }} • {{ c.moneda }}</span
+                        >{{ c.tipo_cuenta === 'Pagar' ? 'A Terceros' :
+                        c.tipo_cuenta }} • {{ c.moneda }}</span
                       >
                     </div>
                     <div class="mt-4">
@@ -676,21 +756,21 @@
                     <p
                       class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1"
                     >
-                      Flujo Neto Mensual (Soles)
+                      Flujo Neto Mensual Fijo (Soles)
                     </p>
-                    <h2 class="text-3xl font-extrabold">
+                    <h2 class="text-3xl md:text-4xl font-extrabold">
                       S/ {{ (flujoNetoMensual).toFixed(2) }}
                     </h2>
-                    <p class="text-[10px] text-slate-300 mt-1">
-                      Este es el dinero que te queda libre después de pagar tus
-                      gastos fijos (sin contar deudas pasadas).
+                    <p class="text-[10px] md:text-xs text-slate-300 mt-1">
+                      Dinero proyectado que te quedará libre tras cubrir tus
+                      pagos fijos seguros.
                     </p>
                   </div>
                   <button
                     @click="showModal = false; tab = 'ajustes'"
-                    class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-xs font-bold transition border border-white/20 whitespace-nowrap"
+                    class="bg-white/10 hover:bg-white/20 text-white px-5 py-3 rounded-xl text-sm font-bold transition border border-white/20 whitespace-nowrap"
                   >
-                    + Crear Nuevo
+                    + Añadir Proyección
                   </button>
                 </div>
 
@@ -704,7 +784,7 @@
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
                         Ingresos Fijos (Seguros)
                       </h3>
-                      <span class="text-emerald-600 font-bold"
+                      <span class="text-emerald-600 font-extrabold text-lg"
                         >S/ {{ totalIngresosFijos.toFixed(2) }}</span
                       >
                     </div>
@@ -727,7 +807,7 @@
                           <p
                             class="text-[10px] font-medium text-slate-500 mt-0.5"
                           >
-                            Día tope: {{ pago.dia_cobro }}
+                            Día tope estimado: {{ pago.dia_cobro }}
                           </p>
                         </div>
                         <div class="font-extrabold text-emerald-600">
@@ -746,7 +826,7 @@
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
                         Gastos Fijos (Obligatorios)
                       </h3>
-                      <span class="text-rose-600 font-bold"
+                      <span class="text-rose-600 font-extrabold text-lg"
                         >S/ {{ totalGastosFijos.toFixed(2) }}</span
                       >
                     </div>
@@ -769,7 +849,7 @@
                           <p
                             class="text-[10px] font-medium text-slate-500 mt-0.5"
                           >
-                            Día pago: {{ pago.dia_cobro }}
+                            Día de pago: {{ pago.dia_cobro }}
                           </p>
                         </div>
                         <div class="font-extrabold text-slate-900">
@@ -886,7 +966,7 @@
                     @click="tab = 'pagos'"
                     class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
                   >
-                    Proyección Mensual
+                    Proyección Mensual de Flujo
                     <span class="text-slate-400">&rarr;</span>
                   </button>
                   <button
@@ -911,47 +991,63 @@
                   <h3
                     class="font-bold text-slate-800 mb-4 border-b border-slate-50 pb-3 text-sm md:text-base"
                   >
-                    Crear Cuenta o Deuda
+                    Crear Activo o Pasivo
                   </h3>
                   <input
                     type="text"
                     v-model="nuevaCuenta.nombre"
-                    placeholder="Nombre (Ej: BBVA, Auto)"
+                    placeholder="Nombre (Ej: BBVA, Préstamo, Juan)"
                     class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                   />
                   <div class="flex gap-2 mb-3">
                     <select
                       v-model="nuevaCuenta.tipo_cuenta"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
                     >
-                      <optgroup label="Activos">
-                        <option value="Debito">Débito</option>
+                      <optgroup label="Mis Activos (Dinero a favor)">
+                        <option value="Debito">Débito (Uso diario)</option>
                         <option value="Efectivo">Efectivo</option>
                         <option value="Ahorro">Ahorro / Alcancía</option>
+                        <option value="Cobrar">
+                          Por Cobrar (Me deben dinero)
+                        </option>
                       </optgroup>
-                      <optgroup label="Pasivos">
+                      <optgroup label="Mis Pasivos (Deudas)">
                         <option value="Credito">Tarjeta Crédito</option>
-                        <option value="Prestamo">Préstamo / Cuotas</option>
+                        <option value="Prestamo">
+                          Préstamo Bancario / Cuotas
+                        </option>
+                        <option value="Pagar">
+                          Por Pagar (Debo a alguien)
+                        </option>
                       </optgroup>
                     </select>
                     <select
                       v-model="nuevaCuenta.moneda"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
                     >
                       <option value="PEN">Soles (S/)</option>
                       <option value="USD">Dólares ($)</option>
                     </select>
                   </div>
+
                   <template
-                    v-if="['Debito', 'Efectivo', 'Ahorro'].includes(nuevaCuenta.tipo_cuenta)"
+                    v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
                   >
+                    <p
+                      v-if="nuevaCuenta.tipo_cuenta === 'Cobrar'"
+                      class="text-[10px] text-slate-500 mb-2"
+                    >
+                      Registra cuánto dinero te debe esta persona actualmente.
+                    </p>
                     <input
                       type="number"
                       v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Saldo Actual a favor"
+                      placeholder="Saldo a favor"
                       class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                     />
                   </template>
+
                   <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
                     <input
                       type="number"
@@ -962,7 +1058,7 @@
                     <input
                       type="number"
                       v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Deuda Actual (Ingresa en positivo)"
+                      placeholder="Deuda Actual (En positivo)"
                       class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                     />
                     <div class="flex gap-2 mb-5">
@@ -980,23 +1076,25 @@
                       />
                     </div>
                   </template>
-                  <template v-else-if="nuevaCuenta.tipo_cuenta === 'Prestamo'">
+
+                  <template v-else>
                     <p class="text-[10px] text-slate-500 mb-2 leading-tight">
-                      Registra la deuda total que te falta pagar. Se guardará
-                      como saldo negativo.
+                      Registra la deuda total que tienes pendiente de pagar. (El
+                      sistema la volverá negativa).
                     </p>
                     <input
                       type="number"
                       v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Deuda Total Pendiente (En positivo)"
+                      placeholder="Deuda Pendiente (En positivo)"
                       class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none border-l-4 border-l-rose-500"
                     />
                   </template>
+
                   <button
                     @click="guardarCuenta"
                     class="w-full bg-slate-900 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-md active:scale-95"
                   >
-                    Guardar Elemento
+                    Guardar Cuenta/Deuda
                   </button>
                 </div>
 
@@ -1007,25 +1105,25 @@
                   <h3
                     class="font-bold text-slate-800 mb-2 border-b border-slate-50 pb-3 text-sm md:text-base"
                   >
-                    Nuevo Flujo Fijo (Calendario)
+                    Nuevo Flujo Fijo (Proyección)
                   </h3>
                   <input
                     type="text"
                     v-model="nuevoPagoFijo.nombre"
-                    placeholder="Nombre (Ej: Sueldo, Netflix)"
+                    placeholder="Nombre (Ej: Sueldo, Alquiler, Internet)"
                     class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                   />
                   <div class="flex gap-2 mb-3">
                     <select
                       v-model="nuevoPagoFijo.tipo_flujo"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
                     >
-                      <option value="Ingreso">Ingreso Seguro</option>
-                      <option value="Egreso">Gasto Fijo</option>
+                      <option value="Ingreso">Ingreso Fijo</option>
+                      <option value="Egreso">Gasto Fijo Obligatorio</option>
                     </select>
                     <select
                       v-model="nuevoPagoFijo.moneda"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
                     >
                       <option value="PEN">Soles (S/)</option>
                       <option value="USD">Dólares ($)</option>
@@ -1041,7 +1139,7 @@
                     <input
                       type="number"
                       v-model="nuevoPagoFijo.dia_cobro"
-                      placeholder="Día del mes"
+                      placeholder="Día del mes (1-31)"
                       min="1"
                       max="31"
                       class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
@@ -1051,7 +1149,7 @@
                     @click="guardarPagoFijo"
                     class="w-full bg-slate-900 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition active:scale-95 shadow-md"
                   >
-                    Guardar en Proyección
+                    Añadir a Proyección
                   </button>
                 </div>
 
@@ -1067,12 +1165,12 @@
                   <input
                     type="text"
                     v-model="nuevaCat.nombre"
-                    placeholder="Nombre de Categoría"
+                    placeholder="Nombre (Ej: Alimentación, Transporte)"
                     class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                   />
                   <select
                     v-model="nuevaCat.tipo_flujo"
-                    class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                    class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
                   >
                     <option value="Ingreso">Ingreso</option>
                     <option value="Egreso">Gasto (Egreso)</option>
@@ -1128,7 +1226,7 @@
                 stroke-width="2"
                 d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
               ></path></svg
-            ><span class="text-[9px] font-bold">Cuentas</span>
+            ><span class="text-[9px] font-bold">Activos</span>
           </button>
           <button
             @click="tab = 'deudas'"
@@ -1147,8 +1245,9 @@
                 stroke-width="2"
                 d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
               ></path></svg
-            ><span class="text-[9px] font-bold">Deudas</span>
+            ><span class="text-[9px] font-bold">Pasivos</span>
           </button>
+
           <div class="relative -top-5">
             <button
               @click="showModal = true"
@@ -1169,6 +1268,7 @@
               </svg>
             </button>
           </div>
+
           <button
             @click="tab = 'historial'"
             :class="tab === 'historial' ? 'text-slate-900' : 'text-slate-400'"
@@ -1238,7 +1338,7 @@
               :class="tipoOperacion === 'Egreso' ? 'bg-white shadow-sm text-slate-900 font-bold' : 'text-slate-500 font-medium'"
               class="flex-1 py-2 text-xs md:text-sm rounded-lg transition"
             >
-              Gasto / Pago
+              Gasto
             </button>
             <button
               @click="tipoOperacion = 'Ingreso'"
@@ -1294,7 +1394,7 @@
             <input
               type="text"
               v-model="tx.descripcion"
-              placeholder="Concepto (Ej. Pago luz, Almuerzo)"
+              placeholder="Concepto (Ej. Almuerzo)"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none"
             />
           </div>
