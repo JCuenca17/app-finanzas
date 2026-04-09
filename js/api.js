@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Gestor de conexiones al Backend (Python)
 
 const API_URL = "https://finanzas-backend-dgv5.onrender.com";
 
@@ -12,12 +11,14 @@ export const api = {
       resCategorias,
       resPagosFijos,
       resEtiquetas,
+      resCashback,
     ] = await Promise.all([
       fetch(`${API_URL}/cuentas/${userId}`),
       fetch(`${API_URL}/historial/${userId}`),
       fetch(`${API_URL}/categorias/`),
       fetch(`${API_URL}/pagos_fijos/${userId}`),
       fetch(`${API_URL}/etiquetas/${userId}`),
+      fetch(`${API_URL}/bolsa_cashback/${userId}`),
     ]);
 
     return {
@@ -32,10 +33,21 @@ export const api = {
         ? (await resPagosFijos.json()).pagos_fijos
         : [],
       etiquetas: resEtiquetas.ok ? (await resEtiquetas.json()).etiquetas : [],
+      bolsaCashback: resCashback.ok
+        ? await resCashback.json()
+        : { saldo_inicial: 0, generado: 0, usado: 0, disponible: 0 },
     };
   },
 
-  // --- TRANSACCIONES ---
+  async actualizarBolsaCashback(userId, datos) {
+    return await fetch(`${API_URL}/bolsa_cashback/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+
+  // ... (El resto de tus llamadas POST, PUT y DELETE para transacciones, cuentas, etc. se mantiene igual, no las borraré aquí, tú ya las tienes en tu api.js)
   async guardarTransaccion(datos) {
     return await fetch(`${API_URL}/transacciones/`, {
       method: "POST",
@@ -53,8 +65,6 @@ export const api = {
   async eliminarTransaccion(id) {
     return await fetch(`${API_URL}/transacciones/${id}`, { method: "DELETE" });
   },
-
-  // --- PAGOS FIJOS (PROYECCIÓN) ---
   async guardarPagoFijo(datos) {
     return await fetch(`${API_URL}/pagos_fijos/`, {
       method: "POST",
@@ -72,8 +82,6 @@ export const api = {
   async eliminarPagoFijo(id) {
     return await fetch(`${API_URL}/pagos_fijos/${id}`, { method: "DELETE" });
   },
-
-  // --- CUENTAS ---
   async guardarCuenta(datos) {
     return await fetch(`${API_URL}/cuentas/`, {
       method: "POST",
@@ -91,8 +99,6 @@ export const api = {
   async eliminarCuenta(id) {
     return await fetch(`${API_URL}/cuentas/${id}`, { method: "DELETE" });
   },
-
-  // --- CATEGORÍAS ---
   async guardarCategoria(datos) {
     return await fetch(`${API_URL}/categorias/`, {
       method: "POST",
@@ -110,8 +116,6 @@ export const api = {
   async eliminarCategoria(id) {
     return await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
   },
-
-  // --- ETIQUETAS / CONTACTOS ---
   async guardarEtiqueta(datos) {
     return await fetch(`${API_URL}/etiquetas/`, {
       method: "POST",
