@@ -1,11 +1,18 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Cálculos Matemáticos y Financieros
+// ARCHIVO: Composable de Cálculos Matemáticos (EFECTO CASCADA)
 
 const { computed } = window.Vue;
 
 export function useCalculations(data, ui) {
-  const { cuentas, historial, pagosFijos, etiquetas, categorias } = data;
+  const {
+    cuentas,
+    historial,
+    pagosFijos,
+    etiquetas,
+    categorias,
+    bolsaCashback,
+  } = data;
   const { tagSearch, tipoOperacion } = ui;
 
   const formatoMoneda = (monto, moneda) => {
@@ -30,30 +37,24 @@ export function useCalculations(data, ui) {
         nombre: "",
         operaciones: [],
       };
-
     const etiquetaIdSeleccionada = parseInt(tagSearch.value);
     const etiquetaObj = etiquetas.value.find(
       (e) => e.id === etiquetaIdSeleccionada,
     );
-    const nombreEtiqueta = etiquetaObj ? etiquetaObj.nombre : "";
-
     const operaciones = historial.value.filter(
       (h) => h.etiqueta_id === etiquetaIdSeleccionada,
     );
-
     let ingresos = 0;
     let egresos = 0;
-
     operaciones.forEach((op) => {
       if (op.tipo_flujo === "Ingreso") ingresos += op.monto;
       if (op.tipo_flujo === "Egreso") egresos += op.monto;
     });
-
     return {
       ingresos,
       egresos,
       balance: ingresos - egresos,
-      nombre: nombreEtiqueta,
+      nombre: etiquetaObj ? etiquetaObj.nombre : "",
       operaciones,
     };
   });
@@ -109,12 +110,11 @@ export function useCalculations(data, ui) {
     return saldos;
   });
 
+  // NUEVA MATEMÁTICA DEL TERMÓMETRO (EFECTO CASCADA)
   const diagnosticoDeuda = computed(() => {
+    // 1. Dinero Base y Flujo
     const liquidez = saldosLiquidos.value.PEN;
     const ahorro = saldosAhorro.value.PEN;
-    const deuda = deudasActivas.value
-      .filter((c) => c.moneda === "PEN")
-      .reduce((acc, c) => acc + Math.abs(c.saldo_actual), 0);
     const ingresosProyectados = pagosFijosIngresos.value
       .filter((p) => p.moneda === "PEN")
       .reduce((acc, p) => acc + p.monto, 0);
@@ -122,15 +122,40 @@ export function useCalculations(data, ui) {
       .filter((p) => p.moneda === "PEN")
       .reduce((acc, p) => acc + p.monto, 0);
 
+    // 2. Dinero Listo para Deudas (La Placa Izquierda del Termómetro)
     const poderAdquisitivoLibre =
-      liquidez + (ingresosProyectados - gastosProyectados);
-    const balance = poderAdquisitivoLibre - deuda;
+      liquidez + ingresosProyectados - gastosProyectados;
+
+    // 3. Evaluar las Cuotas del Mes (La Placa Derecha del Termómetro)
+    let cuotasTarjetas = 0;
+    let cuotasOtros = 0;
+    let deudaTotalAbsoluta = 0;
+
+    deudasActivas.value
+      .filter((c) => c.moneda === "PEN")
+      .forEach((c) => {
+        deudaTotalAbsoluta += Math.abs(c.saldo_actual);
+        const pagoMes = parseFloat(c.pago_del_mes) || 0;
+        if (c.tipo_cuenta === "Credito") cuotasTarjetas += pagoMes;
+        else cuotasOtros += pagoMes;
+      });
+
+    // 4. El Escudo del Cashback (Solo aplica a Tarjetas)
+    const cashbackDisponible = bolsaCashback.value.disponible || 0;
+    const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
+    const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
+
+    // 5. El Veredicto (El Sobrante real)
+    const balanceNetoMes = poderAdquisitivoLibre - obligacionesNetasMes;
 
     let result = {
       liquidez,
-      deuda,
       ingresosProyectados,
       poderAdquisitivoLibre,
+      obligacionesNetasMes,
+      cuotasOriginales: cuotasTarjetas + cuotasOtros,
+      deudaTotalAbsoluta,
+      cashbackAplicado: Math.min(cuotasTarjetas, cashbackDisponible),
       estado: "",
       mensaje: "",
       textColor: "",
@@ -141,9 +166,9 @@ export function useCalculations(data, ui) {
       colorGrafico: "",
     };
 
-    if (deuda === 0) {
+    if (obligacionesNetasMes === 0) {
       result.porcentajeCobertura = 100;
-      result.estado = "Sin obligaciones activas";
+      result.estado = "Mes Despejado";
       result.textColor = "text-emerald-600";
       result.iconBg = "bg-emerald-500";
       result.borderColor = "border-emerald-200";
@@ -151,36 +176,36 @@ export function useCalculations(data, ui) {
         "bg-emerald-50 border-emerald-200 text-emerald-800";
       result.colorGrafico = "#10b981";
       result.mensaje =
-        "Excelente estado de solvencia. No existen pasivos registrados en Soles pendientes de pago.";
+        "Excelente. No tienes cuotas programadas para pagar este mes.";
     } else {
-      let cob = (poderAdquisitivoLibre / deuda) * 100;
+      let cob = (poderAdquisitivoLibre / obligacionesNetasMes) * 100;
       result.porcentajeCobertura = Math.round(Math.max(0, Math.min(cob, 100)));
 
-      if (balance >= 0) {
-        result.estado = "Superávit Proyectado";
+      if (balanceNetoMes >= 0) {
+        result.estado = "Cobertura Segura";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
           "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
-        result.mensaje = `Tras cubrir las obligaciones de crédito y gastos fijos, existirá un excedente líquido de S/ ${balance.toFixed(2)}.`;
-      } else if (balance + ahorro >= 0) {
+        result.mensaje = `Tras pagar las cuotas de este mes, te sobrarán S/ ${balanceNetoMes.toFixed(2)} libres.`;
+      } else if (balanceNetoMes + ahorro >= 0) {
         result.estado = "Alerta Amarilla";
         result.textColor = "text-amber-600";
         result.iconBg = "bg-amber-500";
         result.borderColor = "border-amber-200";
         result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
         result.colorGrafico = "#f59e0b";
-        result.mensaje = `Déficit líquido proyectado de S/ ${Math.abs(balance).toFixed(2)}. Será necesario comprometer capital de la reserva de ahorros para evitar mora.`;
+        result.mensaje = `Déficit de S/ ${Math.abs(balanceNetoMes).toFixed(2)} para cubrir tus cuotas. Tendrás que retirar dinero de tus Ahorros.`;
       } else {
-        result.estado = "Insolvencia Crítica";
+        result.estado = "Riesgo de Mora";
         result.textColor = "text-rose-600";
         result.iconBg = "bg-rose-500";
         result.borderColor = "border-rose-200";
         result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
         result.colorGrafico = "#f43f5e";
-        result.mensaje = `El déficit supera la reserva total de ahorros en S/ ${Math.abs(balance + ahorro).toFixed(2)}. Se requiere reestructuración de deuda inmediata.`;
+        result.mensaje = `Tus ahorros no alcanzan. Te faltan S/ ${Math.abs(balanceNetoMes + ahorro).toFixed(2)} para cubrir las cuotas de este mes.`;
       }
     }
     return result;

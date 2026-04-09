@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos y CRUD (Con soporte estricto para Cashback)
+// ARCHIVO: Composable de Gestión de Datos y CRUD (Con soporte estricto para Cashback y Cuotas)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -14,7 +14,6 @@ export function useFinanceData(
   tab,
   onDatosActualizados,
 ) {
-  // Estado Global
   const cuentas = ref([]);
   const categorias = ref([]);
   const etiquetas = ref([]);
@@ -27,17 +26,14 @@ export function useFinanceData(
     disponible: 0,
   });
 
-  // Estados para la Edición (CRUD)
   const editandoTx = ref({ estado: false, id: null });
   const editandoPagoFijo = ref({ estado: false, id: null });
   const editandoCuenta = ref({ estado: false, id: null });
   const editandoCat = ref({ estado: false, id: null });
   const editandoEtiq = ref({ estado: false, id: null });
 
-  // Bandera de seguridad para operaciones exclusivas de Cashback
   const isRescateCashback = ref(false);
 
-  // Formularios
   const tx = ref({
     monto: "",
     cashback: "",
@@ -47,7 +43,6 @@ export function useFinanceData(
     categoria_id: "",
     etiqueta_id: "",
   });
-
   const txTransf = ref({
     origen_id: "",
     destino_id: "",
@@ -57,6 +52,7 @@ export function useFinanceData(
   });
   const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
   const nuevaEtiq = ref({ nombre: "" });
+  // NUEVO CAMPO: pago_del_mes
   const nuevaCuenta = ref({
     nombre: "",
     tipo_cuenta: "Debito",
@@ -65,6 +61,7 @@ export function useFinanceData(
     limite: "",
     dia_corte: "",
     dia_pago: "",
+    pago_del_mes: "",
   });
   const nuevoPagoFijo = ref({
     nombre: "",
@@ -101,14 +98,12 @@ export function useFinanceData(
           categorias.value.find((c) => c.id == h.categoria)?.nombre ||
           h.categoria,
       }));
-
       if (onDatosActualizados) onDatosActualizados();
     } catch (error) {
       mostrarToast("Error de conexión con el servidor", "error");
     }
   };
 
-  // --- LÓGICA DE CASHBACK ---
   const editarCashbackInicial = async () => {
     const input = window.prompt(
       "Ingresa tu Cashback Histórico acumulado de otros meses (S/):",
@@ -136,17 +131,13 @@ export function useFinanceData(
     const tarjetas = cuentas.value.filter((c) => c.tipo_cuenta === "Credito");
     if (tarjetas.length === 0) {
       mostrarToast(
-        "Debes registrar una Tarjeta de Crédito en tus Ajustes para poder abonarle el Cashback",
+        "Debes registrar una Tarjeta de Crédito en tus Ajustes",
         "warning",
       );
       return;
     }
-
     if (bolsaCashback.value.disponible <= 0) {
-      mostrarToast(
-        "No tienes saldo de Cashback disponible para usar",
-        "warning",
-      );
+      mostrarToast("No tienes saldo de Cashback disponible", "warning");
       return;
     }
 
@@ -181,14 +172,12 @@ export function useFinanceData(
     showModal.value = true;
   };
 
-  // --- LÓGICA DE TRANSACCIONES ---
   const abrirModalTransaccion = (itemAEditar = null) => {
     if (itemAEditar) {
       editandoTx.value = { estado: true, id: itemAEditar.id };
       tipoOperacion.value = itemAEditar.tipo_flujo;
       isRescateCashback.value =
         itemAEditar.categoria_nombre === "Rescate Cashback";
-
       tx.value = {
         monto: itemAEditar.monto,
         cashback: itemAEditar.cashback || "",
@@ -235,17 +224,17 @@ export function useFinanceData(
         return;
       }
       if (txTransf.value.origen_id === txTransf.value.destino_id) {
-        mostrarToast("Las cuentas no pueden ser iguales", "warning");
+        mostrarToast("Cuentas iguales", "warning");
         cargando.value = false;
         return;
       }
+
       let catSalida = categorias.value.find(
         (c) => c.nombre === "Transferencia Saliente",
       );
       let catEntrada = categorias.value.find(
         (c) => c.nombre === "Transferencia Entrante",
       );
-
       if (!catSalida) {
         await api.guardarCategoria({
           nombre: "Transferencia Saliente",
@@ -291,9 +280,9 @@ export function useFinanceData(
         ]);
         txTransf.value.monto = "";
         txTransf.value.descripcion = "";
-        mostrarToast("Transferencia registrada con éxito", "success");
+        mostrarToast("Transferencia registrada", "success");
       } catch (error) {
-        mostrarToast("Ocurrió un error en el servidor", "error");
+        mostrarToast("Error servidor", "error");
       }
     } else {
       if (
@@ -302,27 +291,21 @@ export function useFinanceData(
         !tx.value.monto ||
         !tx.value.descripcion
       ) {
-        mostrarToast(
-          "Por favor, llena todos los campos obligatorios",
-          "warning",
-        );
+        mostrarToast("Llenar campos obligatorios", "warning");
         cargando.value = false;
         return;
       }
-
-      // Validaciones de seguridad exclusivas para el uso de Cashback
       if (isRescateCashback.value) {
         const montoAbonar = parseFloat(tx.value.monto);
         const cuentaSeleccionada = cuentas.value.find(
           (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
         );
-
         if (
           !editandoTx.value.estado &&
           montoAbonar > bolsaCashback.value.disponible
         ) {
           mostrarToast(
-            `Solo tienes S/ ${bolsaCashback.value.disponible.toFixed(2)} disponibles para abonar`,
+            `Solo S/ ${bolsaCashback.value.disponible.toFixed(2)} disponibles`,
             "warning",
           );
           cargando.value = false;
@@ -332,15 +315,11 @@ export function useFinanceData(
           !cuentaSeleccionada ||
           cuentaSeleccionada.tipo_cuenta !== "Credito"
         ) {
-          mostrarToast(
-            `El cashback solo se puede abonar a una Tarjeta de Crédito`,
-            "warning",
-          );
+          mostrarToast(`Solo para Tarjetas de Crédito`, "warning");
           cargando.value = false;
           return;
         }
       }
-
       try {
         const datosParaBD = {
           ...tx.value,
@@ -352,20 +331,19 @@ export function useFinanceData(
           monto: parseFloat(tx.value.monto),
           cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
         };
-
         if (editandoTx.value.estado) {
           await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
-          mostrarToast("Operación actualizada", "success");
+          mostrarToast("Actualizada", "success");
         } else {
           await api.guardarTransaccion(datosParaBD);
-          mostrarToast("Operación registrada", "success");
+          mostrarToast("Registrada", "success");
         }
         tx.value.monto = "";
         tx.value.descripcion = "";
         tx.value.cashback = "";
         tx.value.etiqueta_id = "";
       } catch (error) {
-        mostrarToast("Ocurrió un error en el servidor", "error");
+        mostrarToast("Error servidor", "error");
       }
     }
     showModal.value = false;
@@ -373,13 +351,11 @@ export function useFinanceData(
     cargando.value = false;
   };
 
-  // --- LÓGICA PAGOS FIJOS ---
   const abrirModalPagoFijo = (pagoAEditar) => {
     editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
     nuevoPagoFijo.value = { ...pagoAEditar };
     tab.value = "ajustes";
   };
-
   const cancelarEdicionPago = () => {
     editandoPagoFijo.value = { estado: false, id: null };
     nuevoPagoFijo.value = {
@@ -390,14 +366,13 @@ export function useFinanceData(
       moneda: "PEN",
     };
   };
-
   const guardarPagoFijo = async () => {
     if (
       !nuevoPagoFijo.value.nombre ||
       !nuevoPagoFijo.value.monto ||
       !nuevoPagoFijo.value.dia_cobro
     ) {
-      mostrarToast("Faltan datos en la proyección", "warning");
+      mostrarToast("Faltan datos", "warning");
       return;
     }
     cargando.value = true;
@@ -412,20 +387,19 @@ export function useFinanceData(
       };
       if (editandoPagoFijo.value.estado) {
         await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
-        mostrarToast("Proyección actualizada con éxito", "success");
+        mostrarToast("Actualizada", "success");
       } else {
         await api.guardarPagoFijo(payload);
-        mostrarToast("Proyección guardada con éxito", "success");
+        mostrarToast("Guardada", "success");
       }
       cancelarEdicionPago();
       await cargarDatos();
     } catch (error) {
-      mostrarToast("Error de servidor", "error");
+      mostrarToast("Error", "error");
     }
     cargando.value = false;
   };
 
-  // --- LÓGICA CUENTAS ---
   const abrirModalCuenta = (cuentaAEditar) => {
     editandoCuenta.value = { estado: true, id: cuentaAEditar.id_cuenta };
     nuevaCuenta.value = {
@@ -436,10 +410,10 @@ export function useFinanceData(
       limite: cuentaAEditar.limite || "",
       dia_corte: cuentaAEditar.dia_corte || "",
       dia_pago: cuentaAEditar.dia_pago || "",
+      pago_del_mes: cuentaAEditar.pago_del_mes || "",
     };
     tab.value = "ajustes";
   };
-
   const cancelarEdicionCuenta = () => {
     editandoCuenta.value = { estado: false, id: null };
     nuevaCuenta.value = {
@@ -450,12 +424,13 @@ export function useFinanceData(
       limite: "",
       dia_corte: "",
       dia_pago: "",
+      pago_del_mes: "",
     };
   };
 
   const guardarCuenta = async () => {
     if (!nuevaCuenta.value.nombre) {
-      mostrarToast("El nombre de la cuenta es obligatorio", "warning");
+      mostrarToast("Nombre obligatorio", "warning");
       return;
     }
     cargando.value = true;
@@ -465,7 +440,6 @@ export function useFinanceData(
         ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.value.tipo_cuenta)
       )
         saldo = -Math.abs(saldo);
-
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaCuenta.value.nombre,
@@ -484,24 +458,23 @@ export function useFinanceData(
           nuevaCuenta.value.tipo_cuenta === "Credito"
             ? parseInt(nuevaCuenta.value.dia_pago || 0)
             : null,
+        pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
       };
-
       if (editandoCuenta.value.estado) {
         await api.actualizarCuenta(editandoCuenta.value.id, payload);
-        mostrarToast("Cuenta actualizada correctamente", "success");
+        mostrarToast("Actualizada", "success");
       } else {
         await api.guardarCuenta(payload);
-        mostrarToast("Cuenta registrada correctamente", "success");
+        mostrarToast("Registrada", "success");
       }
       cancelarEdicionCuenta();
       await cargarDatos();
     } catch (error) {
-      mostrarToast("Error de conexión", "error");
+      mostrarToast("Error", "error");
     }
     cargando.value = false;
   };
 
-  // --- LÓGICA CATEGORIAS ---
   const abrirModalCategoria = (catAEditar) => {
     editandoCat.value = { estado: true, id: catAEditar.id };
     nuevaCat.value = {
@@ -509,79 +482,54 @@ export function useFinanceData(
       tipo_flujo: catAEditar.tipo_flujo,
     };
   };
-
   const cancelarEdicionCategoria = () => {
     editandoCat.value = { estado: false, id: null };
     nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
   };
-
   const guardarCategoria = async () => {
-    if (!nuevaCat.value.nombre) {
-      mostrarToast("Ponle un nombre a la categoría", "warning");
-      return;
-    }
+    if (!nuevaCat.value.nombre) return;
     cargando.value = true;
     try {
-      if (editandoCat.value.estado) {
+      if (editandoCat.value.estado)
         await api.actualizarCategoria(editandoCat.value.id, nuevaCat.value);
-        mostrarToast("Categoría actualizada", "success");
-      } else {
-        await api.guardarCategoria(nuevaCat.value);
-        mostrarToast("Categoría creada", "success");
-      }
+      else await api.guardarCategoria(nuevaCat.value);
       cancelarEdicionCategoria();
       await cargarDatos();
-    } catch (error) {
-      mostrarToast("Error al guardar", "error");
+    } catch (e) {
+      mostrarToast("Error", "error");
     }
     cargando.value = false;
   };
 
-  // --- LÓGICA ETIQUETAS ---
   const abrirModalEtiqueta = (etiqAEditar) => {
     editandoEtiq.value = { estado: true, id: etiqAEditar.id };
     nuevaEtiq.value = { nombre: etiqAEditar.nombre };
   };
-
   const cancelarEdicionEtiqueta = () => {
     editandoEtiq.value = { estado: false, id: null };
     nuevaEtiq.value = { nombre: "" };
   };
-
   const guardarEtiqueta = async () => {
-    if (!nuevaEtiq.value.nombre) {
-      mostrarToast("Asigna un nombre al contacto o etiqueta", "warning");
-      return;
-    }
+    if (!nuevaEtiq.value.nombre) return;
     cargando.value = true;
     try {
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaEtiq.value.nombre,
       };
-      if (editandoEtiq.value.estado) {
+      if (editandoEtiq.value.estado)
         await api.actualizarEtiqueta(editandoEtiq.value.id, payload);
-        mostrarToast("Contacto actualizado", "success");
-      } else {
-        await api.guardarEtiqueta(payload);
-        mostrarToast("Contacto creado", "success");
-      }
+      else await api.guardarEtiqueta(payload);
       cancelarEdicionEtiqueta();
       await cargarDatos();
-    } catch (error) {
-      mostrarToast("Error al guardar contacto", "error");
+    } catch (e) {
+      mostrarToast("Error", "error");
     }
     cargando.value = false;
   };
 
-  // --- ELIMINAR GENERICO ---
   const eliminarRegistro = async (tipo, id) => {
-    if (
-      !confirm(
-        "¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.",
-      )
-    )
-      return;
+    if (!confirm("¿Seguro de eliminar?")) return;
     cargando.value = true;
     try {
       if (tipo === "transaccion") await api.eliminarTransaccion(id);
@@ -589,11 +537,10 @@ export function useFinanceData(
       else if (tipo === "cuenta") await api.eliminarCuenta(id);
       else if (tipo === "categoria") await api.eliminarCategoria(id);
       else if (tipo === "etiqueta") await api.eliminarEtiqueta(id);
-
       await cargarDatos();
-      mostrarToast("Registro eliminado", "success");
+      mostrarToast("Eliminado", "success");
     } catch (error) {
-      mostrarToast("No se pudo eliminar. Puede estar en uso.", "error");
+      mostrarToast("Error al eliminar", "error");
     }
     cargando.value = false;
   };

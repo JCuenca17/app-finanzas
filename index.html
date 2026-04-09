@@ -417,7 +417,6 @@
                         <button
                           @click="abrirModalTransaccion(item)"
                           class="text-slate-300 hover:text-blue-500 transition"
-                          aria-label="Editar"
                         >
                           <svg
                             class="w-4 h-4"
@@ -436,7 +435,6 @@
                         <button
                           @click="eliminarRegistro('transaccion', item.id)"
                           class="text-slate-300 hover:text-rose-500 transition"
-                          aria-label="Eliminar"
                         >
                           <svg
                             class="w-4 h-4"
@@ -615,7 +613,7 @@
                     </div>
                     <div>
                       <h3 class="font-extrabold text-lg text-slate-900">
-                        Termómetro de Deuda (PEN)
+                        Termómetro de Deuda del Mes (PEN)
                       </h3>
                       <p
                         class="text-xs font-bold uppercase tracking-widest"
@@ -636,7 +634,7 @@
                           <p
                             class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 leading-tight"
                           >
-                            Dinero Libre a Fin de Mes
+                            Dinero Libre (Tras G. Fijos)
                           </p>
                           <p
                             class="text-xl md:text-2xl font-extrabold text-slate-900"
@@ -646,17 +644,26 @@
                           </p>
                         </div>
                         <div
-                          class="bg-slate-50 p-4 rounded-xl border border-slate-100"
+                          class="bg-slate-50 p-4 rounded-xl border border-slate-100 relative"
                         >
                           <p
                             class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
                           >
-                            Total a Pagar (Deudas)
+                            Cuotas de este mes
                           </p>
                           <p
                             class="text-xl md:text-2xl font-extrabold text-rose-600"
                           >
-                            - S/ {{ diagnosticoDeuda.deuda.toFixed(2) }}
+                            - S/ {{
+                            diagnosticoDeuda.obligacionesNetasMes.toFixed(2) }}
+                          </p>
+                          <p
+                            v-if="diagnosticoDeuda.cashbackAplicado > 0"
+                            class="text-[9px] font-bold text-emerald-600 mt-1 uppercase"
+                          >
+                            ↓ Reducido S/ {{
+                            diagnosticoDeuda.cashbackAplicado.toFixed(2) }} x
+                            Cashback
                           </p>
                         </div>
                       </div>
@@ -700,7 +707,7 @@
                 <h3
                   class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-4"
                 >
-                  Mis Obligaciones a Pagar
+                  Mis Cuotas del Mes a Pagar
                 </h3>
                 <div
                   class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
@@ -747,28 +754,46 @@
                       </div>
                     </div>
                     <div class="mt-4">
-                      <p
-                        class="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold"
+                      <div
+                        class="flex justify-between items-end border-b border-slate-100 pb-3 mb-3"
                       >
-                        Deuda Actual
-                      </p>
-                      <p
-                        class="text-2xl md:text-3xl font-extrabold text-rose-600"
-                      >
-                        {{ formatoMoneda(c.saldo_actual, c.moneda) }}
-                      </p>
+                        <div>
+                          <p
+                            class="text-[10px] md:text-xs text-slate-500 uppercase tracking-wider font-semibold"
+                          >
+                            Cuota de este Mes
+                          </p>
+                          <p
+                            class="text-2xl md:text-3xl font-extrabold text-rose-600"
+                          >
+                            {{ formatoMoneda(c.pago_del_mes || 0, c.moneda) }}
+                          </p>
+                        </div>
+                        <div class="text-right">
+                          <p
+                            class="text-[9px] text-slate-400 uppercase font-semibold"
+                          >
+                            Deuda Total
+                          </p>
+                          <p class="text-sm font-bold text-slate-700">
+                            {{ formatoMoneda(Math.abs(c.saldo_actual), c.moneda)
+                            }}
+                          </p>
+                        </div>
+                      </div>
+
                       <div
                         v-if="c.tipo_cuenta === 'Credito'"
-                        class="mt-3 text-[10px] md:text-xs text-slate-600 bg-slate-50 p-2 md:p-3 rounded-xl border border-slate-100"
+                        class="text-[10px] md:text-xs text-slate-600 bg-slate-50 p-2 md:p-3 rounded-xl border border-slate-100"
                       >
                         <div class="flex justify-between mb-1">
-                          <span>Límite:</span
+                          <span>Límite Total:</span
                           ><span class="font-bold text-slate-900"
                             >{{ formatoMoneda(c.limite || 0, c.moneda) }}</span
                           >
                         </div>
                         <div class="flex justify-between mb-2">
-                          <span>Disponible:</span
+                          <span>Disponible p/ gastar:</span
                           ><span class="font-bold text-emerald-600"
                             >{{ formatoMoneda((c.limite || 0) -
                             Math.abs(c.saldo_actual), c.moneda) }}</span
@@ -816,6 +841,28 @@
                     + Añadir Proyección
                   </button>
                 </div>
+                <div
+                  class="bg-blue-50 border border-blue-100 p-4 md:p-5 rounded-2xl mb-6 text-xs md:text-sm text-blue-800 shadow-sm flex items-start gap-3"
+                >
+                  <svg
+                    class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clip-rule="evenodd"
+                    ></path>
+                  </svg>
+                  <div>
+                    <p class="font-bold mb-1">Nota sobre Pagos Compartidos:</p>
+                    <p>
+                      Si pagas algo en grupo (ej. Plan Spotify), registra aquí
+                      <b>solo tu parte del gasto</b>.
+                    </p>
+                  </div>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <div
                     class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm"
@@ -831,12 +878,6 @@
                       >
                     </div>
                     <div class="divide-y divide-slate-50">
-                      <div
-                        v-if="pagosFijosIngresos.length === 0"
-                        class="py-6 text-center text-slate-500 text-xs md:text-sm"
-                      >
-                        No hay ingresos registrados.
-                      </div>
                       <div
                         v-for="pago in pagosFijosIngresos"
                         :key="pago.id"
@@ -875,9 +916,8 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg>
-                            </button>
-                            <button
+                              </svg></button
+                            ><button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -914,12 +954,6 @@
                       >
                     </div>
                     <div class="divide-y divide-slate-50">
-                      <div
-                        v-if="pagosFijosEgresos.length === 0"
-                        class="py-6 text-center text-slate-500 text-xs md:text-sm"
-                      >
-                        No hay gastos fijos registrados.
-                      </div>
                       <div
                         v-for="pago in pagosFijosEgresos"
                         :key="pago.id"
@@ -958,9 +992,8 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg>
-                            </button>
-                            <button
+                              </svg></button
+                            ><button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1022,10 +1055,6 @@
                   >
                     Análisis Relacional por Contacto / Etiqueta
                   </h3>
-                  <p class="text-[10px] md:text-xs text-slate-500 mb-4">
-                    Selecciona a una persona o etiqueta para ver todo el flujo
-                    de dinero (lo que te depositan vs lo que tú gastas).
-                  </p>
                   <select
                     v-model="tagSearch"
                     class="w-full mb-4 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 bg-slate-50 font-semibold"
@@ -1048,7 +1077,7 @@
                         <p
                           class="text-[10px] md:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1"
                         >
-                          Ingresos con {{ analisisTag.nombre }}
+                          Ingresos
                         </p>
                         <p
                           class="text-xl md:text-2xl font-extrabold text-emerald-600"
@@ -1062,7 +1091,7 @@
                         <p
                           class="text-[10px] md:text-xs font-bold text-rose-400 uppercase tracking-wider mb-1"
                         >
-                          Gastos con {{ analisisTag.nombre }}
+                          Gastos
                         </p>
                         <p
                           class="text-xl md:text-2xl font-extrabold text-rose-600"
@@ -1088,39 +1117,6 @@
                         </p>
                       </div>
                     </div>
-                    <div
-                      class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden mt-4"
-                    >
-                      <div
-                        v-for="item in analisisTag.operaciones"
-                        :key="item.id"
-                        class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition"
-                      >
-                        <div class="min-w-0 pr-4">
-                          <p
-                            class="font-bold text-slate-900 text-xs md:text-sm truncate"
-                          >
-                            {{ item.descripcion }}
-                          </p>
-                          <p class="text-[10px] text-slate-500 mt-0.5">
-                            {{ item.fecha }} • {{ item.categoria_nombre }}
-                          </p>
-                        </div>
-                        <div
-                          class="font-extrabold text-sm whitespace-nowrap"
-                          :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-rose-600'"
-                        >
-                          {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} S/ {{
-                          Math.abs(item.monto).toFixed(2) }}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    v-else-if="tagSearch"
-                    class="text-center py-6 text-slate-500 text-xs md:text-sm"
-                  >
-                    No hay registros asociados a este contacto o etiqueta.
                   </div>
                 </div>
               </div>
@@ -1134,12 +1130,6 @@
                 class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full max-w-4xl mx-auto w-full"
               >
                 <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
-                  <div
-                    v-if="historial.length === 0"
-                    class="p-10 text-center text-slate-500 text-sm"
-                  >
-                    No hay operaciones registradas.
-                  </div>
                   <div
                     v-for="item in historial"
                     :key="item.id"
@@ -1162,8 +1152,7 @@
                           class="text-[10px] md:text-xs font-medium mt-0.5 truncate"
                           :class="item.categoria_nombre && item.categoria_nombre.includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
                         >
-                          {{ item.fecha }} • {{ item.cuenta }} • {{
-                          item.categoria_nombre }}
+                          {{ item.fecha }} • {{ item.cuenta }}
                           <span
                             v-if="item.etiqueta_nombre"
                             class="font-bold text-slate-600 bg-slate-100 px-1 rounded"
@@ -1204,24 +1193,6 @@
                               stroke-linejoin="round"
                               stroke-width="2"
                               d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            ></path>
-                          </svg>
-                        </button>
-                        <button
-                          @click="eliminarRegistro('transaccion', item.id)"
-                          class="text-slate-300 hover:text-rose-500 transition"
-                        >
-                          <svg
-                            class="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                             ></path>
                           </svg>
                         </button>
@@ -1329,6 +1300,7 @@
                       <option value="USD">Dólares ($)</option>
                     </select>
                   </div>
+
                   <template
                     v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
                   >
@@ -1339,6 +1311,7 @@
                       class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                     />
                   </template>
+
                   <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
                     <input
                       type="number"
@@ -1346,12 +1319,20 @@
                       placeholder="Límite Total de la Tarjeta"
                       class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                     />
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Deuda Actual (En positivo)"
-                      class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
+                    <div class="flex gap-2 mb-3">
+                      <input
+                        type="number"
+                        v-model="nuevaCuenta.saldo_inicial"
+                        placeholder="Deuda Total Actual"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                      />
+                      <input
+                        type="number"
+                        v-model="nuevaCuenta.pago_del_mes"
+                        placeholder="Cuota del Mes"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none text-rose-600 font-bold"
+                      />
+                    </div>
                     <div class="flex gap-2 mb-5">
                       <input
                         type="number"
@@ -1367,14 +1348,24 @@
                       />
                     </div>
                   </template>
+
                   <template v-else>
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Deuda Pendiente (En positivo)"
-                      class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none border-l-4 border-l-rose-500"
-                    />
+                    <div class="flex gap-2 mb-5">
+                      <input
+                        type="number"
+                        v-model="nuevaCuenta.saldo_inicial"
+                        placeholder="Deuda Total Pendiente"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none border-l-4 border-l-rose-500"
+                      />
+                      <input
+                        type="number"
+                        v-model="nuevaCuenta.pago_del_mes"
+                        placeholder="Cuota del Mes"
+                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none text-rose-600 font-bold"
+                      />
+                    </div>
                   </template>
+
                   <button
                     @click="guardarCuenta"
                     class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition shadow-md active:scale-95"
@@ -1449,8 +1440,7 @@
                     class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition active:scale-95 shadow-md"
                     :class="editandoPagoFijo.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
                   >
-                    <span v-if="editandoPagoFijo.estado">Guardar Cambios</span
-                    ><span v-else>Añadir a Proyección</span>
+                    Guardar
                   </button>
                 </div>
 
@@ -1480,8 +1470,7 @@
                       v-model="nuevaCat.nombre"
                       placeholder="Nombre"
                       class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                    <select
+                    /><select
                       v-model="nuevaCat.tipo_flujo"
                       class="w-32 px-2 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
                     >
@@ -1491,11 +1480,9 @@
                   </div>
                   <button
                     @click="guardarCategoria"
-                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6"
-                    :class="editandoCat.estado ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-slate-900 hover:bg-slate-800 shadow-md'"
+                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6 bg-slate-900"
                   >
-                    <span v-if="editandoCat.estado">Actualizar Categoría</span
-                    ><span v-else>Añadir Nueva</span>
+                    Guardar
                   </button>
                   <div v-if="!editandoCat.estado">
                     <h4
@@ -1511,11 +1498,7 @@
                       >
                         <span
                           class="text-sm font-semibold text-slate-700 truncate mr-2"
-                          >{{ cat.nombre }}
-                          <span
-                            class="text-[10px] text-slate-400 ml-1 font-medium"
-                            >{{cat.tipo_flujo}}</span
-                          ></span
+                          >{{ cat.nombre }}</span
                         >
                         <div
                           class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
@@ -1592,11 +1575,9 @@
                   </div>
                   <button
                     @click="guardarEtiqueta"
-                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6"
-                    :class="editandoEtiq.estado ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-slate-900 hover:bg-slate-800 shadow-md'"
+                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6 bg-slate-900"
                   >
-                    <span v-if="editandoEtiq.estado">Actualizar Contacto</span
-                    ><span v-else>Añadir Nuevo</span>
+                    Guardar
                   </button>
                   <div v-if="!editandoEtiq.estado">
                     <h4
@@ -1605,12 +1586,6 @@
                       Directorio
                     </h4>
                     <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      <div
-                        v-if="etiquetas.length === 0"
-                        class="text-xs text-slate-500 py-2"
-                      >
-                        Aún no has registrado contactos o etiquetas.
-                      </div>
                       <div
                         v-for="et in etiquetas"
                         :key="et.id"
