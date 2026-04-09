@@ -29,8 +29,10 @@ createApp({
     // Referencias para Gráficos
     const chartCatRef = ref(null);
     const chartFlujoRef = ref(null);
+    const chartDeudaRef = ref(null); // Referencia para el velocímetro
     let chartCatInstance = null;
     let chartFlujoInstance = null;
+    let chartDeudaInstance = null; // Instancia del velocímetro
 
     const tx = ref({
       monto: "",
@@ -100,13 +102,13 @@ createApp({
       return saldos;
     });
 
-    // NUEVO: Algoritmo de Diagnóstico de Deuda
+    // Algoritmo de Diagnóstico de Deuda
     const diagnosticoDeuda = computed(() => {
       const liquidez = saldosLiquidos.value.PEN;
       const ahorro = saldosAhorro.value.PEN;
 
       const deuda = cuentas.value
-        .filter((c) => c.tipo_cuenta === "Credito")
+        .filter((c) => c.tipo_cuenta === "Credito" && c.moneda === "PEN")
         .reduce((acc, c) => acc + Math.abs(c.saldo_actual), 0);
       const ingresosProyectados = pagosFijos.value
         .filter((p) => p.tipo_flujo === "Ingreso" && p.moneda === "PEN")
@@ -125,7 +127,18 @@ createApp({
         iconBg: "",
         borderColor: "",
         alertBoxClasses: "",
+        porcentajeCobertura: 0,
+        colorGrafico: "",
       };
+
+      // Calcular porcentaje para el gráfico (Máximo 100%)
+      if (deuda === 0) {
+        result.porcentajeCobertura = 100;
+      } else {
+        let cob = (poderAdquisitivo / deuda) * 100;
+        if (cob > 100) cob = 100;
+        result.porcentajeCobertura = Math.round(cob);
+      }
 
       if (deuda === 0) {
         result.estado = "Sin deudas";
@@ -134,6 +147,7 @@ createApp({
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
           "bg-emerald-50 text-emerald-800 border-emerald-200";
+        result.colorGrafico = "#10b981";
         result.mensaje =
           "No tienes deudas de tarjeta de crédito activas en Soles.";
       } else if (balance >= 0) {
@@ -143,20 +157,23 @@ createApp({
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
           "bg-emerald-50 text-emerald-800 border-emerald-200";
-        result.mensaje = `Tienes liquidez e ingresos futuros suficientes. Si pagas toda tu deuda, te sobrarán S/ ${balance.toFixed(2)}.`;
+        result.colorGrafico = "#10b981";
+        result.mensaje = `Tienes liquidez e ingresos futuros suficientes. Te sobrarán S/ ${balance.toFixed(2)}.`;
       } else if (balance + ahorro >= 0) {
         result.estado = "Alerta Amarilla";
         result.textColor = "text-amber-600";
         result.iconBg = "bg-amber-500";
         result.borderColor = "border-amber-200";
         result.alertBoxClasses = "bg-amber-50 text-amber-800 border-amber-200";
-        result.mensaje = `Con tu liquidez actual no alcanza. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que usar tus ahorros.`;
+        result.colorGrafico = "#f59e0b";
+        result.mensaje = `Tu liquidez no alcanza. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que usar tus ahorros.`;
       } else {
         result.estado = "Peligro Constante";
         result.textColor = "text-rose-600";
         result.iconBg = "bg-rose-500";
         result.borderColor = "border-rose-200";
         result.alertBoxClasses = "bg-rose-50 text-rose-800 border-rose-200";
+        result.colorGrafico = "#f43f5e";
         result.mensaje = `Aún rompiendo tus ahorros, te faltarán S/ ${Math.abs(balance + ahorro).toFixed(2)} para cubrir la tarjeta.`;
       }
       return result;
@@ -185,7 +202,7 @@ createApp({
         chartFlujoInstance = null;
       }
 
-      // 1. Lógica Gráfico Anillo (Categorías)
+      // 1. Gráfico Anillo (Categorías)
       if (chartCatRef.value) {
         const egresos = historial.value.filter(
           (h) =>
@@ -266,7 +283,7 @@ createApp({
         }
       }
 
-      // 2. Lógica Gráfico Barras (Flujo Ingreso vs Egreso)
+      // 2. Gráfico Barras (Flujo)
       if (chartFlujoRef.value) {
         const ingresosPEN = historial.value
           .filter(
@@ -302,7 +319,7 @@ createApp({
               columnWidth: "50%",
             },
           },
-          colors: ["#10b981", "#f43f5e"], // Esmeralda y Rosa
+          colors: ["#10b981", "#f43f5e"],
           dataLabels: { enabled: false },
           xaxis: {
             categories: ["Ingresos", "Egresos"],
@@ -334,6 +351,51 @@ createApp({
       }
     };
 
+    // Función para renderizar el Velocímetro de Deuda
+    const renderizarGraficoDeuda = () => {
+      if (!chartDeudaRef.value) return;
+      if (chartDeudaInstance) {
+        chartDeudaInstance.destroy();
+        chartDeudaInstance = null;
+      }
+
+      const optionsDeuda = {
+        series: [diagnosticoDeuda.value.porcentajeCobertura],
+        chart: { type: "radialBar", height: 250, fontFamily: "inherit" },
+        plotOptions: {
+          radialBar: {
+            startAngle: -135,
+            endAngle: 135,
+            hollow: { size: "65%" },
+            track: { background: "#f1f5f9", strokeWidth: "100%" },
+            dataLabels: {
+              name: {
+                show: true,
+                fontSize: "12px",
+                color: "#64748b",
+                offsetY: 20,
+              },
+              value: {
+                offsetY: -10,
+                fontSize: "28px",
+                fontWeight: 800,
+                color: "#0f172a",
+                formatter: function (val) {
+                  return val + "%";
+                },
+              },
+            },
+          },
+        },
+        fill: { colors: [diagnosticoDeuda.value.colorGrafico] },
+        stroke: { lineCap: "round" },
+        labels: ["Cobertura de Deuda"],
+      };
+
+      chartDeudaInstance = new ApexCharts(chartDeudaRef.value, optionsDeuda);
+      chartDeudaInstance.render();
+    };
+
     const iniciarSesionGoogle = async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -357,6 +419,10 @@ createApp({
         chartFlujoInstance.destroy();
         chartFlujoInstance = null;
       }
+      if (chartDeudaInstance) {
+        chartDeudaInstance.destroy();
+        chartDeudaInstance = null;
+      }
       cargando.value = false;
     };
 
@@ -376,6 +442,7 @@ createApp({
 
         if (tab.value === "analitica")
           nextTick(() => renderizarGraficosAnalitica());
+        if (tab.value === "cuentas") nextTick(() => renderizarGraficoDeuda());
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
@@ -549,8 +616,10 @@ createApp({
       });
     });
 
+    // Observadores para redibujar gráficos al cambiar de pestaña
     Vue.watch(tab, (newTab) => {
       if (newTab === "analitica") nextTick(() => renderizarGraficosAnalitica());
+      if (newTab === "cuentas") nextTick(() => renderizarGraficoDeuda());
     });
 
     return {
@@ -575,6 +644,7 @@ createApp({
       nuevoPagoFijo,
       chartCatRef,
       chartFlujoRef,
+      chartDeudaRef,
       diagnosticoDeuda,
       iniciarSesionGoogle,
       cerrarSesion,
