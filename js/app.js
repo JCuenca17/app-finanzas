@@ -5,10 +5,10 @@ const { createApp, ref, computed, onMounted } = Vue;
 
 createApp({
   setup() {
-    // --- CREDENCIALES (REEMPLAZA CON LAS TUYAS) ---
-    const SUPABASE_URL = "https://TU-ID-DE-PROYECTO.supabase.co";
-    const SUPABASE_KEY = "TU-ANON-KEY";
-    const API_URL = "https://TU-URL-DE-RENDER.onrender.com";
+    // Credenciales y Rutas
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
+    const API_URL = "https://finanzas-backend-dgv5.onrender.com";
     // ----------------------------------------------
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
