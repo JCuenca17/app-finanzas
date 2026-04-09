@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Cálculos Matemáticos (EFECTO CASCADA)
+// ARCHIVO: Composable de Cálculos Matemáticos (EFECTO CASCADA Y PROYECCIONES)
 
 const { computed } = window.Vue;
 
@@ -110,9 +110,22 @@ export function useCalculations(data, ui) {
     return saldos;
   });
 
-  // NUEVA MATEMÁTICA DEL TERMÓMETRO (EFECTO CASCADA)
-  const diagnosticoDeuda = computed(() => {
-    // 1. Dinero Base y Flujo
+  // NUEVO CÁLCULO: Crédito Disponible en Tarjetas
+  const creditoDisponible = computed(() => {
+    let disponiblePEN = 0;
+    let disponibleUSD = 0;
+    deudasActivas.value
+      .filter((c) => c.tipo_cuenta === "Credito")
+      .forEach((c) => {
+        const disp = (c.limite || 0) - Math.abs(c.saldo_actual);
+        if (c.moneda === "PEN") disponiblePEN += Math.max(0, disp);
+        else disponibleUSD += Math.max(0, disp);
+      });
+    return { PEN: disponiblePEN, USD: disponibleUSD };
+  });
+
+  // NUEVO CÁLCULO: Proyección de Dinero al próximo mes
+  const proyeccionProximoMes = computed(() => {
     const liquidez = saldosLiquidos.value.PEN;
     const ahorro = saldosAhorro.value.PEN;
     const ingresosProyectados = pagosFijosIngresos.value
@@ -122,11 +135,42 @@ export function useCalculations(data, ui) {
       .filter((p) => p.moneda === "PEN")
       .reduce((acc, p) => acc + p.monto, 0);
 
-    // 2. Dinero Listo para Deudas (La Placa Izquierda del Termómetro)
+    let cuotasTarjetas = 0;
+    let cuotasOtros = 0;
+    deudasActivas.value
+      .filter((c) => c.moneda === "PEN")
+      .forEach((c) => {
+        const pagoMes = parseFloat(c.pago_del_mes) || 0;
+        if (c.tipo_cuenta === "Credito") cuotasTarjetas += pagoMes;
+        else cuotasOtros += pagoMes;
+      });
+
+    const cashbackDisponible = bolsaCashback.value.disponible || 0;
+    const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
+    const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
+
+    return (
+      liquidez +
+      ahorro +
+      ingresosProyectados -
+      (gastosProyectados + obligacionesNetasMes)
+    );
+  });
+
+  // TERMÓMETRO DE DEUDA
+  const diagnosticoDeuda = computed(() => {
+    const liquidez = saldosLiquidos.value.PEN;
+    const ahorro = saldosAhorro.value.PEN;
+    const ingresosProyectados = pagosFijosIngresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + p.monto, 0);
+    const gastosProyectados = pagosFijosEgresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + p.monto, 0);
+
     const poderAdquisitivoLibre =
       liquidez + ingresosProyectados - gastosProyectados;
 
-    // 3. Evaluar las Cuotas del Mes (La Placa Derecha del Termómetro)
     let cuotasTarjetas = 0;
     let cuotasOtros = 0;
     let deudaTotalAbsoluta = 0;
@@ -140,12 +184,10 @@ export function useCalculations(data, ui) {
         else cuotasOtros += pagoMes;
       });
 
-    // 4. El Escudo del Cashback (Solo aplica a Tarjetas)
     const cashbackDisponible = bolsaCashback.value.disponible || 0;
     const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
     const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
 
-    // 5. El Veredicto (El Sobrante real)
     const balanceNetoMes = poderAdquisitivoLibre - obligacionesNetasMes;
 
     let result = {
@@ -226,5 +268,7 @@ export function useCalculations(data, ui) {
     saldosLiquidos,
     saldosAhorro,
     diagnosticoDeuda,
+    creditoDisponible,
+    proyeccionProximoMes, // Expuestas al frontend
   };
 }
