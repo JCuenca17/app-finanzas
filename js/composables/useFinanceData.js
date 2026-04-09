@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos y CRUD
+// ARCHIVO: Composable de Gestión de Datos y CRUD (Con soporte para Cashback)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -31,12 +31,14 @@ export function useFinanceData(
   // Formularios
   const tx = ref({
     monto: "",
+    cashback: "",
     descripcion: "",
     fecha: new Date().toISOString().split("T")[0],
     cuenta_id: "",
     categoria_id: "",
     etiqueta_id: "",
   });
+
   const txTransf = ref({
     origen_id: "",
     destino_id: "",
@@ -97,6 +99,7 @@ export function useFinanceData(
       tipoOperacion.value = itemAEditar.tipo_flujo;
       tx.value = {
         monto: itemAEditar.monto,
+        cashback: itemAEditar.cashback || "",
         descripcion: itemAEditar.descripcion,
         fecha: itemAEditar.fecha,
         cuenta_id: itemAEditar.cuenta_id,
@@ -108,6 +111,7 @@ export function useFinanceData(
       tipoOperacion.value = "Egreso";
       tx.value = {
         monto: "",
+        cashback: "",
         descripcion: "",
         fecha: new Date().toISOString().split("T")[0],
         cuenta_id: "",
@@ -178,6 +182,7 @@ export function useFinanceData(
             categoria_id: catSalida.id,
             etiqueta_id: null,
             monto: parseFloat(txTransf.value.monto),
+            cashback: 0,
             fecha: txTransf.value.fecha,
             descripcion: concepto,
           }),
@@ -186,6 +191,7 @@ export function useFinanceData(
             categoria_id: catEntrada.id,
             etiqueta_id: null,
             monto: parseFloat(txTransf.value.monto),
+            cashback: 0,
             fecha: txTransf.value.fecha,
             descripcion: concepto,
           }),
@@ -219,6 +225,7 @@ export function useFinanceData(
             ? parseInt(tx.value.etiqueta_id)
             : null,
           monto: parseFloat(tx.value.monto),
+          cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
         };
 
         if (editandoTx.value.estado) {
@@ -230,6 +237,7 @@ export function useFinanceData(
         }
         tx.value.monto = "";
         tx.value.descripcion = "";
+        tx.value.cashback = "";
         tx.value.etiqueta_id = "";
       } catch (error) {
         mostrarToast("Ocurrió un error en el servidor", "error");
