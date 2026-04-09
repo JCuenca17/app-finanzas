@@ -35,6 +35,7 @@ createApp({
 
     const cuentas = ref([]);
     const categorias = ref([]);
+    const etiquetas = ref([]);
     const historial = ref([]);
     const pagosFijos = ref([]);
 
@@ -52,6 +53,7 @@ createApp({
     const editandoPagoFijo = ref({ estado: false, id: null });
     const editandoCuenta = ref({ estado: false, id: null });
     const editandoCat = ref({ estado: false, id: null });
+    const editandoEtiq = ref({ estado: false, id: null });
 
     const tx = ref({
       monto: "",
@@ -59,7 +61,9 @@ createApp({
       fecha: new Date().toISOString().split("T")[0],
       cuenta_id: "",
       categoria_id: "",
+      etiqueta_id: "",
     });
+
     const txTransf = ref({
       origen_id: "",
       destino_id: "",
@@ -69,6 +73,7 @@ createApp({
     });
 
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
+    const nuevaEtiq = ref({ nombre: "" });
     const nuevaCuenta = ref({
       nombre: "",
       tipo_cuenta: "Debito",
@@ -100,17 +105,42 @@ createApp({
       return titulos[tab.value] || "FinancePro";
     });
 
+    // Nuevo Análisis basado en ID relacional
     const analisisTag = computed(() => {
-      if (!tagSearch.value) return { total: 0, operaciones: [] };
-      const query = tagSearch.value.toLowerCase();
-      const operaciones = historial.value.filter(
-        (h) =>
-          h.descripcion.toLowerCase().includes(query) &&
-          h.tipo_flujo === "Egreso" &&
-          !h.categoria_nombre.includes("Transferencia"),
+      if (!tagSearch.value)
+        return {
+          ingresos: 0,
+          egresos: 0,
+          balance: 0,
+          nombre: "",
+          operaciones: [],
+        };
+
+      const etiquetaIdSeleccionada = parseInt(tagSearch.value);
+      const etiquetaObj = etiquetas.value.find(
+        (e) => e.id === etiquetaIdSeleccionada,
       );
-      const total = operaciones.reduce((acc, op) => acc + op.monto, 0);
-      return { total, operaciones };
+      const nombreEtiqueta = etiquetaObj ? etiquetaObj.nombre : "";
+
+      const operaciones = historial.value.filter(
+        (h) => h.etiqueta_id === etiquetaIdSeleccionada,
+      );
+
+      let ingresos = 0;
+      let egresos = 0;
+
+      operaciones.forEach((op) => {
+        if (op.tipo_flujo === "Ingreso") ingresos += op.monto;
+        if (op.tipo_flujo === "Egreso") egresos += op.monto;
+      });
+
+      return {
+        ingresos,
+        egresos,
+        balance: ingresos - egresos,
+        nombre: nombreEtiqueta,
+        operaciones,
+      };
     });
 
     const cuentasActivas = computed(() =>
@@ -475,6 +505,7 @@ createApp({
       cuentas.value = [];
       historial.value = [];
       pagosFijos.value = [];
+      etiquetas.value = [];
       if (chartCatInstance) {
         chartCatInstance.destroy();
         chartCatInstance = null;
@@ -496,6 +527,7 @@ createApp({
         cuentas.value = datos.cuentas;
         categorias.value = datos.categorias;
         pagosFijos.value = datos.pagosFijos;
+        etiquetas.value = datos.etiquetas;
         historial.value = datos.historialRaw.map((h) => ({
           ...h,
           categoria_nombre:
@@ -520,6 +552,7 @@ createApp({
           fecha: itemAEditar.fecha,
           cuenta_id: itemAEditar.cuenta_id,
           categoria_id: itemAEditar.categoria,
+          etiqueta_id: itemAEditar.etiqueta_id || "",
         };
       } else {
         editandoTx.value = { estado: false, id: null };
@@ -530,6 +563,7 @@ createApp({
           fecha: new Date().toISOString().split("T")[0],
           cuenta_id: "",
           categoria_id: "",
+          etiqueta_id: "",
         };
         txTransf.value = {
           origen_id: "",
@@ -591,6 +625,7 @@ createApp({
             api.guardarTransaccion({
               cuenta_id: parseInt(txTransf.value.origen_id),
               categoria_id: catSalida.id,
+              etiqueta_id: null,
               monto: parseFloat(txTransf.value.monto),
               fecha: txTransf.value.fecha,
               descripcion: concepto,
@@ -598,6 +633,7 @@ createApp({
             api.guardarTransaccion({
               cuenta_id: parseInt(txTransf.value.destino_id),
               categoria_id: catEntrada.id,
+              etiqueta_id: null,
               monto: parseFloat(txTransf.value.monto),
               fecha: txTransf.value.fecha,
               descripcion: concepto,
@@ -616,7 +652,10 @@ createApp({
           !tx.value.monto ||
           !tx.value.descripcion
         ) {
-          mostrarToast("Por favor, llena todos los campos", "warning");
+          mostrarToast(
+            "Por favor, llena todos los campos obligatorios",
+            "warning",
+          );
           cargando.value = false;
           return;
         }
@@ -625,8 +664,12 @@ createApp({
             ...tx.value,
             cuenta_id: parseInt(tx.value.cuenta_id),
             categoria_id: parseInt(tx.value.categoria_id),
+            etiqueta_id: tx.value.etiqueta_id
+              ? parseInt(tx.value.etiqueta_id)
+              : null,
             monto: parseFloat(tx.value.monto),
           };
+
           if (editandoTx.value.estado) {
             await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
             mostrarToast("Operación actualizada", "success");
@@ -636,6 +679,7 @@ createApp({
           }
           tx.value.monto = "";
           tx.value.descripcion = "";
+          tx.value.etiqueta_id = "";
         } catch (error) {
           mostrarToast("Ocurrió un error en el servidor", "error");
         }
@@ -810,6 +854,43 @@ createApp({
       cargando.value = false;
     };
 
+    // Funciones Etiquetas
+    const abrirModalEtiqueta = (etiqAEditar) => {
+      editandoEtiq.value = { estado: true, id: etiqAEditar.id };
+      nuevaEtiq.value = { nombre: etiqAEditar.nombre };
+    };
+
+    const cancelarEdicionEtiqueta = () => {
+      editandoEtiq.value = { estado: false, id: null };
+      nuevaEtiq.value = { nombre: "" };
+    };
+
+    const guardarEtiqueta = async () => {
+      if (!nuevaEtiq.value.nombre) {
+        mostrarToast("Asigna un nombre al contacto o etiqueta", "warning");
+        return;
+      }
+      cargando.value = true;
+      try {
+        const payload = {
+          usuario_id: currentUserId.value,
+          nombre: nuevaEtiq.value.nombre,
+        };
+        if (editandoEtiq.value.estado) {
+          await api.actualizarEtiqueta(editandoEtiq.value.id, payload);
+          mostrarToast("Contacto actualizado", "success");
+        } else {
+          await api.guardarEtiqueta(payload);
+          mostrarToast("Contacto creado", "success");
+        }
+        cancelarEdicionEtiqueta();
+        await cargarDatos();
+      } catch (error) {
+        mostrarToast("Error al guardar contacto", "error");
+      }
+      cargando.value = false;
+    };
+
     const eliminarRegistro = async (tipo, id) => {
       if (
         !confirm(
@@ -823,6 +904,7 @@ createApp({
         else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
         else if (tipo === "cuenta") await api.eliminarCuenta(id);
         else if (tipo === "categoria") await api.eliminarCategoria(id);
+        else if (tipo === "etiqueta") await api.eliminarEtiqueta(id);
 
         await cargarDatos();
         mostrarToast("Registro eliminado", "success");
@@ -881,6 +963,7 @@ createApp({
       analisisTag,
       cuentas,
       categorias,
+      etiquetas,
       categoriasFiltradas,
       historial,
       saldosLiquidos,
@@ -897,6 +980,7 @@ createApp({
       tx,
       txTransf,
       nuevaCat,
+      nuevaEtiq,
       nuevaCuenta,
       nuevoPagoFijo,
       chartCatRef,
@@ -914,6 +998,9 @@ createApp({
       abrirModalCategoria,
       cancelarEdicionCategoria,
       guardarCategoria,
+      abrirModalEtiqueta,
+      cancelarEdicionEtiqueta,
+      guardarEtiqueta,
       eliminarRegistro,
       iniciarSesionGoogle,
       cerrarSesion,
@@ -922,6 +1009,7 @@ createApp({
       editandoPagoFijo,
       editandoCuenta,
       editandoCat,
+      editandoEtiq,
     };
   },
 }).mount("#app");

@@ -6,13 +6,19 @@ const API_URL = "https://finanzas-backend-dgv5.onrender.com";
 
 export const api = {
   async obtenerDatosCompletos(userId) {
-    const [resCuentas, resHistorial, resCategorias, resPagosFijos] =
-      await Promise.all([
-        fetch(`${API_URL}/cuentas/${userId}`),
-        fetch(`${API_URL}/historial/${userId}`),
-        fetch(`${API_URL}/categorias/`),
-        fetch(`${API_URL}/pagos_fijos/${userId}`),
-      ]);
+    const [
+      resCuentas,
+      resHistorial,
+      resCategorias,
+      resPagosFijos,
+      resEtiquetas,
+    ] = await Promise.all([
+      fetch(`${API_URL}/cuentas/${userId}`),
+      fetch(`${API_URL}/historial/${userId}`),
+      fetch(`${API_URL}/categorias/`),
+      fetch(`${API_URL}/pagos_fijos/${userId}`),
+      fetch(`${API_URL}/etiquetas/${userId}`),
+    ]);
 
     return {
       cuentas: resCuentas.ok ? (await resCuentas.json()).cuentas : [],
@@ -25,6 +31,7 @@ export const api = {
       pagosFijos: resPagosFijos.ok
         ? (await resPagosFijos.json()).pagos_fijos
         : [],
+      etiquetas: resEtiquetas.ok ? (await resEtiquetas.json()).etiquetas : [],
     };
   },
 
@@ -102,5 +109,24 @@ export const api = {
   },
   async eliminarCategoria(id) {
     return await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
+  },
+
+  // --- ETIQUETAS / CONTACTOS ---
+  async guardarEtiqueta(datos) {
+    return await fetch(`${API_URL}/etiquetas/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async actualizarEtiqueta(id, datos) {
+    return await fetch(`${API_URL}/etiquetas/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async eliminarEtiqueta(id) {
+    return await fetch(`${API_URL}/etiquetas/${id}`, { method: "DELETE" });
   },
 };

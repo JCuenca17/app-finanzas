@@ -128,29 +128,6 @@
             @click="iniciarSesionGoogle"
             class="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 text-slate-700 font-bold py-3.5 rounded-xl hover:border-slate-300 transition active:scale-[0.98]"
           >
-            <svg
-              class="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                fill="#4285F4"
-              />
-              <path
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                fill="#34A853"
-              />
-              <path
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                fill="#FBBC05"
-              />
-              <path
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                fill="#EA4335"
-              />
-            </svg>
             Continuar
           </button>
         </div>
@@ -191,19 +168,6 @@
               :class="tab === 'inicio' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-                ></path>
-              </svg>
               Dashboard
             </button>
             <button
@@ -211,19 +175,6 @@
               :class="tab === 'analitica' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                ></path>
-              </svg>
               Analítica
             </button>
             <button
@@ -231,19 +182,6 @@
               :class="tab === 'cuentas' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-                ></path>
-              </svg>
               Activos (Cuentas)
             </button>
             <button
@@ -251,19 +189,6 @@
               :class="tab === 'deudas' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                ></path>
-              </svg>
               Pasivos (Deudas)
             </button>
             <button
@@ -271,19 +196,6 @@
               :class="tab === 'pagos' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                ></path>
-              </svg>
               Flujo Fijo
             </button>
             <button
@@ -291,19 +203,6 @@
               :class="tab === 'historial' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                ></path>
-              </svg>
               Historial
             </button>
             <button
@@ -311,25 +210,6 @@
               :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                ></path>
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                ></path>
-              </svg>
               Ajustes
             </button>
           </nav>
@@ -338,19 +218,6 @@
               @click="cerrarSesion"
               class="w-full text-left px-4 py-3 text-sm text-rose-600 font-bold hover:bg-rose-50 rounded-xl transition flex items-center gap-3"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                ></path>
-              </svg>
               Salir
             </button>
           </div>
@@ -477,6 +344,9 @@
                           class="text-[10px] md:text-xs font-medium mt-0.5 truncate text-slate-500"
                         >
                           {{ item.fecha }} • {{ item.cuenta }}
+                          <span v-if="item.etiqueta_nombre">
+                            • {{ item.etiqueta_nombre }}</span
+                          >
                         </p>
                       </div>
                     </div>
@@ -591,24 +461,6 @@
                           ></path>
                         </svg>
                       </button>
-                      <button
-                        @click="eliminarRegistro('cuenta', c.id_cuenta)"
-                        class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                      >
-                        <svg
-                          class="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          ></path>
-                        </svg>
-                      </button>
                     </div>
                   </div>
                   <div class="mt-5">
@@ -663,24 +515,6 @@
                             stroke-linejoin="round"
                             stroke-width="2"
                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                          ></path>
-                        </svg>
-                      </button>
-                      <button
-                        @click="eliminarRegistro('cuenta', c.id_cuenta)"
-                        class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                      >
-                        <svg
-                          class="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                           ></path>
                         </svg>
                       </button>
@@ -857,24 +691,6 @@
                               stroke-linejoin="round"
                               stroke-width="2"
                               d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            ></path>
-                          </svg>
-                        </button>
-                        <button
-                          @click="eliminarRegistro('cuenta', c.id_cuenta)"
-                          class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        >
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                             ></path>
                           </svg>
                         </button>
@@ -1178,39 +994,79 @@
                   <h3
                     class="font-bold text-slate-800 text-sm md:text-base mb-1"
                   >
-                    Análisis por Etiqueta o Persona
+                    Análisis Relacional por Contacto / Etiqueta
                   </h3>
                   <p class="text-[10px] md:text-xs text-slate-500 mb-4">
-                    Agrega un hashtag en el concepto de tus gastos (Ej. "Cena
-                    #Maria"). Búscalo aquí para saber exactamente cuánto has
-                    gastado en esa etiqueta sin romper tus gráficos principales.
+                    Selecciona a una persona o etiqueta para ver todo el flujo
+                    de dinero (lo que te depositan vs lo que tú gastas).
                   </p>
-                  <input
-                    type="text"
+
+                  <select
                     v-model="tagSearch"
-                    placeholder="Buscar etiqueta... (Ej. #Maria, #ViajeSur)"
-                    class="w-full mb-4 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 bg-slate-50"
-                  />
+                    class="w-full mb-4 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 bg-slate-50 font-semibold"
+                  >
+                    <option value="">
+                      -- Selecciona un Contacto o Etiqueta --
+                    </option>
+                    <option v-for="et in etiquetas" :value="et.id">
+                      {{ et.nombre }}
+                    </option>
+                  </select>
+
                   <div
                     v-if="tagSearch && analisisTag.operaciones.length > 0"
                     class="space-y-4"
                   >
-                    <div
-                      class="bg-rose-50 p-4 rounded-xl border border-rose-100 inline-block mb-2"
-                    >
-                      <p
-                        class="text-[10px] md:text-xs font-bold text-rose-400 uppercase tracking-wider mb-1"
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div
+                        class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col justify-center"
                       >
-                        Total Gastado en "{{ tagSearch }}"
-                      </p>
-                      <p
-                        class="text-xl md:text-2xl font-extrabold text-rose-600"
+                        <p
+                          class="text-[10px] md:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1"
+                        >
+                          Ingresos con {{ analisisTag.nombre }}
+                        </p>
+                        <p
+                          class="text-xl md:text-2xl font-extrabold text-emerald-600"
+                        >
+                          S/ {{ analisisTag.ingresos.toFixed(2) }}
+                        </p>
+                      </div>
+                      <div
+                        class="bg-rose-50 p-4 rounded-xl border border-rose-100 flex flex-col justify-center"
                       >
-                        S/ {{ analisisTag.total.toFixed(2) }}
-                      </p>
+                        <p
+                          class="text-[10px] md:text-xs font-bold text-rose-400 uppercase tracking-wider mb-1"
+                        >
+                          Gastos con {{ analisisTag.nombre }}
+                        </p>
+                        <p
+                          class="text-xl md:text-2xl font-extrabold text-rose-600"
+                        >
+                          S/ {{ analisisTag.egresos.toFixed(2) }}
+                        </p>
+                      </div>
+                      <div
+                        class="p-4 rounded-xl border flex flex-col justify-center"
+                        :class="analisisTag.balance >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'"
+                      >
+                        <p
+                          class="text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1"
+                          :class="analisisTag.balance >= 0 ? 'text-blue-500' : 'text-amber-500'"
+                        >
+                          Balance Neto
+                        </p>
+                        <p
+                          class="text-xl md:text-2xl font-extrabold"
+                          :class="analisisTag.balance >= 0 ? 'text-blue-600' : 'text-amber-600'"
+                        >
+                          S/ {{ analisisTag.balance.toFixed(2) }}
+                        </p>
+                      </div>
                     </div>
+
                     <div
-                      class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden"
+                      class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden mt-4"
                     >
                       <div
                         v-for="item in analisisTag.operaciones"
@@ -1228,9 +1084,11 @@
                           </p>
                         </div>
                         <div
-                          class="font-extrabold text-rose-600 text-sm whitespace-nowrap"
+                          class="font-extrabold text-sm whitespace-nowrap"
+                          :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-rose-600'"
                         >
-                          - S/ {{ Math.abs(item.monto).toFixed(2) }}
+                          {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} S/ {{
+                          Math.abs(item.monto).toFixed(2) }}
                         </div>
                       </div>
                     </div>
@@ -1239,7 +1097,7 @@
                     v-else-if="tagSearch"
                     class="text-center py-6 text-slate-500 text-xs md:text-sm"
                   >
-                    No se encontraron gastos con la etiqueta "{{ tagSearch }}".
+                    No hay registros asociados a este contacto o etiqueta.
                   </div>
                 </div>
               </div>
@@ -1283,6 +1141,11 @@
                         >
                           {{ item.fecha }} • {{ item.cuenta }} • {{
                           item.categoria_nombre }}
+                          <span
+                            v-if="item.etiqueta_nombre"
+                            class="font-bold text-slate-600 bg-slate-100 px-1 rounded"
+                            >@{{ item.etiqueta_nombre }}</span
+                          >
                         </p>
                       </div>
                     </div>
@@ -1671,6 +1534,111 @@
                     </div>
                   </div>
                 </div>
+
+                <div
+                  v-show="tab === 'ajustes' || editandoEtiq.estado"
+                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm self-start transition-all"
+                  :class="editandoEtiq.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
+                >
+                  <div
+                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
+                  >
+                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
+                      <span v-if="editandoEtiq.estado">Editar Contacto</span
+                      ><span v-else>Contactos / Etiquetas</span>
+                    </h3>
+                    <button
+                      v-if="editandoEtiq.estado"
+                      @click="cancelarEdicionEtiqueta"
+                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+
+                  <div class="mb-4">
+                    <input
+                      type="text"
+                      v-model="nuevaEtiq.nombre"
+                      placeholder="Nombre (Ej: María, Viaje Cusco)"
+                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    @click="guardarEtiqueta"
+                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6"
+                    :class="editandoEtiq.estado ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-slate-900 hover:bg-slate-800 shadow-md'"
+                  >
+                    <span v-if="editandoEtiq.estado">Actualizar Contacto</span
+                    ><span v-else>Añadir Nuevo</span>
+                  </button>
+
+                  <div v-if="!editandoEtiq.estado">
+                    <h4
+                      class="font-bold text-xs text-slate-400 uppercase tracking-widest mb-3"
+                    >
+                      Directorio
+                    </h4>
+                    <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      <div
+                        v-if="etiquetas.length === 0"
+                        class="text-xs text-slate-500 py-2"
+                      >
+                        Aún no has registrado contactos o etiquetas.
+                      </div>
+                      <div
+                        v-for="et in etiquetas"
+                        :key="et.id"
+                        class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg group border border-slate-100 hover:border-slate-200 transition"
+                      >
+                        <span
+                          class="text-sm font-semibold text-slate-700 truncate mr-2"
+                          >{{ et.nombre }}</span
+                        >
+                        <div
+                          class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
+                        >
+                          <button
+                            @click="abrirModalEtiqueta(et)"
+                            class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition"
+                          >
+                            <svg
+                              class="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              ></path>
+                            </svg>
+                          </button>
+                          <button
+                            @click="eliminarRegistro('etiqueta', et.id)"
+                            class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition"
+                          >
+                            <svg
+                              class="w-3.5 h-3.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              ></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1866,15 +1834,26 @@
                 {{ c.nombre }} ({{ c.moneda }})
               </option>
             </select>
-            <select
-              v-model="tx.categoria_id"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-            >
-              <option value="" disabled>Categoría Maestro...</option>
-              <option v-for="cat in categoriasFiltradas" :value="cat.id">
-                {{ cat.nombre }}
-              </option>
-            </select>
+            <div class="grid grid-cols-2 gap-3 md:gap-4">
+              <select
+                v-model="tx.categoria_id"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
+              >
+                <option value="" disabled>Categoría...</option>
+                <option v-for="cat in categoriasFiltradas" :value="cat.id">
+                  {{ cat.nombre }}
+                </option>
+              </select>
+              <select
+                v-model="tx.etiqueta_id"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none text-blue-600"
+              >
+                <option value="">Sin Etiqueta</option>
+                <option v-for="et in etiquetas" :value="et.id">
+                  @{{ et.nombre }}
+                </option>
+              </select>
+            </div>
             <div class="grid grid-cols-2 gap-3 md:gap-4">
               <input
                 type="number"
