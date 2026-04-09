@@ -1,5 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
+// ARCHIVO: Lógica visual y estado de la aplicación (Vue 3)
 
 import { api } from "./api.js";
 
@@ -16,7 +17,7 @@ createApp({
     const cargando = ref(true);
     const isLoggedIn = ref(false);
     const currentUserId = ref("");
-    const tab = ref("inicio"); // inicio, cuentas, historial, pagos, ajustes, mas
+    const tab = ref("inicio");
     const showModal = ref(false);
     const tipoOperacion = ref("Egreso");
 
@@ -60,6 +61,19 @@ createApp({
       tipo_flujo: "Egreso",
       dia_cobro: "",
       moneda: "PEN",
+    });
+
+    // Título dinámico para evitar errores en HTML
+    const tituloCabecera = computed(() => {
+      const titulos = {
+        inicio: "Dashboard",
+        cuentas: "Mis Cuentas",
+        historial: "Historial",
+        pagos: "Proyección",
+        mas: "Menú",
+        ajustes: "Ajustes",
+      };
+      return titulos[tab.value] || "FinancePro";
     });
 
     const saldosLiquidos = computed(() => {
@@ -156,7 +170,7 @@ createApp({
                 },
                 total: {
                   show: true,
-                  label: "Total Mes",
+                  label: "Total Egresos",
                   color: "#64748b",
                   fontWeight: 600,
                   formatter: function (w) {
@@ -408,7 +422,6 @@ createApp({
       });
     });
 
-    // Observa cuando entras a la pestaña de inicio para dibujar el gráfico
     Vue.watch(tab, (newTab) => {
       if (newTab === "inicio") nextTick(() => renderizarGrafico());
     });
@@ -418,6 +431,7 @@ createApp({
       isLoggedIn,
       currentUserId,
       tab,
+      tituloCabecera,
       showModal,
       tipoOperacion,
       cuentas,

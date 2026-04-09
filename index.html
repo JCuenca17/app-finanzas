@@ -23,7 +23,6 @@
       [v-cloak] {
         display: none;
       }
-      /* Bloqueo de rebote en móviles (Overscroll) */
       body {
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior-y: none;
@@ -293,9 +292,7 @@
               <h1
                 class="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight"
               >
-                {{ tab === 'inicio' ? 'Dashboard' : tab === 'cuentas' ? 'Mis
-                Cuentas' : tab === 'historial' ? 'Historial' : tab === 'pagos' ?
-                'Proyección' : tab === 'mas' ? 'Menú' : 'Ajustes' }}
+                {{ tituloCabecera }}
               </h1>
               <p class="text-sm text-slate-500 font-medium mt-1">
                 Control financiero en tiempo real.
@@ -427,11 +424,11 @@
                     </h4>
                   </div>
                   <div class="mt-6">
-                    <template v-if="c.tipo_cuenta !== 'Credito'">
-                      <p class="text-3xl font-extrabold text-slate-900">
+                    <template v-if="c.tipo_cuenta !== 'Credito'"
+                      ><p class="text-3xl font-extrabold text-slate-900">
                         {{ formatoMoneda(c.saldo_actual, c.moneda) }}
-                      </p>
-                    </template>
+                      </p></template
+                    >
                     <template v-else>
                       <p
                         class="text-xs text-slate-500 uppercase tracking-wider font-semibold"
@@ -630,8 +627,7 @@
                   @click="tab = 'ajustes'"
                   class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-left flex justify-between items-center"
                 >
-                  Configuraciones (Cuentas y Categorías)
-                  <span class="text-slate-400">→</span>
+                  Configuraciones <span class="text-slate-400">→</span>
                 </button>
                 <button
                   @click="cerrarSesion"
@@ -640,7 +636,6 @@
                   Cerrar Sesión
                 </button>
               </div>
-
               <div
                 v-show="tab === 'ajustes'"
                 class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm self-start"
@@ -717,7 +712,6 @@
                   Guardar Cuenta
                 </button>
               </div>
-
               <div
                 v-show="tab === 'ajustes'"
                 class="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm self-start"
@@ -728,8 +722,8 @@
                   Nueva Categoría Maestro
                 </h3>
                 <p class="text-xs text-slate-500 mb-4 leading-tight">
-                  Crea categorías generales (Ej: Alimentación, Transporte).
-                  Evita el micro-detalle para no romper los gráficos.
+                  Crea categorías generales. Evita el micro-detalle para no
+                  romper los gráficos.
                 </p>
                 <input
                   type="text"
@@ -774,9 +768,8 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-              ></path>
-            </svg>
-            <span class="text-[10px] font-bold">Inicio</span>
+              ></path></svg
+            ><span class="text-[10px] font-bold">Inicio</span>
           </button>
           <button
             @click="tab = 'cuentas'"
@@ -794,9 +787,8 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              ></path>
-            </svg>
-            <span class="text-[10px] font-bold">Cuentas</span>
+              ></path></svg
+            ><span class="text-[10px] font-bold">Cuentas</span>
           </button>
 
           <div class="relative -top-6">
@@ -836,9 +828,8 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              ></path>
-            </svg>
-            <span class="text-[10px] font-bold">Historial</span>
+              ></path></svg
+            ><span class="text-[10px] font-bold">Historial</span>
           </button>
           <button
             @click="tab = 'mas'"
@@ -856,9 +847,8 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M4 6h16M4 12h16M4 18h16"
-              ></path>
-            </svg>
-            <span class="text-[10px] font-bold">Más</span>
+              ></path></svg
+            ><span class="text-[10px] font-bold">Más</span>
           </button>
         </nav>
       </div>
@@ -873,7 +863,6 @@
           <div
             class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden"
           ></div>
-
           <div class="flex justify-between items-center mb-6">
             <h2 class="text-xl font-extrabold text-slate-900">
               Nueva Operación
