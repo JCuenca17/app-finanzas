@@ -41,7 +41,6 @@ createApp({
     });
 
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
-
     const nuevaCuenta = ref({
       nombre: "",
       tipo_cuenta: "Debito",
@@ -52,16 +51,27 @@ createApp({
       dia_pago: "",
     });
 
-    // CÁLCULO SEPARADO POR MONEDAS
-    const saldosPorMoneda = computed(() => {
+    // CÁLCULOS SEPARADOS PARA GASTO VS AHORRO
+    const saldosLiquidos = computed(() => {
       const saldos = { PEN: 0, USD: 0 };
       cuentas.value
-        .filter((c) => c.tipo_cuenta !== "Credito")
+        .filter(
+          (c) => c.tipo_cuenta === "Debito" || c.tipo_cuenta === "Efectivo",
+        )
         .forEach((c) => {
           const mon = c.moneda || "PEN";
-          if (saldos[mon] !== undefined) {
-            saldos[mon] += c.saldo_actual;
-          }
+          saldos[mon] += c.saldo_actual;
+        });
+      return saldos;
+    });
+
+    const saldosAhorro = computed(() => {
+      const saldos = { PEN: 0, USD: 0 };
+      cuentas.value
+        .filter((c) => c.tipo_cuenta === "Ahorro")
+        .forEach((c) => {
+          const mon = c.moneda || "PEN";
+          saldos[mon] += c.saldo_actual;
         });
       return saldos;
     });
@@ -74,7 +84,6 @@ createApp({
       );
     });
 
-    // FORMATEADOR VISUAL DE MONEDAS
     const formatoMoneda = (monto, moneda) => {
       const simbolo = moneda === "USD" ? "$" : "S/";
       return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
@@ -141,7 +150,6 @@ createApp({
           return;
         }
 
-        // Validación de moneda (no cruzar soles con dólares directamente)
         const cuentaOrigen = cuentas.value.find(
           (c) => c.id_cuenta == txTransf.value.origen_id,
         );
@@ -326,7 +334,8 @@ createApp({
       categorias,
       categoriasFiltradas,
       historial,
-      saldosPorMoneda,
+      saldosLiquidos,
+      saldosAhorro,
       tx,
       txTransf,
       nuevaCat,
