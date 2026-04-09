@@ -8,9 +8,11 @@ const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
 createApp({
   setup() {
+    // --- CREDENCIALES SUPABASE ---
     const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
     const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // -----------------------------
 
     const cargando = ref(true);
     const isLoggedIn = ref(false);
@@ -19,6 +21,7 @@ createApp({
     const showModal = ref(false);
     const tipoOperacion = ref("Egreso");
 
+    // Sistema Global de Notificaciones (Toasts)
     const toast = ref({ show: false, message: "", type: "success" });
     let toastTimeout = null;
 
@@ -44,6 +47,7 @@ createApp({
     let chartFlujoInstance = null;
     let chartDeudaInstance = null;
 
+    // Estados para la Edición (CRUD)
     const editandoTx = ref({ estado: false, id: null });
     const editandoPagoFijo = ref({ estado: false, id: null });
     const editandoCuenta = ref({ estado: false, id: null });
@@ -914,6 +918,10 @@ createApp({
       iniciarSesionGoogle,
       cerrarSesion,
       formatoMoneda,
+      editandoTx,
+      editandoPagoFijo,
+      editandoCuenta,
+      editandoCat,
     };
   },
 }).mount("#app");
