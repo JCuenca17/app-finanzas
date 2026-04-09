@@ -35,7 +35,6 @@ createApp({
     const historial = ref([]);
     const pagosFijos = ref([]);
 
-    // NUEVO: Variable para el buscador de Etiquetas
     const tagSearch = ref("");
 
     const chartCatRef = ref(null);
@@ -97,7 +96,6 @@ createApp({
       return titulos[tab.value] || "FinancePro";
     });
 
-    // NUEVO: Lógica del filtro de Etiquetas (Hashtags)
     const analisisTag = computed(() => {
       if (!tagSearch.value) return { total: 0, operaciones: [] };
       const query = tagSearch.value.toLowerCase();
@@ -643,8 +641,193 @@ createApp({
       cargando.value = false;
     };
 
-    // ... El resto de tus funciones de edición (abrirModalPagoFijo, eliminarRegistro, etc.) se mantienen idénticas.
-    // Solo las omití en esta vista previa para no alargar la lectura, pero están funcionando perfectamente.
+    const abrirModalPagoFijo = (pagoAEditar) => {
+      editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
+      nuevoPagoFijo.value = {
+        nombre: pagoAEditar.nombre,
+        monto: pagoAEditar.monto,
+        tipo_flujo: pagoAEditar.tipo_flujo,
+        dia_cobro: pagoAEditar.dia_cobro,
+        moneda: pagoAEditar.moneda,
+      };
+      tab.value = "ajustes";
+    };
+
+    const cancelarEdicionPago = () => {
+      editandoPagoFijo.value = { estado: false, id: null };
+      nuevoPagoFijo.value = {
+        nombre: "",
+        monto: "",
+        tipo_flujo: "Egreso",
+        dia_cobro: "",
+        moneda: "PEN",
+      };
+    };
+
+    const guardarPagoFijo = async () => {
+      if (
+        !nuevoPagoFijo.value.nombre ||
+        !nuevoPagoFijo.value.monto ||
+        !nuevoPagoFijo.value.dia_cobro
+      ) {
+        mostrarToast("Faltan datos en la proyección", "warning");
+        return;
+      }
+      cargando.value = true;
+      try {
+        const payload = {
+          usuario_id: currentUserId.value,
+          nombre: nuevoPagoFijo.value.nombre,
+          monto: parseFloat(nuevoPagoFijo.value.monto),
+          tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
+          dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
+          moneda: nuevoPagoFijo.value.moneda,
+        };
+        if (editandoPagoFijo.value.estado) {
+          await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
+          mostrarToast("Proyección actualizada con éxito", "success");
+        } else {
+          await api.guardarPagoFijo(payload);
+          mostrarToast("Proyección guardada con éxito", "success");
+        }
+        cancelarEdicionPago();
+        await cargarDatos();
+      } catch (error) {
+        mostrarToast("Error de servidor", "error");
+      }
+      cargando.value = false;
+    };
+
+    const abrirModalCuenta = (cuentaAEditar) => {
+      editandoCuenta.value = { estado: true, id: cuentaAEditar.id_cuenta };
+      nuevaCuenta.value = {
+        nombre: cuentaAEditar.nombre,
+        tipo_cuenta: cuentaAEditar.tipo_cuenta,
+        moneda: cuentaAEditar.moneda,
+        saldo_inicial: Math.abs(cuentaAEditar.saldo_actual),
+        limite: cuentaAEditar.limite || "",
+        dia_corte: cuentaAEditar.dia_corte || "",
+        dia_pago: cuentaAEditar.dia_pago || "",
+      };
+      tab.value = "ajustes";
+    };
+
+    const cancelarEdicionCuenta = () => {
+      editandoCuenta.value = { estado: false, id: null };
+      nuevaCuenta.value = {
+        nombre: "",
+        tipo_cuenta: "Debito",
+        moneda: "PEN",
+        saldo_inicial: "",
+        limite: "",
+        dia_corte: "",
+        dia_pago: "",
+      };
+    };
+
+    const guardarCuenta = async () => {
+      if (!nuevaCuenta.value.nombre) {
+        mostrarToast("El nombre de la cuenta es obligatorio", "warning");
+        return;
+      }
+      cargando.value = true;
+      try {
+        let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
+        if (["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.tipo_cuenta))
+          saldo = -Math.abs(saldo);
+
+        const payload = {
+          usuario_id: currentUserId.value,
+          nombre: nuevaCuenta.value.nombre,
+          tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+          moneda: nuevaCuenta.value.moneda,
+          saldo_inicial: saldo,
+          limite:
+            nuevaCuenta.value.tipo_cuenta === "Credito"
+              ? parseFloat(nuevaCuenta.value.limite || 0)
+              : null,
+          dia_corte:
+            nuevaCuenta.value.tipo_cuenta === "Credito"
+              ? parseInt(nuevaCuenta.value.dia_corte || 0)
+              : null,
+          dia_pago:
+            nuevaCuenta.value.tipo_cuenta === "Credito"
+              ? parseInt(nuevaCuenta.value.dia_pago || 0)
+              : null,
+        };
+
+        if (editandoCuenta.value.estado) {
+          await api.actualizarCuenta(editandoCuenta.value.id, payload);
+          mostrarToast("Cuenta actualizada correctamente", "success");
+        } else {
+          await api.guardarCuenta(payload);
+          mostrarToast("Cuenta registrada correctamente", "success");
+        }
+        cancelarEdicionCuenta();
+        await cargarDatos();
+      } catch (error) {
+        mostrarToast("Error de conexión", "error");
+      }
+      cargando.value = false;
+    };
+
+    const abrirModalCategoria = (catAEditar) => {
+      editandoCat.value = { estado: true, id: catAEditar.id };
+      nuevaCat.value = {
+        nombre: catAEditar.nombre,
+        tipo_flujo: catAEditar.tipo_flujo,
+      };
+    };
+
+    const cancelarEdicionCategoria = () => {
+      editandoCat.value = { estado: false, id: null };
+      nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
+    };
+
+    const guardarCategoria = async () => {
+      if (!nuevaCat.value.nombre) {
+        mostrarToast("Ponle un nombre a la categoría", "warning");
+        return;
+      }
+      cargando.value = true;
+      try {
+        if (editandoCat.value.estado) {
+          await api.actualizarCategoria(editandoCat.value.id, nuevaCat.value);
+          mostrarToast("Categoría actualizada", "success");
+        } else {
+          await api.guardarCategoria(nuevaCat.value);
+          mostrarToast("Categoría creada", "success");
+        }
+        cancelarEdicionCategoria();
+        await cargarDatos();
+      } catch (error) {
+        mostrarToast("Error al guardar", "error");
+      }
+      cargando.value = false;
+    };
+
+    const eliminarRegistro = async (tipo, id) => {
+      if (
+        !confirm(
+          "¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.",
+        )
+      )
+        return;
+      cargando.value = true;
+      try {
+        if (tipo === "transaccion") await api.eliminarTransaccion(id);
+        else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
+        else if (tipo === "cuenta") await api.eliminarCuenta(id);
+        else if (tipo === "categoria") await api.eliminarCategoria(id);
+
+        await cargarDatos();
+        mostrarToast("Registro eliminado", "success");
+      } catch (error) {
+        console.error("Error al eliminar:", error);
+        mostrarToast("No se pudo eliminar. Puede estar en uso.", "error");
+      }
+      cargando.value = false;
+    };
 
     onMounted(() => {
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -691,7 +874,7 @@ createApp({
       toast,
       mostrarToast,
       tagSearch,
-      analisisTag, // <--- Aquí exportamos el buscador para que el HTML lo pueda usar
+      analisisTag,
       cuentas,
       categorias,
       categoriasFiltradas,
@@ -716,9 +899,21 @@ createApp({
       chartFlujoRef,
       chartDeudaRef,
       diagnosticoDeuda,
+      abrirModalTransaccion,
+      ejecutarOperacion,
+      abrirModalPagoFijo,
+      cancelarEdicionPago,
+      guardarPagoFijo,
+      abrirModalCuenta,
+      cancelarEdicionCuenta,
+      guardarCuenta,
+      abrirModalCategoria,
+      cancelarEdicionCategoria,
+      guardarCategoria,
+      eliminarRegistro,
       iniciarSesionGoogle,
       cerrarSesion,
-      ejecutarOperacion,
+      formatoMoneda,
     };
   },
 }).mount("#app");
