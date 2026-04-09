@@ -5,10 +5,11 @@ const { createApp, ref, computed, onMounted } = Vue;
 
 createApp({
   setup() {
-    // Credenciales y Rutas
-    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
-    const API_URL = "https://finanzas-backend-dgv5.onrender.com";
+    // --- CREDENCIALES (REEMPLAZA CON LAS TUYAS) ---
+    const SUPABASE_URL = "https://TU-ID-DE-PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU-ANON-KEY";
+    const API_URL = "https://TU-URL-DE-RENDER.onrender.com";
+    // ----------------------------------------------
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -17,15 +18,12 @@ createApp({
     const currentUserId = ref("");
     const tab = ref("inicio");
     const showModal = ref(false);
-
-    // Control del Modal
-    const tipoOperacion = ref("Egreso"); // Puede ser 'Egreso', 'Ingreso', 'Transferencia'
+    const tipoOperacion = ref("Egreso");
 
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
 
-    // Formularios
     const tx = ref({
       monto: "",
       descripcion: "",
@@ -42,20 +40,23 @@ createApp({
     });
 
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
+
+    // La variable ahora incluye los campos para Tarjeta de Crédito
     const nuevaCuenta = ref({
       nombre: "",
       tipo_cuenta: "Debito",
       saldo_inicial: "",
+      limite: "",
+      dia_corte: "",
+      dia_pago: "",
     });
 
-    // Cálculos Reactivos
     const saldoTotalLiquido = computed(() => {
       return cuentas.value
         .filter((c) => c.tipo_cuenta !== "Credito")
         .reduce((acc, c) => acc + c.saldo_actual, 0);
     });
 
-    // Filtrar categorías según la pestaña del modal
     const categoriasFiltradas = computed(() => {
       return categorias.value.filter(
         (c) =>
@@ -64,7 +65,6 @@ createApp({
       );
     });
 
-    // Autenticación
     const iniciarSesionGoogle = async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -92,7 +92,6 @@ createApp({
 
         if (resCuentas.ok) cuentas.value = (await resCuentas.json()).cuentas;
         if (resHistorial.ok) {
-          // Mapear el historial para tener el nombre de la categoría fácilmente
           const histData = await resHistorial.json();
           historial.value = histData.historial.map((h) => ({
             ...h,
@@ -108,7 +107,6 @@ createApp({
       }
     };
 
-    // LÓGICA MAESTRA: Decide si guarda un movimiento normal o doble
     const ejecutarOperacion = async () => {
       cargando.value = true;
 
@@ -128,7 +126,6 @@ createApp({
           return;
         }
 
-        // Buscamos las categorías del sistema
         const catSalida = categorias.value.find(
           (c) => c.nombre === "Transferencia Saliente",
         );
@@ -137,9 +134,7 @@ createApp({
         );
 
         if (!catSalida || !catEntrada) {
-          alert(
-            "Faltan las categorías de sistema en la Base de Datos. Ejecuta el código SQL.",
-          );
+          alert("Faltan las categorías de sistema en la Base de Datos.");
           cargando.value = false;
           return;
         }
@@ -147,7 +142,6 @@ createApp({
         const concepto =
           txTransf.value.descripcion || "Transferencia entre cuentas";
 
-        // 1. Quitar dinero del Origen (Ej. Yape)
         await fetch(`${API_URL}/transacciones/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -160,7 +154,6 @@ createApp({
           }),
         });
 
-        // 2. Ingresar dinero al Destino (Ej. Tarjeta de Crédito)
         await fetch(`${API_URL}/transacciones/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -176,7 +169,6 @@ createApp({
         txTransf.value.monto = "";
         txTransf.value.descripcion = "";
       } else {
-        // Operación Normal (Gasto o Ingreso)
         if (
           !tx.value.cuenta_id ||
           !tx.value.categoria_id ||
@@ -218,19 +210,45 @@ createApp({
       await cargarDatos();
     };
 
+    // LA NUEVA FUNCIÓN PARA GUARDAR CUENTAS (INCLUYENDO TARJETAS)
     const guardarCuenta = async () => {
       if (!nuevaCuenta.value.nombre) return;
+
+      // Empaquetamos los datos, enviando las fechas y límites solo si es Crédito
+      const payload = {
+        usuario_id: currentUserId.value,
+        nombre: nuevaCuenta.value.nombre,
+        tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+        saldo_inicial: parseFloat(nuevaCuenta.value.saldo_inicial || 0),
+        limite:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseFloat(nuevaCuenta.value.limite || 0)
+            : null,
+        dia_corte:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseInt(nuevaCuenta.value.dia_corte || 0)
+            : null,
+        dia_pago:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseInt(nuevaCuenta.value.dia_pago || 0)
+            : null,
+      };
+
       await fetch(`${API_URL}/cuentas/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...nuevaCuenta.value,
-          usuario_id: currentUserId.value,
-          saldo_inicial: parseFloat(nuevaCuenta.value.saldo_inicial || 0),
-        }),
+        body: JSON.stringify(payload),
       });
-      nuevaCuenta.value.nombre = "";
-      nuevaCuenta.value.saldo_inicial = "";
+
+      // Limpiamos el formulario
+      nuevaCuenta.value = {
+        nombre: "",
+        tipo_cuenta: "Debito",
+        saldo_inicial: "",
+        limite: "",
+        dia_corte: "",
+        dia_pago: "",
+      };
       await cargarDatos();
     };
 
