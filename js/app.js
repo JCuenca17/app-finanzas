@@ -1,11 +1,11 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
 
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
 createApp({
   setup() {
-    // --- CREDENCIALES ---
+    // --- CREDENCIALES (RECUERDA PONER LAS TUYAS) ---
     const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
     const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const API_URL = "https://finanzas-backend-dgv5.onrender.com";
@@ -23,6 +23,11 @@ createApp({
     const categorias = ref([]);
     const historial = ref([]);
     const pagosFijos = ref([]);
+
+    // REFERENCIAS PARA EL GRÁFICO
+    const chartRef = ref(null);
+    let chartInstance = null;
+    const hayGastosParaGrafico = ref(false);
 
     const tx = ref({
       monto: "",
@@ -49,7 +54,6 @@ createApp({
       dia_corte: "",
       dia_pago: "",
     });
-
     const nuevoPagoFijo = ref({
       nombre: "",
       monto: "",
@@ -95,6 +99,103 @@ createApp({
       return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
     };
 
+    // FUNCIÓN PARA RENDERIZAR APEXCHARTS
+    const renderizarGrafico = () => {
+      if (!chartRef.value) return;
+
+      // 1. Filtrar solo Egresos reales (no transferencias)
+      const egresos = historial.value.filter(
+        (h) =>
+          h.tipo_flujo === "Egreso" &&
+          !h.categoria_nombre.includes("Transferencia"),
+      );
+
+      // 2. Agrupar montos por categoría
+      const datosAgrupados = {};
+      egresos.forEach((egreso) => {
+        if (!datosAgrupados[egreso.categoria_nombre]) {
+          datosAgrupados[egreso.categoria_nombre] = 0;
+        }
+        datosAgrupados[egreso.categoria_nombre] += egreso.monto;
+      });
+
+      const labels = Object.keys(datosAgrupados);
+      const series = Object.values(datosAgrupados);
+
+      if (series.length === 0) {
+        hayGastosParaGrafico.value = false;
+        return;
+      }
+
+      hayGastosParaGrafico.value = true;
+
+      const options = {
+        series: series,
+        labels: labels,
+        chart: {
+          type: "donut",
+          height: 320,
+          fontFamily: "inherit",
+          background: "transparent",
+          toolbar: { show: false },
+        },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: "75%",
+              labels: {
+                show: true,
+                name: { show: true, fontSize: "13px", color: "#64748b" },
+                value: {
+                  show: true,
+                  fontSize: "20px",
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  formatter: function (val) {
+                    return "S/ " + parseFloat(val).toFixed(2);
+                  },
+                },
+                total: {
+                  show: true,
+                  label: "Total Gastos",
+                  color: "#64748b",
+                  formatter: function (w) {
+                    const total = w.globals.seriesTotals.reduce(
+                      (a, b) => a + b,
+                      0,
+                    );
+                    return "S/ " + total.toFixed(2);
+                  },
+                },
+              },
+            },
+          },
+        },
+        dataLabels: { enabled: false }, // Ocultar etiquetas feas de porcentaje encima del grafico
+        stroke: { width: 0 }, // Sin bordes molestos
+        theme: { palette: "palette1" }, // Paleta moderna integrada
+        legend: {
+          position: "bottom",
+          fontSize: "13px",
+          markers: { radius: 12 },
+        },
+        tooltip: {
+          y: {
+            formatter: function (val) {
+              return "S/ " + val.toFixed(2);
+            },
+          },
+        },
+      };
+
+      if (chartInstance) {
+        chartInstance.updateOptions(options);
+      } else {
+        chartInstance = new ApexCharts(chartRef.value, options);
+        chartInstance.render();
+      }
+    };
+
     const iniciarSesionGoogle = async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -110,6 +211,10 @@ createApp({
       cuentas.value = [];
       historial.value = [];
       pagosFijos.value = [];
+      if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+      }
       cargando.value = false;
     };
 
@@ -137,6 +242,11 @@ createApp({
           categorias.value = (await resCategorias.json()).categorias;
         if (resPagosFijos.ok)
           pagosFijos.value = (await resPagosFijos.json()).pagos_fijos;
+
+        // Llamar al gráfico al terminar de cargar los datos
+        if (tab.value === "inicio") {
+          nextTick(() => renderizarGrafico());
+        }
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
@@ -367,6 +477,13 @@ createApp({
       });
     });
 
+    // Asegurarnos de que el gráfico se dibuje si cambiamos de pestaña y volvemos al inicio
+    Vue.watch(tab, (newTab) => {
+      if (newTab === "inicio") {
+        nextTick(() => renderizarGrafico());
+      }
+    });
+
     return {
       cargando,
       isLoggedIn,
@@ -386,6 +503,8 @@ createApp({
       nuevaCat,
       nuevaCuenta,
       nuevoPagoFijo,
+      chartRef,
+      hayGastosParaGrafico, // Referencias del gráfico
       iniciarSesionGoogle,
       cerrarSesion,
       ejecutarOperacion,
