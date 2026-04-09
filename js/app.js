@@ -21,6 +21,18 @@ createApp({
     const showModal = ref(false);
     const tipoOperacion = ref("Egreso");
 
+    // Sistema Global de Notificaciones
+    const toast = ref({ show: false, message: "", type: "success" });
+    let toastTimeout = null;
+
+    const mostrarToast = (mensaje, tipo = "success") => {
+      toast.value = { show: true, message: mensaje, type: tipo };
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.value.show = false;
+      }, 3500);
+    };
+
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
@@ -80,7 +92,6 @@ createApp({
       return titulos[tab.value] || "FinancePro";
     });
 
-    // Filtros de Cuentas vs Deudas ampliados
     const cuentasActivas = computed(() =>
       cuentas.value.filter((c) =>
         ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
@@ -483,28 +494,26 @@ createApp({
         if (tab.value === "deudas") nextTick(() => renderizarGraficoDeuda());
       } catch (error) {
         console.error("Error conectando con la API:", error);
+        mostrarToast("Error de conexión con el servidor", "error");
       }
     };
 
     const ejecutarOperacion = async () => {
-      cargando.value = true;
-
       if (tipoOperacion.value === "Transferencia") {
         if (
           !txTransf.value.origen_id ||
           !txTransf.value.destino_id ||
           !txTransf.value.monto
         ) {
-          alert("Completa todos los datos");
-          cargando.value = false;
+          mostrarToast("Completa todos los datos", "error");
           return;
         }
         if (txTransf.value.origen_id === txTransf.value.destino_id) {
-          alert("Cuentas iguales");
-          cargando.value = false;
+          mostrarToast("Las cuentas no pueden ser iguales", "error");
           return;
         }
 
+        cargando.value = true;
         const catSalida = categorias.value.find(
           (c) => c.nombre === "Transferencia Saliente",
         );
@@ -513,24 +522,29 @@ createApp({
         );
         const concepto = txTransf.value.descripcion || "Transferencia";
 
-        await Promise.all([
-          api.guardarTransaccion({
-            cuenta_id: parseInt(txTransf.value.origen_id),
-            categoria_id: catSalida.id,
-            monto: parseFloat(txTransf.value.monto),
-            fecha: txTransf.value.fecha,
-            descripcion: concepto,
-          }),
-          api.guardarTransaccion({
-            cuenta_id: parseInt(txTransf.value.destino_id),
-            categoria_id: catEntrada.id,
-            monto: parseFloat(txTransf.value.monto),
-            fecha: txTransf.value.fecha,
-            descripcion: concepto,
-          }),
-        ]);
-        txTransf.value.monto = "";
-        txTransf.value.descripcion = "";
+        try {
+          await Promise.all([
+            api.guardarTransaccion({
+              cuenta_id: parseInt(txTransf.value.origen_id),
+              categoria_id: catSalida.id,
+              monto: parseFloat(txTransf.value.monto),
+              fecha: txTransf.value.fecha,
+              descripcion: concepto,
+            }),
+            api.guardarTransaccion({
+              cuenta_id: parseInt(txTransf.value.destino_id),
+              categoria_id: catEntrada.id,
+              monto: parseFloat(txTransf.value.monto),
+              fecha: txTransf.value.fecha,
+              descripcion: concepto,
+            }),
+          ]);
+          txTransf.value.monto = "";
+          txTransf.value.descripcion = "";
+          mostrarToast("Operación registrada correctamente", "success");
+        } catch (error) {
+          mostrarToast("Ocurrió un error al registrar", "error");
+        }
       } else {
         if (
           !tx.value.cuenta_id ||
@@ -538,18 +552,24 @@ createApp({
           !tx.value.monto ||
           !tx.value.descripcion
         ) {
-          alert("Datos incompletos");
-          cargando.value = false;
+          mostrarToast("Faltan datos obligatorios", "error");
           return;
         }
-        await api.guardarTransaccion({
-          ...tx.value,
-          cuenta_id: parseInt(tx.value.cuenta_id),
-          categoria_id: parseInt(tx.value.categoria_id),
-          monto: parseFloat(tx.value.monto),
-        });
-        tx.value.monto = "";
-        tx.value.descripcion = "";
+
+        cargando.value = true;
+        try {
+          await api.guardarTransaccion({
+            ...tx.value,
+            cuenta_id: parseInt(tx.value.cuenta_id),
+            categoria_id: parseInt(tx.value.categoria_id),
+            monto: parseFloat(tx.value.monto),
+          });
+          tx.value.monto = "";
+          tx.value.descripcion = "";
+          mostrarToast("Operación registrada correctamente", "success");
+        } catch (error) {
+          mostrarToast("Ocurrió un error al registrar", "error");
+        }
       }
 
       showModal.value = false;
@@ -558,50 +578,72 @@ createApp({
     };
 
     const guardarCategoria = async () => {
-      if (!nuevaCat.value.nombre) return;
-      await api.guardarCategoria(nuevaCat.value);
-      nuevaCat.value.nombre = "";
-      await cargarDatos();
+      if (!nuevaCat.value.nombre) {
+        mostrarToast("El nombre de la categoría es requerido", "error");
+        return;
+      }
+      cargando.value = true;
+      try {
+        await api.guardarCategoria(nuevaCat.value);
+        nuevaCat.value.nombre = "";
+        await cargarDatos();
+        mostrarToast("Categoría guardada correctamente", "success");
+      } catch (error) {
+        mostrarToast("Error al guardar categoría", "error");
+      }
+      cargando.value = false;
     };
 
     const guardarCuenta = async () => {
-      if (!nuevaCuenta.value.nombre) return;
-
-      let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
-      if (["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.tipo_cuenta)) {
-        saldo = -Math.abs(saldo);
+      if (!nuevaCuenta.value.nombre) {
+        mostrarToast("El nombre de la cuenta es requerido", "error");
+        return;
       }
+      cargando.value = true;
 
-      const payload = {
-        usuario_id: currentUserId.value,
-        nombre: nuevaCuenta.value.nombre,
-        tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
-        moneda: nuevaCuenta.value.moneda,
-        saldo_inicial: saldo,
-        limite:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseFloat(nuevaCuenta.value.limite || 0)
-            : null,
-        dia_corte:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseInt(nuevaCuenta.value.dia_corte || 0)
-            : null,
-        dia_pago:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseInt(nuevaCuenta.value.dia_pago || 0)
-            : null,
-      };
-      await api.guardarCuenta(payload);
-      nuevaCuenta.value = {
-        nombre: "",
-        tipo_cuenta: "Debito",
-        moneda: "PEN",
-        saldo_inicial: "",
-        limite: "",
-        dia_corte: "",
-        dia_pago: "",
-      };
-      await cargarDatos();
+      try {
+        let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
+        if (
+          ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.tipo_cuenta)
+        ) {
+          saldo = -Math.abs(saldo);
+        }
+
+        const payload = {
+          usuario_id: currentUserId.value,
+          nombre: nuevaCuenta.value.nombre,
+          tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+          moneda: nuevaCuenta.value.moneda,
+          saldo_inicial: saldo,
+          limite:
+            nuevaCuenta.value.tipo_cuenta === "Credito"
+              ? parseFloat(nuevaCuenta.value.limite || 0)
+              : null,
+          dia_corte:
+            nuevaCuenta.value.tipo_cuenta === "Credito"
+              ? parseInt(nuevaCuenta.value.dia_corte || 0)
+              : null,
+          dia_pago:
+            nuevaCuenta.value.tipo_cuenta === "Credito"
+              ? parseInt(nuevaCuenta.value.dia_pago || 0)
+              : null,
+        };
+        await api.guardarCuenta(payload);
+        nuevaCuenta.value = {
+          nombre: "",
+          tipo_cuenta: "Debito",
+          moneda: "PEN",
+          saldo_inicial: "",
+          limite: "",
+          dia_corte: "",
+          dia_pago: "",
+        };
+        await cargarDatos();
+        mostrarToast("Cuenta/Deuda creada correctamente", "success");
+      } catch (error) {
+        mostrarToast("Error al crear cuenta", "error");
+      }
+      cargando.value = false;
     };
 
     const guardarPagoFijo = async () => {
@@ -609,25 +651,34 @@ createApp({
         !nuevoPagoFijo.value.nombre ||
         !nuevoPagoFijo.value.monto ||
         !nuevoPagoFijo.value.dia_cobro
-      )
+      ) {
+        mostrarToast("Completa todos los campos obligatorios", "error");
         return;
-      const payload = {
-        usuario_id: currentUserId.value,
-        nombre: nuevoPagoFijo.value.nombre,
-        monto: parseFloat(nuevoPagoFijo.value.monto),
-        tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
-        dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
-        moneda: nuevoPagoFijo.value.moneda,
-      };
-      await api.guardarPagoFijo(payload);
-      nuevoPagoFijo.value = {
-        nombre: "",
-        monto: "",
-        tipo_flujo: "Egreso",
-        dia_cobro: "",
-        moneda: "PEN",
-      };
-      await cargarDatos();
+      }
+      cargando.value = true;
+      try {
+        const payload = {
+          usuario_id: currentUserId.value,
+          nombre: nuevoPagoFijo.value.nombre,
+          monto: parseFloat(nuevoPagoFijo.value.monto),
+          tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
+          dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
+          moneda: nuevoPagoFijo.value.moneda,
+        };
+        await api.guardarPagoFijo(payload);
+        nuevoPagoFijo.value = {
+          nombre: "",
+          monto: "",
+          tipo_flujo: "Egreso",
+          dia_cobro: "",
+          moneda: "PEN",
+        };
+        await cargarDatos();
+        mostrarToast("Proyección guardada correctamente", "success");
+      } catch (error) {
+        mostrarToast("Error al guardar proyección", "error");
+      }
+      cargando.value = false;
     };
 
     onMounted(() => {
@@ -673,6 +724,8 @@ createApp({
       tituloCabecera,
       showModal,
       tipoOperacion,
+      toast,
+      mostrarToast,
       cuentas,
       categorias,
       categoriasFiltradas,
