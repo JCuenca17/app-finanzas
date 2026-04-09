@@ -26,13 +26,12 @@ createApp({
     const historial = ref([]);
     const pagosFijos = ref([]);
 
-    // Referencias para Gráficos
     const chartCatRef = ref(null);
     const chartFlujoRef = ref(null);
-    const chartDeudaRef = ref(null); // Referencia para el velocímetro
+    const chartDeudaRef = ref(null);
     let chartCatInstance = null;
     let chartFlujoInstance = null;
-    let chartDeudaInstance = null; // Instancia del velocímetro
+    let chartDeudaInstance = null;
 
     const tx = ref({
       monto: "",
@@ -71,21 +70,50 @@ createApp({
       const titulos = {
         inicio: "Dashboard",
         analitica: "Análisis Financiero",
-        cuentas: "Cuentas y Deudas",
+        cuentas: "Mis Activos",
+        deudas: "Mis Pasivos (Deudas)",
         historial: "Historial Completo",
-        pagos: "Proyección Mensual",
-        mas: "Menú",
+        pagos: "Flujo de Caja Libre",
+        mas: "Menú Principal",
         ajustes: "Ajustes de Sistema",
       };
       return titulos[tab.value] || "FinancePro";
     });
 
+    // Filtros de Cuentas vs Deudas
+    const cuentasActivas = computed(() =>
+      cuentas.value.filter((c) =>
+        ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
+      ),
+    );
+    const deudasActivas = computed(() =>
+      cuentas.value.filter((c) =>
+        ["Credito", "Prestamo"].includes(c.tipo_cuenta),
+      ),
+    );
+
+    // Filtros de Proyección
+    const pagosFijosIngresos = computed(() =>
+      pagosFijos.value.filter((p) => p.tipo_flujo === "Ingreso"),
+    );
+    const pagosFijosEgresos = computed(() =>
+      pagosFijos.value.filter((p) => p.tipo_flujo === "Egreso"),
+    );
+
+    const totalIngresosFijos = computed(() =>
+      pagosFijosIngresos.value.reduce((a, b) => a + b.monto, 0),
+    );
+    const totalGastosFijos = computed(() =>
+      pagosFijosEgresos.value.reduce((a, b) => a + b.monto, 0),
+    );
+    const flujoNetoMensual = computed(
+      () => totalIngresosFijos.value - totalGastosFijos.value,
+    );
+
     const saldosLiquidos = computed(() => {
       const saldos = { PEN: 0, USD: 0 };
-      cuentas.value
-        .filter(
-          (c) => c.tipo_cuenta === "Debito" || c.tipo_cuenta === "Efectivo",
-        )
+      cuentasActivas.value
+        .filter((c) => c.tipo_cuenta !== "Ahorro")
         .forEach((c) => {
           saldos[c.moneda || "PEN"] += c.saldo_actual;
         });
@@ -94,7 +122,7 @@ createApp({
 
     const saldosAhorro = computed(() => {
       const saldos = { PEN: 0, USD: 0 };
-      cuentas.value
+      cuentasActivas.value
         .filter((c) => c.tipo_cuenta === "Ahorro")
         .forEach((c) => {
           saldos[c.moneda || "PEN"] += c.saldo_actual;
@@ -102,25 +130,33 @@ createApp({
       return saldos;
     });
 
-    // Algoritmo de Diagnóstico de Deuda
+    // NUEVO: Algoritmo Inteligente de Deuda (Mide Liquidez + Flujo Neto vs Deuda)
     const diagnosticoDeuda = computed(() => {
       const liquidez = saldosLiquidos.value.PEN;
       const ahorro = saldosAhorro.value.PEN;
 
-      const deuda = cuentas.value
-        .filter((c) => c.tipo_cuenta === "Credito" && c.moneda === "PEN")
+      // Solo calcula deudas en PEN para simplificar el termómetro por ahora
+      const deuda = deudasActivas.value
+        .filter((c) => c.moneda === "PEN")
         .reduce((acc, c) => acc + Math.abs(c.saldo_actual), 0);
-      const ingresosProyectados = pagosFijos.value
-        .filter((p) => p.tipo_flujo === "Ingreso" && p.moneda === "PEN")
+
+      // El poder adquisitivo real a fin de mes es lo que tienes ahora + lo que te va a sobrar de tus fijos
+      const ingresosProyectados = pagosFijosIngresos.value
+        .filter((p) => p.moneda === "PEN")
+        .reduce((acc, p) => acc + p.monto, 0);
+      const gastosProyectados = pagosFijosEgresos.value
+        .filter((p) => p.moneda === "PEN")
         .reduce((acc, p) => acc + p.monto, 0);
 
-      const poderAdquisitivo = liquidez + ingresosProyectados;
-      const balance = poderAdquisitivo - deuda;
+      const poderAdquisitivoLibre =
+        liquidez + (ingresosProyectados - gastosProyectados);
+      const balance = poderAdquisitivoLibre - deuda;
 
       let result = {
         liquidez,
         deuda,
         ingresosProyectados,
+        poderAdquisitivoLibre,
         estado: "",
         mensaje: "",
         textColor: "",
@@ -131,17 +167,17 @@ createApp({
         colorGrafico: "",
       };
 
-      // Calcular porcentaje para el gráfico (Máximo 100%)
       if (deuda === 0) {
         result.porcentajeCobertura = 100;
       } else {
-        let cob = (poderAdquisitivo / deuda) * 100;
+        let cob = (poderAdquisitivoLibre / deuda) * 100;
+        if (cob < 0) cob = 0; // Si el poder es negativo, cobertura 0%
         if (cob > 100) cob = 100;
         result.porcentajeCobertura = Math.round(cob);
       }
 
       if (deuda === 0) {
-        result.estado = "Sin deudas";
+        result.estado = "Sin deudas activas";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
@@ -149,7 +185,7 @@ createApp({
           "bg-emerald-50 text-emerald-800 border-emerald-200";
         result.colorGrafico = "#10b981";
         result.mensaje =
-          "No tienes deudas de tarjeta de crédito activas en Soles.";
+          "Genial. No tienes deudas en Soles registradas en este momento.";
       } else if (balance >= 0) {
         result.estado = "Controlado";
         result.textColor = "text-emerald-600";
@@ -158,7 +194,7 @@ createApp({
         result.alertBoxClasses =
           "bg-emerald-50 text-emerald-800 border-emerald-200";
         result.colorGrafico = "#10b981";
-        result.mensaje = `Tienes liquidez e ingresos futuros suficientes. Te sobrarán S/ ${balance.toFixed(2)}.`;
+        result.mensaje = `Tienes liquidez y flujo libre suficientes para pagar. Si cancelas todo, aún te sobrarán S/ ${balance.toFixed(2)}.`;
       } else if (balance + ahorro >= 0) {
         result.estado = "Alerta Amarilla";
         result.textColor = "text-amber-600";
@@ -166,7 +202,7 @@ createApp({
         result.borderColor = "border-amber-200";
         result.alertBoxClasses = "bg-amber-50 text-amber-800 border-amber-200";
         result.colorGrafico = "#f59e0b";
-        result.mensaje = `Tu liquidez no alcanza. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que usar tus ahorros.`;
+        result.mensaje = `Tu flujo mensual y liquidez no alcanzan. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que usar tus ahorros.`;
       } else {
         result.estado = "Peligro Constante";
         result.textColor = "text-rose-600";
@@ -174,7 +210,7 @@ createApp({
         result.borderColor = "border-rose-200";
         result.alertBoxClasses = "bg-rose-50 text-rose-800 border-rose-200";
         result.colorGrafico = "#f43f5e";
-        result.mensaje = `Aún rompiendo tus ahorros, te faltarán S/ ${Math.abs(balance + ahorro).toFixed(2)} para cubrir la tarjeta.`;
+        result.mensaje = `Aún vaciando todos tus ahorros, te faltarán S/ ${Math.abs(balance + ahorro).toFixed(2)} para cubrir tus deudas. ¡Cuidado!`;
       }
       return result;
     });
@@ -202,7 +238,6 @@ createApp({
         chartFlujoInstance = null;
       }
 
-      // 1. Gráfico Anillo (Categorías)
       if (chartCatRef.value) {
         const egresos = historial.value.filter(
           (h) =>
@@ -283,7 +318,6 @@ createApp({
         }
       }
 
-      // 2. Gráfico Barras (Flujo)
       if (chartFlujoRef.value) {
         const ingresosPEN = historial.value
           .filter(
@@ -351,7 +385,6 @@ createApp({
       }
     };
 
-    // Función para renderizar el Velocímetro de Deuda
     const renderizarGraficoDeuda = () => {
       if (!chartDeudaRef.value) return;
       if (chartDeudaInstance) {
@@ -361,24 +394,41 @@ createApp({
 
       const optionsDeuda = {
         series: [diagnosticoDeuda.value.porcentajeCobertura],
-        chart: { type: "radialBar", height: 250, fontFamily: "inherit" },
+        chart: {
+          type: "radialBar",
+          height: 280,
+          fontFamily: "inherit",
+          sparkline: { enabled: true },
+        },
         plotOptions: {
           radialBar: {
-            startAngle: -135,
-            endAngle: 135,
+            startAngle: -100,
+            endAngle: 100,
             hollow: { size: "65%" },
-            track: { background: "#f1f5f9", strokeWidth: "100%" },
+            track: {
+              background: "#e2e8f0",
+              strokeWidth: "100%",
+              margin: 0,
+              dropShadow: {
+                enabled: true,
+                top: 0,
+                left: 0,
+                blur: 3,
+                opacity: 0.2,
+              },
+            },
             dataLabels: {
               name: {
                 show: true,
-                fontSize: "12px",
+                fontSize: "11px",
                 color: "#64748b",
-                offsetY: 20,
+                offsetY: 15,
+                fontWeight: 700,
               },
               value: {
-                offsetY: -10,
-                fontSize: "28px",
-                fontWeight: 800,
+                offsetY: -5,
+                fontSize: "32px",
+                fontWeight: 900,
                 color: "#0f172a",
                 formatter: function (val) {
                   return val + "%";
@@ -389,7 +439,7 @@ createApp({
         },
         fill: { colors: [diagnosticoDeuda.value.colorGrafico] },
         stroke: { lineCap: "round" },
-        labels: ["Cobertura de Deuda"],
+        labels: ["Cobertura Segura"],
       };
 
       chartDeudaInstance = new ApexCharts(chartDeudaRef.value, optionsDeuda);
@@ -442,7 +492,7 @@ createApp({
 
         if (tab.value === "analitica")
           nextTick(() => renderizarGraficosAnalitica());
-        if (tab.value === "cuentas") nextTick(() => renderizarGraficoDeuda());
+        if (tab.value === "deudas") nextTick(() => renderizarGraficoDeuda());
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
@@ -528,12 +578,22 @@ createApp({
 
     const guardarCuenta = async () => {
       if (!nuevaCuenta.value.nombre) return;
+
+      let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
+      // Aseguramos que Créditos y Préstamos se guarden como número negativo en la BD para la matemática
+      if (
+        nuevaCuenta.value.tipo_cuenta === "Credito" ||
+        nuevaCuenta.value.tipo_cuenta === "Prestamo"
+      ) {
+        saldo = -Math.abs(saldo);
+      }
+
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaCuenta.value.nombre,
         tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
         moneda: nuevaCuenta.value.moneda,
-        saldo_inicial: parseFloat(nuevaCuenta.value.saldo_inicial || 0),
+        saldo_inicial: saldo,
         limite:
           nuevaCuenta.value.tipo_cuenta === "Credito"
             ? parseFloat(nuevaCuenta.value.limite || 0)
@@ -616,10 +676,9 @@ createApp({
       });
     });
 
-    // Observadores para redibujar gráficos al cambiar de pestaña
     Vue.watch(tab, (newTab) => {
       if (newTab === "analitica") nextTick(() => renderizarGraficosAnalitica());
-      if (newTab === "cuentas") nextTick(() => renderizarGraficoDeuda());
+      if (newTab === "deudas") nextTick(() => renderizarGraficoDeuda());
     });
 
     return {
@@ -637,6 +696,13 @@ createApp({
       saldosLiquidos,
       saldosAhorro,
       pagosFijos,
+      cuentasActivas,
+      deudasActivas,
+      pagosFijosIngresos,
+      pagosFijosEgresos,
+      totalIngresosFijos,
+      totalGastosFijos,
+      flujoNetoMensual,
       tx,
       txTransf,
       nuevaCat,
