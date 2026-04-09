@@ -66,7 +66,26 @@ export const api = {
     return await fetch(`${API_URL}/pagos_fijos/${id}`, { method: "DELETE" });
   },
 
-  // --- CUENTAS Y CATEGORÍAS ---
+  // --- CUENTAS ---
+  async guardarCuenta(datos) {
+    return await fetch(`${API_URL}/cuentas/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async actualizarCuenta(id, datos) {
+    return await fetch(`${API_URL}/cuentas/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async eliminarCuenta(id) {
+    return await fetch(`${API_URL}/cuentas/${id}`, { method: "DELETE" });
+  },
+
+  // --- CATEGORÍAS ---
   async guardarCategoria(datos) {
     return await fetch(`${API_URL}/categorias/`, {
       method: "POST",
@@ -74,11 +93,14 @@ export const api = {
       body: JSON.stringify(datos),
     });
   },
-  async guardarCuenta(datos) {
-    return await fetch(`${API_URL}/cuentas/`, {
-      method: "POST",
+  async actualizarCategoria(id, datos) {
+    return await fetch(`${API_URL}/categorias/${id}`, {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(datos),
     });
+  },
+  async eliminarCategoria(id) {
+    return await fetch(`${API_URL}/categorias/${id}`, { method: "DELETE" });
   },
 };

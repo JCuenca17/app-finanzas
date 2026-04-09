@@ -45,9 +45,11 @@ createApp({
     let chartFlujoInstance = null;
     let chartDeudaInstance = null;
 
-    // Estados para la Edición (Reutilizar modales)
+    // Estados para la Edición (CRUD)
     const editandoTx = ref({ estado: false, id: null });
     const editandoPagoFijo = ref({ estado: false, id: null });
+    const editandoCuenta = ref({ estado: false, id: null });
+    const editandoCat = ref({ estado: false, id: null });
 
     const tx = ref({
       monto: "",
@@ -502,23 +504,20 @@ createApp({
       }
     };
 
-    // --- SISTEMA DE EDICIÓN Y CREACIÓN (CRUD) ---
+    // --- SISTEMA DE EDICIÓN Y CREACIÓN (CRUD COMPLETO) ---
 
-    // Abre el modal limpio para Nueva Transacción
     const abrirModalTransaccion = (itemAEditar = null) => {
       if (itemAEditar) {
-        // Modo Edición
         editandoTx.value = { estado: true, id: itemAEditar.id };
         tipoOperacion.value = itemAEditar.tipo_flujo;
         tx.value = {
           monto: itemAEditar.monto,
           descripcion: itemAEditar.descripcion,
           fecha: itemAEditar.fecha,
-          cuenta_id: itemAEditar.cuenta, // Asegúrate que el backend envíe el ID y no solo el nombre
-          categoria_id: itemAEditar.categoria,
+          cuenta_id: itemAEditar.cuenta, // Asume que el backend devuelve ID
+          categoria_id: itemAEditar.categoria, // Asume que el backend devuelve ID
         };
       } else {
-        // Modo Nuevo
         editandoTx.value = { estado: false, id: null };
         tipoOperacion.value = "Egreso";
         tx.value = {
@@ -541,7 +540,6 @@ createApp({
 
     const ejecutarOperacion = async () => {
       cargando.value = true;
-
       if (tipoOperacion.value === "Transferencia") {
         if (
           !txTransf.value.origen_id ||
@@ -608,7 +606,6 @@ createApp({
             categoria_id: parseInt(tx.value.categoria_id),
             monto: parseFloat(tx.value.monto),
           };
-
           if (editandoTx.value.estado) {
             await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
             mostrarToast("Operación actualizada con éxito", "success");
@@ -622,13 +619,11 @@ createApp({
           mostrarToast("Ocurrió un error en el servidor", "error");
         }
       }
-
       showModal.value = false;
       await cargarDatos();
       cargando.value = false;
     };
 
-    // Modal para Proyección Fija
     const abrirModalPagoFijo = (pagoAEditar) => {
       editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
       nuevoPagoFijo.value = {
@@ -638,7 +633,7 @@ createApp({
         dia_cobro: pagoAEditar.dia_cobro,
         moneda: pagoAEditar.moneda,
       };
-      tab.value = "ajustes"; // Te lleva a la pestaña donde está el formulario
+      tab.value = "ajustes";
     };
 
     const cancelarEdicionPago = () => {
@@ -671,7 +666,6 @@ createApp({
           dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
           moneda: nuevoPagoFijo.value.moneda,
         };
-
         if (editandoPagoFijo.value.estado) {
           await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
           mostrarToast("Proyección actualizada con éxito", "success");
@@ -679,8 +673,7 @@ createApp({
           await api.guardarPagoFijo(payload);
           mostrarToast("Proyección guardada con éxito", "success");
         }
-
-        cancelarEdicionPago(); // Limpia el formulario
+        cancelarEdicionPago();
         await cargarDatos();
       } catch (error) {
         mostrarToast("Error de servidor", "error");
@@ -688,42 +681,31 @@ createApp({
       cargando.value = false;
     };
 
-    // Eliminar global (Conectado al Backend)
-    const eliminarRegistro = async (tipo, id) => {
-      if (!confirm("¿Estás seguro de que deseas eliminar este registro?"))
-        return;
-
-      cargando.value = true;
-      try {
-        if (tipo === "transaccion") {
-          await api.eliminarTransaccion(id);
-        } else if (tipo === "proyeccion") {
-          await api.eliminarPagoFijo(id);
-        }
-        await cargarDatos();
-        mostrarToast("Registro eliminado correctamente", "success");
-      } catch (error) {
-        console.error("Error al eliminar:", error);
-        mostrarToast("Hubo un error al intentar eliminar", "error");
-      }
-      cargando.value = false;
+    const abrirModalCuenta = (cuentaAEditar) => {
+      editandoCuenta.value = { estado: true, id: cuentaAEditar.id_cuenta };
+      nuevaCuenta.value = {
+        nombre: cuentaAEditar.nombre,
+        tipo_cuenta: cuentaAEditar.tipo_cuenta,
+        moneda: cuentaAEditar.moneda,
+        saldo_inicial: Math.abs(cuentaAEditar.saldo_actual), // Se muestra en positivo al usuario
+        limite: cuentaAEditar.limite || "",
+        dia_corte: cuentaAEditar.dia_corte || "",
+        dia_pago: cuentaAEditar.dia_pago || "",
+      };
+      tab.value = "ajustes";
     };
 
-    const guardarCategoria = async () => {
-      if (!nuevaCat.value.nombre) {
-        mostrarToast("Ponle un nombre a la categoría", "warning");
-        return;
-      }
-      cargando.value = true;
-      try {
-        await api.guardarCategoria(nuevaCat.value);
-        nuevaCat.value.nombre = "";
-        await cargarDatos();
-        mostrarToast("Categoría creada", "success");
-      } catch (error) {
-        mostrarToast("Error al guardar", "error");
-      }
-      cargando.value = false;
+    const cancelarEdicionCuenta = () => {
+      editandoCuenta.value = { estado: false, id: null };
+      nuevaCuenta.value = {
+        nombre: "",
+        tipo_cuenta: "Debito",
+        moneda: "PEN",
+        saldo_inicial: "",
+        limite: "",
+        dia_corte: "",
+        dia_pago: "",
+      };
     };
 
     const guardarCuenta = async () => {
@@ -732,14 +714,10 @@ createApp({
         return;
       }
       cargando.value = true;
-
       try {
         let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
-        if (
-          ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.tipo_cuenta)
-        ) {
+        if (["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.tipo_cuenta))
           saldo = -Math.abs(saldo);
-        }
 
         const payload = {
           usuario_id: currentUserId.value,
@@ -760,20 +738,79 @@ createApp({
               ? parseInt(nuevaCuenta.value.dia_pago || 0)
               : null,
         };
-        await api.guardarCuenta(payload);
-        nuevaCuenta.value = {
-          nombre: "",
-          tipo_cuenta: "Debito",
-          moneda: "PEN",
-          saldo_inicial: "",
-          limite: "",
-          dia_corte: "",
-          dia_pago: "",
-        };
+
+        if (editandoCuenta.value.estado) {
+          await api.actualizarCuenta(editandoCuenta.value.id, payload);
+          mostrarToast("Cuenta actualizada correctamente", "success");
+        } else {
+          await api.guardarCuenta(payload);
+          mostrarToast("Cuenta registrada correctamente", "success");
+        }
+        cancelarEdicionCuenta();
         await cargarDatos();
-        mostrarToast("Cuenta registrada correctamente", "success");
       } catch (error) {
         mostrarToast("Error de conexión", "error");
+      }
+      cargando.value = false;
+    };
+
+    const abrirModalCategoria = (catAEditar) => {
+      editandoCat.value = { estado: true, id: catAEditar.id };
+      nuevaCat.value = {
+        nombre: catAEditar.nombre,
+        tipo_flujo: catAEditar.tipo_flujo,
+      };
+    };
+
+    const cancelarEdicionCategoria = () => {
+      editandoCat.value = { estado: false, id: null };
+      nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
+    };
+
+    const guardarCategoria = async () => {
+      if (!nuevaCat.value.nombre) {
+        mostrarToast("Ponle un nombre a la categoría", "warning");
+        return;
+      }
+      cargando.value = true;
+      try {
+        if (editandoCat.value.estado) {
+          await api.actualizarCategoria(editandoCat.value.id, nuevaCat.value);
+          mostrarToast("Categoría actualizada", "success");
+        } else {
+          await api.guardarCategoria(nuevaCat.value);
+          mostrarToast("Categoría creada", "success");
+        }
+        cancelarEdicionCategoria();
+        await cargarDatos();
+      } catch (error) {
+        mostrarToast("Error al guardar", "error");
+      }
+      cargando.value = false;
+    };
+
+    const eliminarRegistro = async (tipo, id) => {
+      if (
+        !confirm(
+          "¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.",
+        )
+      )
+        return;
+      cargando.value = true;
+      try {
+        if (tipo === "transaccion") await api.eliminarTransaccion(id);
+        else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
+        else if (tipo === "cuenta") await api.eliminarCuenta(id);
+        else if (tipo === "categoria") await api.eliminarCategoria(id);
+
+        await cargarDatos();
+        mostrarToast("Registro eliminado correctamente", "success");
+      } catch (error) {
+        console.error("Error al eliminar:", error);
+        mostrarToast(
+          "No se pudo eliminar. Verifica que no tenga operaciones ligadas.",
+          "error",
+        );
       }
       cargando.value = false;
     };
@@ -827,8 +864,14 @@ createApp({
       abrirModalTransaccion,
       abrirModalPagoFijo,
       cancelarEdicionPago,
+      abrirModalCuenta,
+      cancelarEdicionCuenta,
+      abrirModalCategoria,
+      cancelarEdicionCategoria,
       editandoTx,
       editandoPagoFijo,
+      editandoCuenta,
+      editandoCat,
       cuentas,
       categorias,
       categoriasFiltradas,
