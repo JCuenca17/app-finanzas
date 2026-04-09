@@ -556,7 +556,6 @@
                 >
                   No tienes cuentas registradas.
                 </div>
-
                 <div
                   v-for="c in cuentasActivas"
                   :key="c.id_cuenta"
@@ -619,7 +618,6 @@
                     </p>
                   </div>
                 </div>
-
                 <div class="col-span-full">
                   <h3
                     class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-6 mb-1"
@@ -633,7 +631,6 @@
                 >
                   Nadie te debe dinero actualmente.
                 </div>
-
                 <div
                   v-for="c in cuentasPorCobrar"
                   :key="c.id_cuenta"
@@ -813,7 +810,6 @@
                     </div>
                   </div>
                 </div>
-
                 <h3
                   class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-4"
                 >
@@ -950,29 +946,6 @@
                   >
                     + Añadir Proyección
                   </button>
-                </div>
-                <div
-                  class="bg-blue-50 border border-blue-100 p-4 md:p-5 rounded-2xl mb-6 text-xs md:text-sm text-blue-800 shadow-sm flex items-start gap-3"
-                >
-                  <svg
-                    class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clip-rule="evenodd"
-                    ></path>
-                  </svg>
-                  <div>
-                    <p class="font-bold mb-1">Nota sobre Pagos Compartidos:</p>
-                    <p>
-                      Si pagas algo en grupo (ej. Plan Spotify), registra aquí
-                      <b>solo tu parte del gasto</b>. Lo que te deben los demás
-                      regístralo como "Por Cobrar" en la pestaña Ajustes.
-                    </p>
-                  </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <div
@@ -1172,6 +1145,79 @@
                   </h3>
                   <div class="flex-1 w-full" ref="chartCatRef"></div>
                 </div>
+
+                <div
+                  class="col-span-1 lg:col-span-2 bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 flex flex-col mt-2"
+                >
+                  <h3
+                    class="font-bold text-slate-800 text-sm md:text-base mb-1"
+                  >
+                    Análisis por Etiqueta o Persona
+                  </h3>
+                  <p class="text-[10px] md:text-xs text-slate-500 mb-4">
+                    Agrega un hashtag en el concepto de tus gastos (Ej. "Cena
+                    #Maria"). Búscalo aquí para saber exactamente cuánto has
+                    gastado en esa etiqueta sin romper tus gráficos principales.
+                  </p>
+
+                  <input
+                    type="text"
+                    v-model="tagSearch"
+                    placeholder="Buscar etiqueta... (Ej. #Maria, #ViajeSur)"
+                    class="w-full mb-4 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 bg-slate-50"
+                  />
+
+                  <div
+                    v-if="tagSearch && analisisTag.operaciones.length > 0"
+                    class="space-y-4"
+                  >
+                    <div
+                      class="bg-rose-50 p-4 rounded-xl border border-rose-100 inline-block mb-2"
+                    >
+                      <p
+                        class="text-[10px] md:text-xs font-bold text-rose-400 uppercase tracking-wider mb-1"
+                      >
+                        Total Gastado en "{{ tagSearch }}"
+                      </p>
+                      <p
+                        class="text-xl md:text-2xl font-extrabold text-rose-600"
+                      >
+                        S/ {{ analisisTag.total.toFixed(2) }}
+                      </p>
+                    </div>
+                    <div
+                      class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden"
+                    >
+                      <div
+                        v-for="item in analisisTag.operaciones"
+                        :key="item.id"
+                        class="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition"
+                      >
+                        <div class="min-w-0 pr-4">
+                          <p
+                            class="font-bold text-slate-900 text-xs md:text-sm truncate"
+                          >
+                            {{ item.descripcion }}
+                          </p>
+                          <p class="text-[10px] text-slate-500 mt-0.5">
+                            {{ item.fecha }} • {{ item.categoria_nombre }}
+                          </p>
+                        </div>
+                        <div
+                          class="font-extrabold text-rose-600 text-sm whitespace-nowrap"
+                        >
+                          - S/ {{ Math.abs(item.monto).toFixed(2) }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    v-else-if="tagSearch"
+                    class="text-center py-6 text-slate-500 text-xs md:text-sm"
+                  >
+                    No se encontraron gastos con la etiqueta "{{ tagSearch }}".
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1276,333 +1322,7 @@
             >
               <div
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto"
-              >
-                <div
-                  v-if="tab === 'mas'"
-                  class="md:hidden col-span-1 space-y-3 mb-2"
-                >
-                  <button
-                    @click="tab = 'analitica'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
-                  >
-                    Analítica Visual <span class="text-slate-400">&rarr;</span>
-                  </button>
-                  <button
-                    @click="tab = 'pagos'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
-                  >
-                    Proyección Mensual de Flujo
-                    <span class="text-slate-400">&rarr;</span>
-                  </button>
-                  <button
-                    @click="tab = 'ajustes'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
-                  >
-                    Configuración de Sistema
-                    <span class="text-slate-400">&rarr;</span>
-                  </button>
-                  <button
-                    @click="cerrarSesion"
-                    class="w-full bg-rose-50 p-4 rounded-2xl border border-rose-100 shadow-sm font-bold text-sm text-rose-600 text-left flex justify-between items-center"
-                  >
-                    Cerrar Sesión
-                  </button>
-                </div>
-
-                <div
-                  v-show="tab === 'ajustes' || editandoCuenta.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm self-start transition-all"
-                  :class="editandoCuenta.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
-                  <div
-                    class="flex justify-between items-center mb-4 border-b border-slate-50 pb-3"
-                  >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoCuenta.estado"
-                        >Editar Cuenta/Deuda</span
-                      ><span v-else>Crear Activo o Pasivo</span>
-                    </h3>
-                    <button
-                      v-if="editandoCuenta.estado"
-                      @click="cancelarEdicionCuenta"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    v-model="nuevaCuenta.nombre"
-                    placeholder="Nombre (Ej: BBVA, Préstamo)"
-                    class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                  />
-                  <div class="flex gap-2 mb-3">
-                    <select
-                      v-model="nuevaCuenta.tipo_cuenta"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <optgroup label="Mis Activos (Dinero a favor)">
-                        <option value="Debito">Débito (Uso diario)</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Ahorro">Ahorro / Alcancía</option>
-                        <option value="Cobrar">
-                          Por Cobrar (Me deben dinero)
-                        </option>
-                      </optgroup>
-                      <optgroup label="Mis Pasivos (Deudas)">
-                        <option value="Credito">Tarjeta Crédito</option>
-                        <option value="Prestamo">
-                          Préstamo Bancario / Cuotas
-                        </option>
-                        <option value="Pagar">
-                          Por Pagar (Debo a alguien)
-                        </option>
-                      </optgroup>
-                    </select>
-                    <select
-                      v-model="nuevaCuenta.moneda"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="PEN">Soles (S/)</option>
-                      <option value="USD">Dólares ($)</option>
-                    </select>
-                  </div>
-                  <template
-                    v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
-                  >
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Saldo a favor"
-                      class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                  </template>
-                  <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.limite"
-                      placeholder="Límite Total de la Tarjeta"
-                      class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Deuda Actual (En positivo)"
-                      class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                    <div class="flex gap-2 mb-5">
-                      <input
-                        type="number"
-                        v-model="nuevaCuenta.dia_corte"
-                        placeholder="Día Corte"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                      />
-                      <input
-                        type="number"
-                        v-model="nuevaCuenta.dia_pago"
-                        placeholder="Día Pago"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                      />
-                    </div>
-                  </template>
-                  <template v-else>
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Deuda Pendiente (En positivo)"
-                      class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none border-l-4 border-l-rose-500"
-                    />
-                  </template>
-                  <button
-                    @click="guardarCuenta"
-                    class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition shadow-md active:scale-95"
-                    :class="editandoCuenta.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
-                  >
-                    <span v-if="editandoCuenta.estado">Actualizar Cuenta</span>
-                    <span v-else>Guardar Cuenta/Deuda</span>
-                  </button>
-                </div>
-
-                <div
-                  v-show="tab === 'ajustes' || editandoPagoFijo.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm self-start transition-all"
-                  :class="editandoPagoFijo.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
-                  <div
-                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
-                  >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoPagoFijo.estado"
-                        >Editar Proyección Fija</span
-                      >
-                      <span v-else>Nuevo Flujo Fijo</span>
-                    </h3>
-                    <button
-                      v-if="editandoPagoFijo.estado"
-                      @click="cancelarEdicionPago"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    v-model="nuevoPagoFijo.nombre"
-                    placeholder="Nombre (Ej: Sueldo, Netflix)"
-                    class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                  />
-                  <div class="flex gap-2 mb-3">
-                    <select
-                      v-model="nuevoPagoFijo.tipo_flujo"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="Ingreso">Ingreso Seguro</option>
-                      <option value="Egreso">Gasto Fijo</option>
-                    </select>
-                    <select
-                      v-model="nuevoPagoFijo.moneda"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="PEN">Soles (S/)</option>
-                      <option value="USD">Dólares ($)</option>
-                    </select>
-                  </div>
-                  <div class="flex gap-2 mb-5">
-                    <input
-                      type="number"
-                      v-model="nuevoPagoFijo.monto"
-                      placeholder="Monto"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      v-model="nuevoPagoFijo.dia_cobro"
-                      placeholder="Día del mes (1-31)"
-                      min="1"
-                      max="31"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                  </div>
-                  <button
-                    @click="guardarPagoFijo"
-                    class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition active:scale-95 shadow-md"
-                    :class="editandoPagoFijo.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
-                  >
-                    <span v-if="editandoPagoFijo.estado">Guardar Cambios</span>
-                    <span v-else>Añadir a Proyección</span>
-                  </button>
-                </div>
-
-                <div
-                  v-show="tab === 'ajustes' || editandoCat.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm self-start transition-all"
-                  :class="editandoCat.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
-                  <div
-                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
-                  >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoCat.estado">Editar Categoría</span>
-                      <span v-else>Categorías Maestro</span>
-                    </h3>
-                    <button
-                      v-if="editandoCat.estado"
-                      @click="cancelarEdicionCategoria"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-
-                  <div class="flex gap-2 mb-4">
-                    <input
-                      type="text"
-                      v-model="nuevaCat.nombre"
-                      placeholder="Nombre"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                    <select
-                      v-model="nuevaCat.tipo_flujo"
-                      class="w-32 px-2 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="Ingreso">Ing.</option>
-                      <option value="Egreso">Egr.</option>
-                    </select>
-                  </div>
-                  <button
-                    @click="guardarCategoria"
-                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6"
-                    :class="editandoCat.estado ? 'bg-blue-600 hover:bg-blue-700 shadow-md' : 'bg-slate-900 hover:bg-slate-800 shadow-md'"
-                  >
-                    <span v-if="editandoCat.estado">Actualizar Categoría</span>
-                    <span v-else>Añadir Nueva</span>
-                  </button>
-
-                  <div v-if="!editandoCat.estado">
-                    <h4
-                      class="font-bold text-xs text-slate-400 uppercase tracking-widest mb-3"
-                    >
-                      Mis Categorías
-                    </h4>
-                    <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
-                      <div
-                        v-for="cat in categorias"
-                        :key="cat.id"
-                        class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg group border border-slate-100 hover:border-slate-200 transition"
-                      >
-                        <span
-                          class="text-sm font-semibold text-slate-700 truncate mr-2"
-                          >{{ cat.nombre }}
-                          <span
-                            class="text-[10px] text-slate-400 ml-1 font-medium"
-                            >{{cat.tipo_flujo}}</span
-                          ></span
-                        >
-                        <div
-                          class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
-                        >
-                          <button
-                            @click="abrirModalCategoria(cat)"
-                            class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition"
-                          >
-                            <svg
-                              class="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                              ></path>
-                            </svg>
-                          </button>
-                          <button
-                            @click="eliminarRegistro('categoria', cat.id)"
-                            class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition"
-                          >
-                            <svg
-                              class="w-3.5 h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              ></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              ></div>
             </div>
           </div>
         </main>
@@ -1727,176 +1447,7 @@
           </button>
         </nav>
       </div>
-
-      <div
-        v-if="showModal"
-        class="fixed inset-0 z-50 flex items-end md:items-center justify-center glass p-0 md:p-4 transition-all"
-      >
-        <div
-          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl border border-slate-100 max-h-[85vh] md:max-h-[90vh] overflow-y-auto slide-up relative"
-        >
-          <div
-            class="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-5 md:hidden"
-          ></div>
-          <div class="flex justify-between items-center mb-5">
-            <h2 class="text-lg md:text-xl font-extrabold text-slate-900">
-              <span v-if="editandoTx.estado">Editar Operación</span
-              ><span v-else>Nueva Operación</span>
-            </h2>
-            <button
-              @click="showModal = false"
-              class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition"
-            >
-              &times;
-            </button>
-          </div>
-
-          <div
-            v-if="!editandoTx.estado"
-            class="flex gap-2 p-1 bg-slate-100 rounded-xl mb-5"
-          >
-            <button
-              @click="tipoOperacion = 'Egreso'"
-              :class="tipoOperacion === 'Egreso' ? 'bg-white shadow-sm text-slate-900 font-bold' : 'text-slate-500 font-medium'"
-              class="flex-1 py-2 text-xs md:text-sm rounded-lg transition"
-            >
-              Gasto / Pago
-            </button>
-            <button
-              @click="tipoOperacion = 'Ingreso'"
-              :class="tipoOperacion === 'Ingreso' ? 'bg-white shadow-sm text-slate-900 font-bold' : 'text-slate-500 font-medium'"
-              class="flex-1 py-2 text-xs md:text-sm rounded-lg transition"
-            >
-              Ingreso
-            </button>
-            <button
-              @click="tipoOperacion = 'Transferencia'"
-              :class="tipoOperacion === 'Transferencia' ? 'bg-white shadow-sm text-slate-900 font-bold' : 'text-slate-500 font-medium'"
-              class="flex-1 py-2 text-xs md:text-sm rounded-lg transition"
-            >
-              Mover
-            </button>
-          </div>
-          <div
-            v-else
-            class="mb-5 bg-blue-50 text-blue-800 p-3 rounded-xl text-xs font-semibold text-center border border-blue-100"
-          >
-            Modificando registro de tipo: {{ tipoOperacion }}
-          </div>
-
-          <div
-            v-if="tipoOperacion !== 'Transferencia'"
-            class="space-y-3 md:space-y-4"
-          >
-            <select
-              v-model="tx.cuenta_id"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-            >
-              <option value="" disabled>Cuenta origen/destino...</option>
-              <option v-for="c in cuentas" :value="c.id_cuenta">
-                {{ c.nombre }} ({{ c.moneda }})
-              </option>
-            </select>
-            <select
-              v-model="tx.categoria_id"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-            >
-              <option value="" disabled>Categoría Maestro...</option>
-              <option v-for="cat in categoriasFiltradas" :value="cat.id">
-                {{ cat.nombre }}
-              </option>
-            </select>
-            <div class="grid grid-cols-2 gap-3 md:gap-4">
-              <input
-                type="number"
-                v-model="tx.monto"
-                placeholder="Monto"
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base md:text-lg font-extrabold focus:outline-none"
-              />
-              <input
-                type="date"
-                v-model="tx.fecha"
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-              />
-            </div>
-            <input
-              type="text"
-              v-model="tx.descripcion"
-              placeholder="Concepto (Ej. Pago luz, Almuerzo)"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none"
-            />
-          </div>
-
-          <div
-            v-if="tipoOperacion === 'Transferencia'"
-            class="space-y-3 md:space-y-4"
-          >
-            <div
-              v-if="editandoTx.estado"
-              class="text-xs text-rose-500 font-semibold mb-2 bg-rose-50 p-2 rounded-lg border border-rose-100"
-            >
-              Por seguridad contable, las transferencias deben ser eliminadas y
-              creadas de nuevo. No se pueden editar directamente.
-            </div>
-            <select
-              v-model="txTransf.origen_id"
-              :disabled="editandoTx.estado"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-            >
-              <option value="" disabled>Sale de...</option>
-              <option v-for="c in cuentas" :value="c.id_cuenta">
-                {{ c.nombre }} ({{ c.moneda }})
-              </option>
-            </select>
-            <select
-              v-model="txTransf.destino_id"
-              :disabled="editandoTx.estado"
-              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-            >
-              <option value="" disabled>Entra a...</option>
-              <option v-for="c in cuentas" :value="c.id_cuenta">
-                {{ c.nombre }} ({{ c.moneda }})
-              </option>
-            </select>
-            <div class="grid grid-cols-2 gap-3 md:gap-4">
-              <input
-                type="number"
-                v-model="txTransf.monto"
-                :disabled="editandoTx.estado"
-                placeholder="Monto"
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base md:text-lg font-extrabold focus:outline-none"
-              />
-              <input
-                type="date"
-                v-model="txTransf.fecha"
-                :disabled="editandoTx.estado"
-                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div class="mt-6 md:mt-8 flex gap-3 pb-8 md:pb-0">
-            <button
-              v-if="!editandoTx.estado || tipoOperacion !== 'Transferencia'"
-              @click="ejecutarOperacion"
-              class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition active:scale-95 shadow-lg"
-              :class="editandoTx.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
-            >
-              <span v-if="editandoTx.estado">Guardar Cambios</span>
-              <span v-else>Confirmar Operación</span>
-            </button>
-            <button
-              v-if="editandoTx.estado"
-              @click="showModal = false"
-              class="w-full py-3.5 text-sm font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
-
     <script type="module" src="js/app.js"></script>
     <style>
       .slide-up {
