@@ -9,8 +9,8 @@ const { createApp, ref, computed, onMounted, nextTick } = Vue;
 createApp({
   setup() {
     // --- CREDENCIALES SUPABASE ---
-    const SUPABASE_URL = "https://TU-ID-DE-PROYECTO.supabase.co";
-    const SUPABASE_KEY = "TU-ANON-KEY";
+    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     // -----------------------------
 
