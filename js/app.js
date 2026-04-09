@@ -185,8 +185,9 @@ createApp({
         result.porcentajeCobertura = Math.round(cob);
       }
 
+      // Textos amigables
       if (deuda === 0) {
-        result.estado = "Sin obligaciones activas";
+        result.estado = "Todo en orden";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
@@ -194,32 +195,32 @@ createApp({
           "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
         result.mensaje =
-          "Excelente estado de solvencia. No existen pasivos registrados en Soles pendientes de pago.";
+          "No tienes deudas de tarjetas en este momento. ¡Sigue así!";
       } else if (balance >= 0) {
-        result.estado = "Superávit Proyectado";
+        result.estado = "Bajo Control";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
           "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
-        result.mensaje = `Tras cubrir las obligaciones de crédito y gastos fijos, existirá un excedente líquido de S/ ${balance.toFixed(2)}.`;
+        result.mensaje = `Con tu dinero actual y tu sueldo podrás pagar tus tarjetas tranqui. Te sobrarán S/ ${balance.toFixed(2)}.`;
       } else if (balance + ahorro >= 0) {
-        result.estado = "Alerta Amarilla";
+        result.estado = "Cuidado, faltan fondos";
         result.textColor = "text-amber-600";
         result.iconBg = "bg-amber-500";
         result.borderColor = "border-amber-200";
         result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
         result.colorGrafico = "#f59e0b";
-        result.mensaje = `Déficit líquido proyectado de S/ ${Math.abs(balance).toFixed(2)}. Será necesario comprometer capital de la reserva de ahorros para evitar mora.`;
+        result.mensaje = `Tu sueldo no alcanza para la tarjeta. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que sacar de tus ahorros.`;
       } else {
-        result.estado = "Insolvencia Crítica";
+        result.estado = "Peligro de Deuda";
         result.textColor = "text-rose-600";
         result.iconBg = "bg-rose-500";
         result.borderColor = "border-rose-200";
         result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
         result.colorGrafico = "#f43f5e";
-        result.mensaje = `El déficit supera la reserva total de ahorros en S/ ${Math.abs(balance + ahorro).toFixed(2)}. Se requiere reestructuración de deuda inmediata.`;
+        result.mensaje = `Incluso usando todos tus ahorros te van a faltar S/ ${Math.abs(balance + ahorro).toFixed(2)}. Evita gastar más.`;
       }
       return result;
     });
@@ -505,11 +506,11 @@ createApp({
           !txTransf.value.destino_id ||
           !txTransf.value.monto
         ) {
-          mostrarToast("Completa todos los datos", "error");
+          mostrarToast("Falta completar datos", "warning");
           return;
         }
         if (txTransf.value.origen_id === txTransf.value.destino_id) {
-          mostrarToast("Las cuentas no pueden ser iguales", "error");
+          mostrarToast("Las cuentas no pueden ser iguales", "warning");
           return;
         }
 
@@ -541,9 +542,9 @@ createApp({
           ]);
           txTransf.value.monto = "";
           txTransf.value.descripcion = "";
-          mostrarToast("Operación registrada correctamente", "success");
+          mostrarToast("Transferencia registrada con éxito", "success");
         } catch (error) {
-          mostrarToast("Ocurrió un error al registrar", "error");
+          mostrarToast("Ocurrió un error en el servidor", "error");
         }
       } else {
         if (
@@ -552,7 +553,7 @@ createApp({
           !tx.value.monto ||
           !tx.value.descripcion
         ) {
-          mostrarToast("Faltan datos obligatorios", "error");
+          mostrarToast("Por favor, llena todos los campos", "warning");
           return;
         }
 
@@ -566,9 +567,9 @@ createApp({
           });
           tx.value.monto = "";
           tx.value.descripcion = "";
-          mostrarToast("Operación registrada correctamente", "success");
+          mostrarToast("Operación registrada con éxito", "success");
         } catch (error) {
-          mostrarToast("Ocurrió un error al registrar", "error");
+          mostrarToast("Ocurrió un error en el servidor", "error");
         }
       }
 
@@ -579,7 +580,7 @@ createApp({
 
     const guardarCategoria = async () => {
       if (!nuevaCat.value.nombre) {
-        mostrarToast("El nombre de la categoría es requerido", "error");
+        mostrarToast("Ponle un nombre a la categoría", "warning");
         return;
       }
       cargando.value = true;
@@ -587,16 +588,16 @@ createApp({
         await api.guardarCategoria(nuevaCat.value);
         nuevaCat.value.nombre = "";
         await cargarDatos();
-        mostrarToast("Categoría guardada correctamente", "success");
+        mostrarToast("Categoría creada", "success");
       } catch (error) {
-        mostrarToast("Error al guardar categoría", "error");
+        mostrarToast("Error al guardar", "error");
       }
       cargando.value = false;
     };
 
     const guardarCuenta = async () => {
       if (!nuevaCuenta.value.nombre) {
-        mostrarToast("El nombre de la cuenta es requerido", "error");
+        mostrarToast("El nombre de la cuenta es obligatorio", "warning");
         return;
       }
       cargando.value = true;
@@ -639,9 +640,9 @@ createApp({
           dia_pago: "",
         };
         await cargarDatos();
-        mostrarToast("Cuenta/Deuda creada correctamente", "success");
+        mostrarToast("Cuenta registrada correctamente", "success");
       } catch (error) {
-        mostrarToast("Error al crear cuenta", "error");
+        mostrarToast("Error de conexión", "error");
       }
       cargando.value = false;
     };
@@ -652,7 +653,7 @@ createApp({
         !nuevoPagoFijo.value.monto ||
         !nuevoPagoFijo.value.dia_cobro
       ) {
-        mostrarToast("Completa todos los campos obligatorios", "error");
+        mostrarToast("Faltan datos en la proyección", "warning");
         return;
       }
       cargando.value = true;
@@ -674,11 +675,20 @@ createApp({
           moneda: "PEN",
         };
         await cargarDatos();
-        mostrarToast("Proyección guardada correctamente", "success");
+        mostrarToast("Proyección guardada con éxito", "success");
       } catch (error) {
-        mostrarToast("Error al guardar proyección", "error");
+        mostrarToast("Error de servidor", "error");
       }
       cargando.value = false;
+    };
+
+    // Función mock para eliminar (Prepara el terreno para el backend)
+    const eliminarRegistro = (tipo, id) => {
+      mostrarToast(
+        "Falta conectar la función DELETE en tu Backend (Python) para poder borrar elementos.",
+        "warning",
+      );
+      console.log(`Intento de eliminar ${tipo} con ID: ${id}`);
     };
 
     onMounted(() => {
@@ -726,6 +736,7 @@ createApp({
       tipoOperacion,
       toast,
       mostrarToast,
+      eliminarRegistro,
       cuentas,
       categorias,
       categoriasFiltradas,

@@ -56,7 +56,6 @@
         height: 100%;
       }
 
-      /* Animación para las notificaciones Toast */
       .toast-enter-active,
       .toast-leave-active {
         transition: all 0.3s ease;
@@ -79,37 +78,11 @@
         <div
           v-if="toast.show"
           class="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[300px] max-w-[90%] pointer-events-none"
-          :class="toast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'"
+          :class="toast.type === 'success' ? 'bg-emerald-600 text-white' : (toast.type === 'warning' ? 'bg-amber-500 text-white' : 'bg-rose-600 text-white')"
         >
-          <svg
-            v-if="toast.type === 'success'"
-            class="w-6 h-6 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            ></path>
-          </svg>
-          <svg
-            v-else
-            class="w-6 h-6 flex-shrink-0"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <p class="font-bold text-sm leading-tight">{{ toast.message }}</p>
+          <p class="font-bold text-sm leading-tight text-center w-full">
+            {{ toast.message }}
+          </p>
         </div>
       </transition>
 
@@ -150,7 +123,7 @@
             FinancePro
           </h1>
           <p class="text-sm text-slate-500 mb-8 font-medium">
-            Tu ecosistema financiero personal.
+            Control financiero personal.
           </p>
           <button
             @click="iniciarSesionGoogle"
@@ -406,7 +379,7 @@
               @click="showModal = true"
               class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
             >
-              + Registrar Operación
+              Registrar Operación
             </button>
           </header>
 
@@ -486,7 +459,7 @@
                   <div
                     v-for="item in historial.slice(0, 10)"
                     :key="item.id"
-                    class="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition"
+                    class="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition group"
                   >
                     <div class="flex items-center gap-3">
                       <div
@@ -508,12 +481,33 @@
                         </p>
                       </div>
                     </div>
-                    <div
-                      :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
-                      class="font-extrabold text-sm md:text-base whitespace-nowrap pl-2"
-                    >
-                      {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
-                      formatoMoneda(item.monto, item.moneda) }}
+                    <div class="flex items-center gap-4">
+                      <div
+                        :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
+                        class="font-extrabold text-sm md:text-base whitespace-nowrap"
+                      >
+                        {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
+                        formatoMoneda(item.monto, item.moneda) }}
+                      </div>
+                      <button
+                        @click="eliminarRegistro('transaccion', item.id)"
+                        class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        aria-label="Eliminar"
+                      >
+                        <svg
+                          class="w-4 h-4 md:w-5 md:h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          ></path>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -661,7 +655,7 @@
                           <p
                             class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 leading-tight"
                           >
-                            Poder Adquisitivo Libre
+                            Dinero Libre a Fin de Mes
                           </p>
                           <p
                             class="text-xl md:text-2xl font-extrabold text-slate-900"
@@ -676,7 +670,7 @@
                           <p
                             class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
                           >
-                            Deuda Total Acumulada
+                            Total a Pagar (Tarjetas)
                           </p>
                           <p
                             class="text-xl md:text-2xl font-extrabold text-rose-600"
@@ -707,7 +701,7 @@
                           <p
                             class="text-[10px] font-bold uppercase tracking-widest mb-0.5 opacity-80"
                           >
-                            Diagnóstico Inteligente
+                            Consejo Financiero
                           </p>
                           <p class="text-sm font-semibold leading-relaxed">
                             {{ diagnosticoDeuda.mensaje }}
@@ -808,22 +802,47 @@
                     <p
                       class="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-1"
                     >
-                      Flujo Neto Mensual (Soles)
+                      Flujo Neto Mensual Fijo (Soles)
                     </p>
-                    <h2 class="text-3xl font-extrabold">
+                    <h2 class="text-3xl md:text-4xl font-extrabold">
                       S/ {{ (flujoNetoMensual).toFixed(2) }}
                     </h2>
-                    <p class="text-[10px] text-slate-300 mt-1">
-                      Este es el dinero que te queda libre después de pagar tus
-                      gastos fijos (sin contar deudas pasadas).
+                    <p class="text-[10px] md:text-xs text-slate-300 mt-1">
+                      Dinero proyectado que te quedará libre tras cubrir tus
+                      pagos fijos seguros.
                     </p>
                   </div>
                   <button
                     @click="showModal = false; tab = 'ajustes'"
-                    class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl text-xs font-bold transition border border-white/20 whitespace-nowrap"
+                    class="bg-white/10 hover:bg-white/20 text-white px-5 py-3 rounded-xl text-sm font-bold transition border border-white/20 whitespace-nowrap"
                   >
-                    + Crear Nuevo
+                    + Añadir Proyección
                   </button>
+                </div>
+
+                <div
+                  class="bg-blue-50 border border-blue-100 p-4 md:p-5 rounded-2xl mb-6 text-xs md:text-sm text-blue-800 shadow-sm flex items-start gap-3"
+                >
+                  <svg
+                    class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clip-rule="evenodd"
+                    ></path>
+                  </svg>
+                  <div>
+                    <p class="font-bold mb-1">Nota sobre Pagos Compartidos:</p>
+                    <p>
+                      Si pagas algo en grupo (ej. Plan familiar de Spotify),
+                      registra aquí <b>solo tu parte del gasto</b>. Lo que te
+                      deben los demás regístralo como "Por Cobrar" en la pestaña
+                      Ajustes. Así tus gráficos siempre serán precisos.
+                    </p>
+                  </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -836,7 +855,7 @@
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
                         Ingresos Fijos (Seguros)
                       </h3>
-                      <span class="text-emerald-600 font-bold"
+                      <span class="text-emerald-600 font-extrabold text-lg"
                         >S/ {{ totalIngresosFijos.toFixed(2) }}</span
                       >
                     </div>
@@ -850,7 +869,7 @@
                       <div
                         v-for="pago in pagosFijosIngresos"
                         :key="pago.id"
-                        class="py-3 flex justify-between items-center px-1"
+                        class="py-3 flex justify-between items-center px-1 group"
                       >
                         <div>
                           <p class="font-bold text-slate-900 text-sm">
@@ -859,11 +878,32 @@
                           <p
                             class="text-[10px] font-medium text-slate-500 mt-0.5"
                           >
-                            Día tope: {{ pago.dia_cobro }}
+                            Día tope estimado: {{ pago.dia_cobro }}
                           </p>
                         </div>
-                        <div class="font-extrabold text-emerald-600">
-                          + {{ formatoMoneda(pago.monto, pago.moneda) }}
+                        <div class="flex items-center gap-3">
+                          <div class="font-extrabold text-emerald-600">
+                            + {{ formatoMoneda(pago.monto, pago.moneda) }}
+                          </div>
+                          <button
+                            @click="eliminarRegistro('proyeccion', pago.id)"
+                            class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            aria-label="Eliminar"
+                          >
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              ></path>
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -878,7 +918,7 @@
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
                         Gastos Fijos (Obligatorios)
                       </h3>
-                      <span class="text-rose-600 font-bold"
+                      <span class="text-rose-600 font-extrabold text-lg"
                         >S/ {{ totalGastosFijos.toFixed(2) }}</span
                       >
                     </div>
@@ -892,7 +932,7 @@
                       <div
                         v-for="pago in pagosFijosEgresos"
                         :key="pago.id"
-                        class="py-3 flex justify-between items-center px-1"
+                        class="py-3 flex justify-between items-center px-1 group"
                       >
                         <div>
                           <p class="font-bold text-slate-900 text-sm">
@@ -901,11 +941,32 @@
                           <p
                             class="text-[10px] font-medium text-slate-500 mt-0.5"
                           >
-                            Día pago: {{ pago.dia_cobro }}
+                            Día de pago: {{ pago.dia_cobro }}
                           </p>
                         </div>
-                        <div class="font-extrabold text-slate-900">
-                          - {{ formatoMoneda(pago.monto, pago.moneda) }}
+                        <div class="flex items-center gap-3">
+                          <div class="font-extrabold text-slate-900">
+                            - {{ formatoMoneda(pago.monto, pago.moneda) }}
+                          </div>
+                          <button
+                            @click="eliminarRegistro('proyeccion', pago.id)"
+                            class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                            aria-label="Eliminar"
+                          >
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              ></path>
+                            </svg>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -961,7 +1022,7 @@
                   <div
                     v-for="item in historial"
                     :key="item.id"
-                    class="p-4 flex items-center justify-between hover:bg-slate-50 transition"
+                    class="p-4 flex items-center justify-between hover:bg-slate-50 transition group"
                   >
                     <div class="flex items-center gap-3 md:gap-4">
                       <div
@@ -985,12 +1046,33 @@
                         </p>
                       </div>
                     </div>
-                    <div
-                      :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
-                      class="font-extrabold text-base md:text-lg whitespace-nowrap pl-2"
-                    >
-                      {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
-                      formatoMoneda(item.monto, item.moneda) }}
+                    <div class="flex items-center gap-4">
+                      <div
+                        :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
+                        class="font-extrabold text-base md:text-lg whitespace-nowrap"
+                      >
+                        {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
+                        formatoMoneda(item.monto, item.moneda) }}
+                      </div>
+                      <button
+                        @click="eliminarRegistro('transaccion', item.id)"
+                        class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                        aria-label="Eliminar"
+                      >
+                        <svg
+                          class="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          ></path>
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </div>
