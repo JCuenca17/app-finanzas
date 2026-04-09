@@ -1,0 +1,503 @@
+// DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
+// ÁREA: Ingeniería de Sistemas / Operaciones
+// ARCHIVO: Composable de Gestión de Datos y CRUD
+
+import { api } from "../api.js";
+const { ref } = window.Vue;
+
+export function useFinanceData(
+  currentUserId,
+  cargando,
+  mostrarToast,
+  showModal,
+  tipoOperacion,
+  tab,
+  onDatosActualizados,
+) {
+  // Estado Global
+  const cuentas = ref([]);
+  const categorias = ref([]);
+  const etiquetas = ref([]);
+  const historial = ref([]);
+  const pagosFijos = ref([]);
+
+  // Estados para la Edición (CRUD)
+  const editandoTx = ref({ estado: false, id: null });
+  const editandoPagoFijo = ref({ estado: false, id: null });
+  const editandoCuenta = ref({ estado: false, id: null });
+  const editandoCat = ref({ estado: false, id: null });
+  const editandoEtiq = ref({ estado: false, id: null });
+
+  // Formularios
+  const tx = ref({
+    monto: "",
+    descripcion: "",
+    fecha: new Date().toISOString().split("T")[0],
+    cuenta_id: "",
+    categoria_id: "",
+    etiqueta_id: "",
+  });
+  const txTransf = ref({
+    origen_id: "",
+    destino_id: "",
+    monto: "",
+    fecha: new Date().toISOString().split("T")[0],
+    descripcion: "",
+  });
+  const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
+  const nuevaEtiq = ref({ nombre: "" });
+  const nuevaCuenta = ref({
+    nombre: "",
+    tipo_cuenta: "Debito",
+    moneda: "PEN",
+    saldo_inicial: "",
+    limite: "",
+    dia_corte: "",
+    dia_pago: "",
+  });
+  const nuevoPagoFijo = ref({
+    nombre: "",
+    monto: "",
+    tipo_flujo: "Egreso",
+    dia_cobro: "",
+    moneda: "PEN",
+  });
+
+  const limpiarDatos = () => {
+    cuentas.value = [];
+    historial.value = [];
+    pagosFijos.value = [];
+    etiquetas.value = [];
+  };
+
+  const cargarDatos = async () => {
+    try {
+      const datos = await api.obtenerDatosCompletos(currentUserId.value);
+      cuentas.value = datos.cuentas;
+      categorias.value = datos.categorias;
+      pagosFijos.value = datos.pagosFijos;
+      etiquetas.value = datos.etiquetas;
+      historial.value = datos.historialRaw.map((h) => ({
+        ...h,
+        categoria_nombre:
+          categorias.value.find((c) => c.id == h.categoria)?.nombre ||
+          h.categoria,
+      }));
+
+      if (onDatosActualizados) onDatosActualizados();
+    } catch (error) {
+      mostrarToast("Error de conexión con el servidor", "error");
+    }
+  };
+
+  // --- LÓGICA DE TRANSACCIONES ---
+  const abrirModalTransaccion = (itemAEditar = null) => {
+    if (itemAEditar) {
+      editandoTx.value = { estado: true, id: itemAEditar.id };
+      tipoOperacion.value = itemAEditar.tipo_flujo;
+      tx.value = {
+        monto: itemAEditar.monto,
+        descripcion: itemAEditar.descripcion,
+        fecha: itemAEditar.fecha,
+        cuenta_id: itemAEditar.cuenta_id,
+        categoria_id: itemAEditar.categoria,
+        etiqueta_id: itemAEditar.etiqueta_id || "",
+      };
+    } else {
+      editandoTx.value = { estado: false, id: null };
+      tipoOperacion.value = "Egreso";
+      tx.value = {
+        monto: "",
+        descripcion: "",
+        fecha: new Date().toISOString().split("T")[0],
+        cuenta_id: "",
+        categoria_id: "",
+        etiqueta_id: "",
+      };
+      txTransf.value = {
+        origen_id: "",
+        destino_id: "",
+        monto: "",
+        fecha: new Date().toISOString().split("T")[0],
+        descripcion: "",
+      };
+    }
+    showModal.value = true;
+  };
+
+  const ejecutarOperacion = async () => {
+    cargando.value = true;
+    if (tipoOperacion.value === "Transferencia") {
+      if (
+        !txTransf.value.origen_id ||
+        !txTransf.value.destino_id ||
+        !txTransf.value.monto
+      ) {
+        mostrarToast("Falta completar datos", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (txTransf.value.origen_id === txTransf.value.destino_id) {
+        mostrarToast("Las cuentas no pueden ser iguales", "warning");
+        cargando.value = false;
+        return;
+      }
+      let catSalida = categorias.value.find(
+        (c) => c.nombre === "Transferencia Saliente",
+      );
+      let catEntrada = categorias.value.find(
+        (c) => c.nombre === "Transferencia Entrante",
+      );
+
+      if (!catSalida) {
+        await api.guardarCategoria({
+          nombre: "Transferencia Saliente",
+          tipo_flujo: "Egreso",
+        });
+        await cargarDatos();
+        catSalida = categorias.value.find(
+          (c) => c.nombre === "Transferencia Saliente",
+        );
+      }
+      if (!catEntrada) {
+        await api.guardarCategoria({
+          nombre: "Transferencia Entrante",
+          tipo_flujo: "Ingreso",
+        });
+        await cargarDatos();
+        catEntrada = categorias.value.find(
+          (c) => c.nombre === "Transferencia Entrante",
+        );
+      }
+
+      const concepto = txTransf.value.descripcion || "Transferencia";
+      try {
+        await Promise.all([
+          api.guardarTransaccion({
+            cuenta_id: parseInt(txTransf.value.origen_id),
+            categoria_id: catSalida.id,
+            etiqueta_id: null,
+            monto: parseFloat(txTransf.value.monto),
+            fecha: txTransf.value.fecha,
+            descripcion: concepto,
+          }),
+          api.guardarTransaccion({
+            cuenta_id: parseInt(txTransf.value.destino_id),
+            categoria_id: catEntrada.id,
+            etiqueta_id: null,
+            monto: parseFloat(txTransf.value.monto),
+            fecha: txTransf.value.fecha,
+            descripcion: concepto,
+          }),
+        ]);
+        txTransf.value.monto = "";
+        txTransf.value.descripcion = "";
+        mostrarToast("Transferencia registrada con éxito", "success");
+      } catch (error) {
+        mostrarToast("Ocurrió un error en el servidor", "error");
+      }
+    } else {
+      if (
+        !tx.value.cuenta_id ||
+        !tx.value.categoria_id ||
+        !tx.value.monto ||
+        !tx.value.descripcion
+      ) {
+        mostrarToast(
+          "Por favor, llena todos los campos obligatorios",
+          "warning",
+        );
+        cargando.value = false;
+        return;
+      }
+      try {
+        const datosParaBD = {
+          ...tx.value,
+          cuenta_id: parseInt(tx.value.cuenta_id),
+          categoria_id: parseInt(tx.value.categoria_id),
+          etiqueta_id: tx.value.etiqueta_id
+            ? parseInt(tx.value.etiqueta_id)
+            : null,
+          monto: parseFloat(tx.value.monto),
+        };
+
+        if (editandoTx.value.estado) {
+          await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
+          mostrarToast("Operación actualizada", "success");
+        } else {
+          await api.guardarTransaccion(datosParaBD);
+          mostrarToast("Operación registrada", "success");
+        }
+        tx.value.monto = "";
+        tx.value.descripcion = "";
+        tx.value.etiqueta_id = "";
+      } catch (error) {
+        mostrarToast("Ocurrió un error en el servidor", "error");
+      }
+    }
+    showModal.value = false;
+    await cargarDatos();
+    cargando.value = false;
+  };
+
+  // --- LÓGICA PAGOS FIJOS ---
+  const abrirModalPagoFijo = (pagoAEditar) => {
+    editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
+    nuevoPagoFijo.value = { ...pagoAEditar };
+    tab.value = "ajustes";
+  };
+
+  const cancelarEdicionPago = () => {
+    editandoPagoFijo.value = { estado: false, id: null };
+    nuevoPagoFijo.value = {
+      nombre: "",
+      monto: "",
+      tipo_flujo: "Egreso",
+      dia_cobro: "",
+      moneda: "PEN",
+    };
+  };
+
+  const guardarPagoFijo = async () => {
+    if (
+      !nuevoPagoFijo.value.nombre ||
+      !nuevoPagoFijo.value.monto ||
+      !nuevoPagoFijo.value.dia_cobro
+    ) {
+      mostrarToast("Faltan datos en la proyección", "warning");
+      return;
+    }
+    cargando.value = true;
+    try {
+      const payload = {
+        usuario_id: currentUserId.value,
+        nombre: nuevoPagoFijo.value.nombre,
+        monto: parseFloat(nuevoPagoFijo.value.monto),
+        tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
+        dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
+        moneda: nuevoPagoFijo.value.moneda,
+      };
+      if (editandoPagoFijo.value.estado) {
+        await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
+        mostrarToast("Proyección actualizada con éxito", "success");
+      } else {
+        await api.guardarPagoFijo(payload);
+        mostrarToast("Proyección guardada con éxito", "success");
+      }
+      cancelarEdicionPago();
+      await cargarDatos();
+    } catch (error) {
+      mostrarToast("Error de servidor", "error");
+    }
+    cargando.value = false;
+  };
+
+  // --- LÓGICA CUENTAS ---
+  const abrirModalCuenta = (cuentaAEditar) => {
+    editandoCuenta.value = { estado: true, id: cuentaAEditar.id_cuenta };
+    nuevaCuenta.value = {
+      nombre: cuentaAEditar.nombre,
+      tipo_cuenta: cuentaAEditar.tipo_cuenta,
+      moneda: cuentaAEditar.moneda,
+      saldo_inicial: Math.abs(cuentaAEditar.saldo_actual),
+      limite: cuentaAEditar.limite || "",
+      dia_corte: cuentaAEditar.dia_corte || "",
+      dia_pago: cuentaAEditar.dia_pago || "",
+    };
+    tab.value = "ajustes";
+  };
+
+  const cancelarEdicionCuenta = () => {
+    editandoCuenta.value = { estado: false, id: null };
+    nuevaCuenta.value = {
+      nombre: "",
+      tipo_cuenta: "Debito",
+      moneda: "PEN",
+      saldo_inicial: "",
+      limite: "",
+      dia_corte: "",
+      dia_pago: "",
+    };
+  };
+
+  const guardarCuenta = async () => {
+    if (!nuevaCuenta.value.nombre) {
+      mostrarToast("El nombre de la cuenta es obligatorio", "warning");
+      return;
+    }
+    cargando.value = true;
+    try {
+      let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
+      if (
+        ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.value.tipo_cuenta)
+      )
+        saldo = -Math.abs(saldo);
+
+      const payload = {
+        usuario_id: currentUserId.value,
+        nombre: nuevaCuenta.value.nombre,
+        tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+        moneda: nuevaCuenta.value.moneda,
+        saldo_inicial: saldo,
+        limite:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseFloat(nuevaCuenta.value.limite || 0)
+            : null,
+        dia_corte:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseInt(nuevaCuenta.value.dia_corte || 0)
+            : null,
+        dia_pago:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseInt(nuevaCuenta.value.dia_pago || 0)
+            : null,
+      };
+
+      if (editandoCuenta.value.estado) {
+        await api.actualizarCuenta(editandoCuenta.value.id, payload);
+        mostrarToast("Cuenta actualizada correctamente", "success");
+      } else {
+        await api.guardarCuenta(payload);
+        mostrarToast("Cuenta registrada correctamente", "success");
+      }
+      cancelarEdicionCuenta();
+      await cargarDatos();
+    } catch (error) {
+      mostrarToast("Error de conexión", "error");
+    }
+    cargando.value = false;
+  };
+
+  // --- LÓGICA CATEGORIAS ---
+  const abrirModalCategoria = (catAEditar) => {
+    editandoCat.value = { estado: true, id: catAEditar.id };
+    nuevaCat.value = {
+      nombre: catAEditar.nombre,
+      tipo_flujo: catAEditar.tipo_flujo,
+    };
+  };
+
+  const cancelarEdicionCategoria = () => {
+    editandoCat.value = { estado: false, id: null };
+    nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
+  };
+
+  const guardarCategoria = async () => {
+    if (!nuevaCat.value.nombre) {
+      mostrarToast("Ponle un nombre a la categoría", "warning");
+      return;
+    }
+    cargando.value = true;
+    try {
+      if (editandoCat.value.estado) {
+        await api.actualizarCategoria(editandoCat.value.id, nuevaCat.value);
+        mostrarToast("Categoría actualizada", "success");
+      } else {
+        await api.guardarCategoria(nuevaCat.value);
+        mostrarToast("Categoría creada", "success");
+      }
+      cancelarEdicionCategoria();
+      await cargarDatos();
+    } catch (error) {
+      mostrarToast("Error al guardar", "error");
+    }
+    cargando.value = false;
+  };
+
+  // --- LÓGICA ETIQUETAS ---
+  const abrirModalEtiqueta = (etiqAEditar) => {
+    editandoEtiq.value = { estado: true, id: etiqAEditar.id };
+    nuevaEtiq.value = { nombre: etiqAEditar.nombre };
+  };
+
+  const cancelarEdicionEtiqueta = () => {
+    editandoEtiq.value = { estado: false, id: null };
+    nuevaEtiq.value = { nombre: "" };
+  };
+
+  const guardarEtiqueta = async () => {
+    if (!nuevaEtiq.value.nombre) {
+      mostrarToast("Asigna un nombre al contacto o etiqueta", "warning");
+      return;
+    }
+    cargando.value = true;
+    try {
+      const payload = {
+        usuario_id: currentUserId.value,
+        nombre: nuevaEtiq.value.nombre,
+      };
+      if (editandoEtiq.value.estado) {
+        await api.actualizarEtiqueta(editandoEtiq.value.id, payload);
+        mostrarToast("Contacto actualizado", "success");
+      } else {
+        await api.guardarEtiqueta(payload);
+        mostrarToast("Contacto creado", "success");
+      }
+      cancelarEdicionEtiqueta();
+      await cargarDatos();
+    } catch (error) {
+      mostrarToast("Error al guardar contacto", "error");
+    }
+    cargando.value = false;
+  };
+
+  // --- ELIMINAR GENERICO ---
+  const eliminarRegistro = async (tipo, id) => {
+    if (
+      !confirm(
+        "¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.",
+      )
+    )
+      return;
+    cargando.value = true;
+    try {
+      if (tipo === "transaccion") await api.eliminarTransaccion(id);
+      else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
+      else if (tipo === "cuenta") await api.eliminarCuenta(id);
+      else if (tipo === "categoria") await api.eliminarCategoria(id);
+      else if (tipo === "etiqueta") await api.eliminarEtiqueta(id);
+
+      await cargarDatos();
+      mostrarToast("Registro eliminado", "success");
+    } catch (error) {
+      mostrarToast("No se pudo eliminar. Puede estar en uso.", "error");
+    }
+    cargando.value = false;
+  };
+
+  return {
+    cuentas,
+    categorias,
+    etiquetas,
+    historial,
+    pagosFijos,
+    editandoTx,
+    editandoPagoFijo,
+    editandoCuenta,
+    editandoCat,
+    editandoEtiq,
+    tx,
+    txTransf,
+    nuevaCat,
+    nuevaEtiq,
+    nuevaCuenta,
+    nuevoPagoFijo,
+    limpiarDatos,
+    cargarDatos,
+    abrirModalTransaccion,
+    ejecutarOperacion,
+    abrirModalPagoFijo,
+    cancelarEdicionPago,
+    guardarPagoFijo,
+    abrirModalCuenta,
+    cancelarEdicionCuenta,
+    guardarCuenta,
+    abrirModalCategoria,
+    cancelarEdicionCategoria,
+    guardarCategoria,
+    abrirModalEtiqueta,
+    cancelarEdicionEtiqueta,
+    guardarEtiqueta,
+    eliminarRegistro,
+  };
+}

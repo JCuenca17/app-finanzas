@@ -1,0 +1,35 @@
+// DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
+// ÁREA: Ingeniería de Sistemas / Operaciones
+// ARCHIVO: Composable de Autenticación
+
+const { ref } = window.Vue;
+
+export function useAuth() {
+  const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
+  const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const isLoggedIn = ref(false);
+  const currentUserId = ref("");
+
+  const iniciarSesionGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+  };
+
+  const cerrarSesionAuth = async () => {
+    await supabase.auth.signOut();
+    isLoggedIn.value = false;
+    currentUserId.value = "";
+  };
+
+  return {
+    supabase,
+    isLoggedIn,
+    currentUserId,
+    iniciarSesionGoogle,
+    cerrarSesionAuth,
+  };
+}
