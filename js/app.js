@@ -9,8 +9,8 @@ const { createApp, ref, computed, onMounted, nextTick } = Vue;
 createApp({
   setup() {
     // --- CREDENCIALES SUPABASE ---
-    const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-    const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
+    const SUPABASE_URL = "https://TU-ID-DE-PROYECTO.supabase.co";
+    const SUPABASE_KEY = "TU-ANON-KEY";
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     // -----------------------------
 
@@ -26,9 +26,11 @@ createApp({
     const historial = ref([]);
     const pagosFijos = ref([]);
 
-    const chartRef = ref(null);
-    let chartInstance = null;
-    const hayGastosParaGrafico = ref(false);
+    // Referencias para Gráficos
+    const chartCatRef = ref(null);
+    const chartFlujoRef = ref(null);
+    let chartCatInstance = null;
+    let chartFlujoInstance = null;
 
     const tx = ref({
       monto: "",
@@ -66,11 +68,12 @@ createApp({
     const tituloCabecera = computed(() => {
       const titulos = {
         inicio: "Dashboard",
-        cuentas: "Mis Cuentas",
-        historial: "Historial",
-        pagos: "Proyección",
+        analitica: "Análisis Financiero",
+        cuentas: "Cuentas y Deudas",
+        historial: "Historial Completo",
+        pagos: "Proyección Mensual",
         mas: "Menú",
-        ajustes: "Ajustes",
+        ajustes: "Ajustes de Sistema",
       };
       return titulos[tab.value] || "FinancePro";
     });
@@ -97,6 +100,68 @@ createApp({
       return saldos;
     });
 
+    // NUEVO: Algoritmo de Diagnóstico de Deuda
+    const diagnosticoDeuda = computed(() => {
+      const liquidez = saldosLiquidos.value.PEN;
+      const ahorro = saldosAhorro.value.PEN;
+
+      const deuda = cuentas.value
+        .filter((c) => c.tipo_cuenta === "Credito")
+        .reduce((acc, c) => acc + Math.abs(c.saldo_actual), 0);
+      const ingresosProyectados = pagosFijos.value
+        .filter((p) => p.tipo_flujo === "Ingreso" && p.moneda === "PEN")
+        .reduce((acc, p) => acc + p.monto, 0);
+
+      const poderAdquisitivo = liquidez + ingresosProyectados;
+      const balance = poderAdquisitivo - deuda;
+
+      let result = {
+        liquidez,
+        deuda,
+        ingresosProyectados,
+        estado: "",
+        mensaje: "",
+        textColor: "",
+        iconBg: "",
+        borderColor: "",
+        alertBoxClasses: "",
+      };
+
+      if (deuda === 0) {
+        result.estado = "Sin deudas";
+        result.textColor = "text-emerald-600";
+        result.iconBg = "bg-emerald-500";
+        result.borderColor = "border-emerald-200";
+        result.alertBoxClasses =
+          "bg-emerald-50 text-emerald-800 border-emerald-200";
+        result.mensaje =
+          "No tienes deudas de tarjeta de crédito activas en Soles.";
+      } else if (balance >= 0) {
+        result.estado = "Controlado";
+        result.textColor = "text-emerald-600";
+        result.iconBg = "bg-emerald-500";
+        result.borderColor = "border-emerald-200";
+        result.alertBoxClasses =
+          "bg-emerald-50 text-emerald-800 border-emerald-200";
+        result.mensaje = `Tienes liquidez e ingresos futuros suficientes. Si pagas toda tu deuda, te sobrarán S/ ${balance.toFixed(2)}.`;
+      } else if (balance + ahorro >= 0) {
+        result.estado = "Alerta Amarilla";
+        result.textColor = "text-amber-600";
+        result.iconBg = "bg-amber-500";
+        result.borderColor = "border-amber-200";
+        result.alertBoxClasses = "bg-amber-50 text-amber-800 border-amber-200";
+        result.mensaje = `Con tu liquidez actual no alcanza. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que usar tus ahorros.`;
+      } else {
+        result.estado = "Peligro Constante";
+        result.textColor = "text-rose-600";
+        result.iconBg = "bg-rose-500";
+        result.borderColor = "border-rose-200";
+        result.alertBoxClasses = "bg-rose-50 text-rose-800 border-rose-200";
+        result.mensaje = `Aún rompiendo tus ahorros, te faltarán S/ ${Math.abs(balance + ahorro).toFixed(2)} para cubrir la tarjeta.`;
+      }
+      return result;
+    });
+
     const categoriasFiltradas = computed(() => {
       return categorias.value.filter(
         (c) =>
@@ -110,100 +175,162 @@ createApp({
       return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
     };
 
-    const renderizarGrafico = () => {
-      if (!chartRef.value) return;
-
-      const egresos = historial.value.filter(
-        (h) =>
-          h.tipo_flujo === "Egreso" &&
-          !h.categoria_nombre.includes("Transferencia"),
-      );
-      const datosAgrupados = {};
-
-      egresos.forEach((egreso) => {
-        if (!datosAgrupados[egreso.categoria_nombre])
-          datosAgrupados[egreso.categoria_nombre] = 0;
-        datosAgrupados[egreso.categoria_nombre] += egreso.monto;
-      });
-
-      const labels = Object.keys(datosAgrupados);
-      const series = Object.values(datosAgrupados);
-
-      if (series.length === 0) {
-        hayGastosParaGrafico.value = false;
-        return;
+    const renderizarGraficosAnalitica = () => {
+      if (chartCatInstance) {
+        chartCatInstance.destroy();
+        chartCatInstance = null;
+      }
+      if (chartFlujoInstance) {
+        chartFlujoInstance.destroy();
+        chartFlujoInstance = null;
       }
 
-      hayGastosParaGrafico.value = true;
+      // 1. Lógica Gráfico Anillo (Categorías)
+      if (chartCatRef.value) {
+        const egresos = historial.value.filter(
+          (h) =>
+            h.tipo_flujo === "Egreso" &&
+            !h.categoria_nombre.includes("Transferencia"),
+        );
+        const datosAgrupados = {};
+        egresos.forEach((e) => {
+          if (!datosAgrupados[e.categoria_nombre])
+            datosAgrupados[e.categoria_nombre] = 0;
+          datosAgrupados[e.categoria_nombre] += e.monto;
+        });
 
-      const options = {
-        series: series,
-        labels: labels,
-        chart: {
-          type: "donut",
-          height: "100%",
-          width: "100%",
-          fontFamily: "inherit",
-          background: "transparent",
-          toolbar: { show: false },
-        },
-        plotOptions: {
-          pie: {
-            donut: {
-              size: "75%",
-              labels: {
-                show: true,
-                name: {
-                  show: true,
-                  fontSize: "10px",
-                  color: "#64748b",
-                  fontWeight: 600,
-                },
-                value: {
-                  show: true,
-                  fontSize: "18px",
-                  fontWeight: 800,
-                  color: "#0f172a",
-                  formatter: function (val) {
-                    return "S/ " + parseFloat(val).toFixed(2);
-                  },
-                },
-                total: {
-                  show: true,
-                  label: "Total",
-                  color: "#64748b",
-                  fontWeight: 600,
-                  formatter: function (w) {
-                    return (
-                      "S/ " +
-                      w.globals.seriesTotals
-                        .reduce((a, b) => a + b, 0)
-                        .toFixed(2)
-                    );
+        if (Object.keys(datosAgrupados).length > 0) {
+          const optionsCat = {
+            series: Object.values(datosAgrupados),
+            labels: Object.keys(datosAgrupados),
+            chart: {
+              type: "donut",
+              height: "100%",
+              width: "100%",
+              fontFamily: "inherit",
+              background: "transparent",
+            },
+            plotOptions: {
+              pie: {
+                donut: {
+                  size: "70%",
+                  labels: {
+                    show: true,
+                    name: {
+                      show: true,
+                      fontSize: "12px",
+                      color: "#64748b",
+                      fontWeight: 600,
+                    },
+                    value: {
+                      show: true,
+                      fontSize: "22px",
+                      fontWeight: 800,
+                      color: "#0f172a",
+                      formatter: function (val) {
+                        return "S/ " + parseFloat(val).toFixed(2);
+                      },
+                    },
+                    total: {
+                      show: true,
+                      label: "Total Egresos",
+                      color: "#64748b",
+                      fontWeight: 600,
+                      formatter: function (w) {
+                        return (
+                          "S/ " +
+                          w.globals.seriesTotals
+                            .reduce((a, b) => a + b, 0)
+                            .toFixed(2)
+                        );
+                      },
+                    },
                   },
                 },
               },
             },
+            dataLabels: { enabled: false },
+            stroke: { width: 0 },
+            theme: { palette: "palette1" },
+            legend: { position: "bottom", fontSize: "13px", fontWeight: 600 },
+            tooltip: {
+              y: {
+                formatter: function (val) {
+                  return "S/ " + val.toFixed(2);
+                },
+              },
+            },
+          };
+          chartCatInstance = new ApexCharts(chartCatRef.value, optionsCat);
+          chartCatInstance.render();
+        }
+      }
+
+      // 2. Lógica Gráfico Barras (Flujo Ingreso vs Egreso)
+      if (chartFlujoRef.value) {
+        const ingresosPEN = historial.value
+          .filter(
+            (h) =>
+              h.tipo_flujo === "Ingreso" &&
+              h.moneda === "PEN" &&
+              !h.categoria_nombre.includes("Transferencia"),
+          )
+          .reduce((a, b) => a + b.monto, 0);
+        const egresosPEN = historial.value
+          .filter(
+            (h) =>
+              h.tipo_flujo === "Egreso" &&
+              h.moneda === "PEN" &&
+              !h.categoria_nombre.includes("Transferencia"),
+          )
+          .reduce((a, b) => a + b.monto, 0);
+
+        const optionsFlujo = {
+          series: [{ name: "Monto en Soles", data: [ingresosPEN, egresosPEN] }],
+          chart: {
+            type: "bar",
+            height: "100%",
+            width: "100%",
+            fontFamily: "inherit",
+            toolbar: { show: false },
           },
-        },
-        dataLabels: { enabled: false },
-        stroke: { width: 0 },
-        theme: { palette: "palette1" },
-        legend: { show: false }, // Ocultamos la leyenda en la versión super compacta móvil
-        tooltip: {
-          y: {
-            formatter: function (val) {
-              return "S/ " + val.toFixed(2);
+          plotOptions: {
+            bar: {
+              borderRadius: 6,
+              distributed: true,
+              horizontal: false,
+              columnWidth: "50%",
             },
           },
-        },
-      };
-
-      if (chartInstance) {
-        chartInstance.updateOptions(options);
-      } else {
-        chartInstance = new ApexCharts(chartRef.value, options);
-        chartInstance.render();
+          colors: ["#10b981", "#f43f5e"], // Esmeralda y Rosa
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: ["Ingresos", "Egresos"],
+            labels: {
+              style: {
+                fontSize: "13px",
+                fontWeight: 600,
+                colors: ["#64748b", "#64748b"],
+              },
+            },
+          },
+          yaxis: {
+            labels: {
+              formatter: function (val) {
+                return "S/ " + val.toFixed(0);
+              },
+            },
+          },
+          tooltip: {
+            y: {
+              formatter: function (val) {
+                return "S/ " + val.toFixed(2);
+              },
+            },
+          },
+        };
+        chartFlujoInstance = new ApexCharts(chartFlujoRef.value, optionsFlujo);
+        chartFlujoInstance.render();
       }
     };
 
@@ -222,9 +349,13 @@ createApp({
       cuentas.value = [];
       historial.value = [];
       pagosFijos.value = [];
-      if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
+      if (chartCatInstance) {
+        chartCatInstance.destroy();
+        chartCatInstance = null;
+      }
+      if (chartFlujoInstance) {
+        chartFlujoInstance.destroy();
+        chartFlujoInstance = null;
       }
       cargando.value = false;
     };
@@ -243,7 +374,8 @@ createApp({
             h.categoria,
         }));
 
-        if (tab.value === "inicio") nextTick(() => renderizarGrafico());
+        if (tab.value === "analitica")
+          nextTick(() => renderizarGraficosAnalitica());
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
@@ -418,7 +550,7 @@ createApp({
     });
 
     Vue.watch(tab, (newTab) => {
-      if (newTab === "inicio") nextTick(() => renderizarGrafico());
+      if (newTab === "analitica") nextTick(() => renderizarGraficosAnalitica());
     });
 
     return {
@@ -441,8 +573,9 @@ createApp({
       nuevaCat,
       nuevaCuenta,
       nuevoPagoFijo,
-      chartRef,
-      hayGastosParaGrafico,
+      chartCatRef,
+      chartFlujoRef,
+      diagnosticoDeuda,
       iniciarSesionGoogle,
       cerrarSesion,
       ejecutarOperacion,
