@@ -514,8 +514,8 @@ createApp({
           monto: itemAEditar.monto,
           descripcion: itemAEditar.descripcion,
           fecha: itemAEditar.fecha,
-          cuenta_id: itemAEditar.cuenta, // Asume que el backend devuelve ID
-          categoria_id: itemAEditar.categoria, // Asume que el backend devuelve ID
+          cuenta_id: itemAEditar.cuenta_id, // Usamos el ID devuelto por el nuevo backend
+          categoria_id: itemAEditar.categoria,
         };
       } else {
         editandoTx.value = { estado: false, id: null };
@@ -556,12 +556,35 @@ createApp({
           return;
         }
 
-        const catSalida = categorias.value.find(
+        let catSalida = categorias.value.find(
           (c) => c.nombre === "Transferencia Saliente",
         );
-        const catEntrada = categorias.value.find(
+        let catEntrada = categorias.value.find(
           (c) => c.nombre === "Transferencia Entrante",
         );
+
+        // SISTEMA AUTO-HEALING: Crea las categorías de transferencia si el usuario no las tiene
+        if (!catSalida) {
+          await api.guardarCategoria({
+            nombre: "Transferencia Saliente",
+            tipo_flujo: "Egreso",
+          });
+          await cargarDatos();
+          catSalida = categorias.value.find(
+            (c) => c.nombre === "Transferencia Saliente",
+          );
+        }
+        if (!catEntrada) {
+          await api.guardarCategoria({
+            nombre: "Transferencia Entrante",
+            tipo_flujo: "Ingreso",
+          });
+          await cargarDatos();
+          catEntrada = categorias.value.find(
+            (c) => c.nombre === "Transferencia Entrante",
+          );
+        }
+
         const concepto = txTransf.value.descripcion || "Transferencia";
 
         try {
@@ -687,7 +710,7 @@ createApp({
         nombre: cuentaAEditar.nombre,
         tipo_cuenta: cuentaAEditar.tipo_cuenta,
         moneda: cuentaAEditar.moneda,
-        saldo_inicial: Math.abs(cuentaAEditar.saldo_actual), // Se muestra en positivo al usuario
+        saldo_inicial: Math.abs(cuentaAEditar.saldo_actual),
         limite: cuentaAEditar.limite || "",
         dia_corte: cuentaAEditar.dia_corte || "",
         dia_pago: cuentaAEditar.dia_pago || "",
@@ -792,7 +815,7 @@ createApp({
     const eliminarRegistro = async (tipo, id) => {
       if (
         !confirm(
-          "¿Estás seguro de que deseas eliminar este registro? Esta acción no se puede deshacer.",
+          "¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.",
         )
       )
         return;
@@ -804,13 +827,10 @@ createApp({
         else if (tipo === "categoria") await api.eliminarCategoria(id);
 
         await cargarDatos();
-        mostrarToast("Registro eliminado correctamente", "success");
+        mostrarToast("Registro eliminado", "success");
       } catch (error) {
         console.error("Error al eliminar:", error);
-        mostrarToast(
-          "No se pudo eliminar. Verifica que no tenga operaciones ligadas.",
-          "error",
-        );
+        mostrarToast("No se pudo eliminar. Puede estar en uso.", "error");
       }
       cargando.value = false;
     };
