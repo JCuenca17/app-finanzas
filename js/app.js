@@ -9,7 +9,8 @@ createApp({
     const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
     const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const API_URL = "https://finanzas-backend-dgv5.onrender.com";
-    // ----------------------------------------------
+
+    // --------------------
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -41,20 +42,28 @@ createApp({
 
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
 
-    // La variable ahora incluye los campos para Tarjeta de Crédito
     const nuevaCuenta = ref({
       nombre: "",
       tipo_cuenta: "Debito",
+      moneda: "PEN",
       saldo_inicial: "",
       limite: "",
       dia_corte: "",
       dia_pago: "",
     });
 
-    const saldoTotalLiquido = computed(() => {
-      return cuentas.value
+    // CÁLCULO SEPARADO POR MONEDAS
+    const saldosPorMoneda = computed(() => {
+      const saldos = { PEN: 0, USD: 0 };
+      cuentas.value
         .filter((c) => c.tipo_cuenta !== "Credito")
-        .reduce((acc, c) => acc + c.saldo_actual, 0);
+        .forEach((c) => {
+          const mon = c.moneda || "PEN";
+          if (saldos[mon] !== undefined) {
+            saldos[mon] += c.saldo_actual;
+          }
+        });
+      return saldos;
     });
 
     const categoriasFiltradas = computed(() => {
@@ -64,6 +73,12 @@ createApp({
           !c.nombre.includes("Transferencia"),
       );
     });
+
+    // FORMATEADOR VISUAL DE MONEDAS
+    const formatoMoneda = (monto, moneda) => {
+      const simbolo = moneda === "USD" ? "$" : "S/";
+      return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
+    };
 
     const iniciarSesionGoogle = async () => {
       await supabase.auth.signInWithOAuth({
@@ -122,6 +137,25 @@ createApp({
         }
         if (txTransf.value.origen_id === txTransf.value.destino_id) {
           alert("No puedes transferir a la misma cuenta");
+          cargando.value = false;
+          return;
+        }
+
+        // Validación de moneda (no cruzar soles con dólares directamente)
+        const cuentaOrigen = cuentas.value.find(
+          (c) => c.id_cuenta == txTransf.value.origen_id,
+        );
+        const cuentaDestino = cuentas.value.find(
+          (c) => c.id_cuenta == txTransf.value.destino_id,
+        );
+        if (
+          cuentaOrigen &&
+          cuentaDestino &&
+          cuentaOrigen.moneda !== cuentaDestino.moneda
+        ) {
+          alert(
+            "Por ahora, no se pueden hacer transferencias directas entre diferentes monedas (Soles a Dólares).",
+          );
           cargando.value = false;
           return;
         }
@@ -210,15 +244,14 @@ createApp({
       await cargarDatos();
     };
 
-    // LA NUEVA FUNCIÓN PARA GUARDAR CUENTAS (INCLUYENDO TARJETAS)
     const guardarCuenta = async () => {
       if (!nuevaCuenta.value.nombre) return;
 
-      // Empaquetamos los datos, enviando las fechas y límites solo si es Crédito
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaCuenta.value.nombre,
         tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+        moneda: nuevaCuenta.value.moneda,
         saldo_inicial: parseFloat(nuevaCuenta.value.saldo_inicial || 0),
         limite:
           nuevaCuenta.value.tipo_cuenta === "Credito"
@@ -240,10 +273,10 @@ createApp({
         body: JSON.stringify(payload),
       });
 
-      // Limpiamos el formulario
       nuevaCuenta.value = {
         nombre: "",
         tipo_cuenta: "Debito",
+        moneda: "PEN",
         saldo_inicial: "",
         limite: "",
         dia_corte: "",
@@ -293,7 +326,7 @@ createApp({
       categorias,
       categoriasFiltradas,
       historial,
-      saldoTotalLiquido,
+      saldosPorMoneda,
       tx,
       txTransf,
       nuevaCat,
@@ -303,6 +336,7 @@ createApp({
       ejecutarOperacion,
       guardarCategoria,
       guardarCuenta,
+      formatoMoneda,
     };
   },
 }).mount("#app");

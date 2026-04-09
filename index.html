@@ -138,17 +138,31 @@
           </div>
 
           <div v-if="tab === 'inicio'" class="space-y-8">
-            <div
-              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
-            >
-              <p
-                class="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1"
+            <div class="grid grid-cols-2 gap-4">
+              <div
+                class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
               >
-                Total Disponible Líquido
-              </p>
-              <h2 class="text-4xl font-bold text-slate-900">
-                S/ {{ saldoTotalLiquido.toFixed(2) }}
-              </h2>
+                <p
+                  class="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1"
+                >
+                  Total Disponible (Soles)
+                </p>
+                <h2 class="text-4xl font-bold text-slate-900">
+                  S/ {{ saldosPorMoneda.PEN.toFixed(2) }}
+                </h2>
+              </div>
+              <div
+                class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"
+              >
+                <p
+                  class="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1"
+                >
+                  Total Disponible (Dólares)
+                </p>
+                <h2 class="text-4xl font-bold text-slate-900">
+                  $ {{ saldosPorMoneda.USD.toFixed(2) }}
+                </h2>
+              </div>
             </div>
 
             <div>
@@ -166,7 +180,7 @@
                   <div>
                     <span
                       class="text-xs font-bold text-slate-400 uppercase tracking-wider"
-                      >{{ c.tipo_cuenta }}</span
+                      >{{ c.tipo_cuenta }} • {{ c.moneda }}</span
                     >
                     <h4 class="font-bold text-slate-900 text-lg">
                       {{ c.nombre }}
@@ -175,7 +189,7 @@
                   <div class="mt-4">
                     <template v-if="c.tipo_cuenta !== 'Credito'">
                       <p class="text-2xl font-bold text-emerald-600">
-                        S/ {{ c.saldo_actual.toFixed(2) }}
+                        {{ formatoMoneda(c.saldo_actual, c.moneda) }}
                       </p>
                     </template>
                     <template v-else>
@@ -185,7 +199,7 @@
                         Deuda Actual
                       </p>
                       <p class="text-2xl font-bold text-red-500">
-                        S/ {{ Math.abs(c.saldo_actual).toFixed(2) }}
+                        {{ formatoMoneda(c.saldo_actual, c.moneda) }}
                       </p>
                       <div
                         class="mt-3 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100"
@@ -193,15 +207,14 @@
                         <div class="flex justify-between mb-1">
                           <span>Límite:</span>
                           <span class="font-semibold"
-                            >S/ {{ c.limite ? c.limite.toFixed(2) : '0.00'
-                            }}</span
+                            >{{ formatoMoneda(c.limite || 0, c.moneda) }}</span
                           >
                         </div>
                         <div class="flex justify-between mb-2">
                           <span>Disponible:</span>
                           <span class="font-semibold text-emerald-600"
-                            >S/ {{ ((c.limite || 0) -
-                            Math.abs(c.saldo_actual)).toFixed(2) }}</span
+                            >{{ formatoMoneda((c.limite || 0) -
+                            Math.abs(c.saldo_actual), c.moneda) }}</span
                           >
                         </div>
                         <div
@@ -253,8 +266,8 @@
                     :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
                     class="font-medium"
                   >
-                    {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} S/ {{
-                    item.monto.toFixed(2) }}
+                    {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
+                    formatoMoneda(item.monto, item.moneda) }}
                   </div>
                 </div>
               </div>
@@ -274,20 +287,30 @@
                 placeholder="Nombre (Ej: Billetera, BBVA, CMR)"
                 class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
               />
-              <select
-                v-model="nuevaCuenta.tipo_cuenta"
-                class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
-              >
-                <option value="Efectivo">Efectivo (Dinero físico)</option>
-                <option value="Debito">Débito / App Digital</option>
-                <option value="Credito">Tarjeta de Crédito</option>
-              </select>
+
+              <div class="flex gap-2 mb-3">
+                <select
+                  v-model="nuevaCuenta.tipo_cuenta"
+                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Debito">Débito</option>
+                  <option value="Credito">Tarjeta Crédito</option>
+                </select>
+                <select
+                  v-model="nuevaCuenta.moneda"
+                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                >
+                  <option value="PEN">Soles (S/)</option>
+                  <option value="USD">Dólares ($)</option>
+                </select>
+              </div>
 
               <template v-if="nuevaCuenta.tipo_cuenta !== 'Credito'">
                 <input
                   type="number"
                   v-model="nuevaCuenta.saldo_inicial"
-                  placeholder="Saldo Actual (S/)"
+                  placeholder="Saldo Actual"
                   class="w-full mb-4 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
                 />
               </template>
@@ -296,13 +319,13 @@
                 <input
                   type="number"
                   v-model="nuevaCuenta.limite"
-                  placeholder="Límite Total de Crédito (S/)"
+                  placeholder="Límite Total de Crédito"
                   class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
                 />
                 <input
                   type="number"
                   v-model="nuevaCuenta.saldo_inicial"
-                  placeholder="Deuda Actual (S/ - Ingresa sin negativo)"
+                  placeholder="Deuda Actual (Sin negativo)"
                   class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
                 />
                 <div class="flex gap-2 mb-4">
@@ -412,7 +435,7 @@
                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
               >
                 <option v-for="c in cuentas" :value="c.id_cuenta">
-                  {{ c.nombre }}
+                  {{ c.nombre }} ({{ c.moneda }})
                 </option>
               </select>
             </div>
@@ -432,7 +455,7 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-medium text-slate-500 mb-1"
-                  >Monto (S/)</label
+                  >Monto</label
                 ><input
                   type="number"
                   v-model="tx.monto"
@@ -473,7 +496,7 @@
                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
               >
                 <option v-for="c in cuentas" :value="c.id_cuenta">
-                  {{ c.nombre }}
+                  {{ c.nombre }} ({{ c.moneda }})
                 </option>
               </select>
             </div>
@@ -486,14 +509,14 @@
                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none"
               >
                 <option v-for="c in cuentas" :value="c.id_cuenta">
-                  {{ c.nombre }}
+                  {{ c.nombre }} ({{ c.moneda }})
                 </option>
               </select>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-medium text-slate-500 mb-1"
-                  >Monto a mover (S/)</label
+                  >Monto a mover</label
                 ><input
                   type="number"
                   v-model="txTransf.monto"
