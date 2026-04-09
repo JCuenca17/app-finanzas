@@ -63,7 +63,6 @@ createApp({
       moneda: "PEN",
     });
 
-    // Título dinámico para evitar errores en HTML
     const tituloCabecera = computed(() => {
       const titulos = {
         inicio: "Dashboard",
@@ -142,7 +141,8 @@ createApp({
         labels: labels,
         chart: {
           type: "donut",
-          height: 350,
+          height: "100%",
+          width: "100%",
           fontFamily: "inherit",
           background: "transparent",
           toolbar: { show: false },
@@ -155,13 +155,13 @@ createApp({
                 show: true,
                 name: {
                   show: true,
-                  fontSize: "12px",
+                  fontSize: "10px",
                   color: "#64748b",
                   fontWeight: 600,
                 },
                 value: {
                   show: true,
-                  fontSize: "24px",
+                  fontSize: "18px",
                   fontWeight: 800,
                   color: "#0f172a",
                   formatter: function (val) {
@@ -170,7 +170,7 @@ createApp({
                 },
                 total: {
                   show: true,
-                  label: "Total Egresos",
+                  label: "Total",
                   color: "#64748b",
                   fontWeight: 600,
                   formatter: function (w) {
@@ -189,12 +189,7 @@ createApp({
         dataLabels: { enabled: false },
         stroke: { width: 0 },
         theme: { palette: "palette1" },
-        legend: {
-          position: "bottom",
-          fontSize: "13px",
-          fontWeight: 600,
-          markers: { radius: 12 },
-        },
+        legend: { show: false }, // Ocultamos la leyenda en la versión super compacta móvil
         tooltip: {
           y: {
             formatter: function (val) {
