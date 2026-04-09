@@ -80,6 +80,7 @@ createApp({
       return titulos[tab.value] || "FinancePro";
     });
 
+    // Filtros de Cuentas vs Deudas ampliados
     const cuentasActivas = computed(() =>
       cuentas.value.filter((c) =>
         ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
@@ -426,7 +427,7 @@ createApp({
         },
         fill: { colors: [diagnosticoDeuda.value.colorGrafico] },
         stroke: { lineCap: "round" },
-        labels: ["Cobertura de Deuda"],
+        labels: ["Cobertura Segura"],
       };
 
       chartDeudaInstance = new ApexCharts(chartDeudaRef.value, optionsDeuda);
