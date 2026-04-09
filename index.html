@@ -55,7 +55,6 @@
         width: 100%;
         height: 100%;
       }
-
       .toast-enter-active,
       .toast-leave-active {
         transition: all 0.3s ease;
@@ -376,10 +375,10 @@
               </p>
             </div>
             <button
-              @click="showModal = true"
+              @click="abrirModalTransaccion()"
               class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
             >
-              Registrar Operación
+              + Registrar Operación
             </button>
           </header>
 
@@ -481,7 +480,7 @@
                         </p>
                       </div>
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
                       <div
                         :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
                         class="font-extrabold text-sm md:text-base whitespace-nowrap"
@@ -489,25 +488,48 @@
                         {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
                         formatoMoneda(item.monto, item.moneda) }}
                       </div>
-                      <button
-                        @click="eliminarRegistro('transaccion', item.id)"
-                        class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        aria-label="Eliminar"
+                      <div
+                        class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-2"
                       >
-                        <svg
-                          class="w-4 h-4 md:w-5 md:h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                        <button
+                          @click="abrirModalTransaccion(item)"
+                          class="text-slate-300 hover:text-blue-500 transition"
+                          aria-label="Editar"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          ></path>
-                        </svg>
-                      </button>
+                          <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            ></path>
+                          </svg>
+                        </button>
+                        <button
+                          @click="eliminarRegistro('transaccion', item.id)"
+                          class="text-slate-300 hover:text-rose-500 transition"
+                          aria-label="Eliminar"
+                        >
+                          <svg
+                            class="w-4 h-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -528,7 +550,6 @@
                     Mi Dinero Líquido y Ahorros
                   </h3>
                 </div>
-
                 <div
                   v-if="cuentasActivas.length === 0"
                   class="col-span-full py-6 text-center text-slate-500 text-sm"
@@ -559,7 +580,6 @@
                     </p>
                   </div>
                 </div>
-
                 <div class="col-span-full">
                   <h3
                     class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-6 mb-1"
@@ -567,7 +587,6 @@
                     Cuentas Por Cobrar (Me deben)
                   </h3>
                 </div>
-
                 <div
                   v-if="cuentasPorCobrar.length === 0"
                   class="col-span-full py-6 text-center text-slate-500 text-sm"
@@ -643,7 +662,6 @@
                       </p>
                     </div>
                   </div>
-
                   <div
                     class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch relative z-10"
                   >
@@ -670,7 +688,7 @@
                           <p
                             class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider mb-1"
                           >
-                            Total a Pagar (Tarjetas)
+                            Total a Pagar (Deudas)
                           </p>
                           <p
                             class="text-xl md:text-2xl font-extrabold text-rose-600"
@@ -679,7 +697,6 @@
                           </p>
                         </div>
                       </div>
-
                       <div
                         class="bg-slate-50 p-4 rounded-xl border flex gap-3 items-start"
                         :class="diagnosticoDeuda.alertBoxClasses"
@@ -701,7 +718,7 @@
                           <p
                             class="text-[10px] font-bold uppercase tracking-widest mb-0.5 opacity-80"
                           >
-                            Consejo Financiero
+                            Diagnóstico Inteligente
                           </p>
                           <p class="text-sm font-semibold leading-relaxed">
                             {{ diagnosticoDeuda.mensaje }}
@@ -709,7 +726,6 @@
                         </div>
                       </div>
                     </div>
-
                     <div class="chart-container min-h-[220px]">
                       <div
                         ref="chartDeudaRef"
@@ -759,7 +775,6 @@
                       >
                         {{ formatoMoneda(c.saldo_actual, c.moneda) }}
                       </p>
-
                       <div
                         v-if="c.tipo_cuenta === 'Credito'"
                         class="mt-3 text-[10px] md:text-xs text-slate-600 bg-slate-50 p-2 md:p-3 rounded-xl border border-slate-100"
@@ -819,7 +834,6 @@
                     + Añadir Proyección
                   </button>
                 </div>
-
                 <div
                   class="bg-blue-50 border border-blue-100 p-4 md:p-5 rounded-2xl mb-6 text-xs md:text-sm text-blue-800 shadow-sm flex items-start gap-3"
                 >
@@ -837,14 +851,12 @@
                   <div>
                     <p class="font-bold mb-1">Nota sobre Pagos Compartidos:</p>
                     <p>
-                      Si pagas algo en grupo (ej. Plan familiar de Spotify),
-                      registra aquí <b>solo tu parte del gasto</b>. Lo que te
-                      deben los demás regístralo como "Por Cobrar" en la pestaña
-                      Ajustes. Así tus gráficos siempre serán precisos.
+                      Si pagas algo en grupo (ej. Plan Spotify), registra aquí
+                      <b>solo tu parte del gasto</b>. Lo que te deben los demás
+                      regístralo como "Por Cobrar" en la pestaña Ajustes.
                     </p>
                   </div>
                 </div>
-
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <div
                     class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm"
@@ -853,7 +865,7 @@
                       class="flex justify-between items-end border-b border-slate-50 pb-3 mb-4"
                     >
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                        Ingresos Fijos (Seguros)
+                        Ingresos Fijos
                       </h3>
                       <span class="text-emerald-600 font-extrabold text-lg"
                         >S/ {{ totalIngresosFijos.toFixed(2) }}</span
@@ -881,34 +893,54 @@
                             Día tope estimado: {{ pago.dia_cobro }}
                           </p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
                           <div class="font-extrabold text-emerald-600">
                             + {{ formatoMoneda(pago.monto, pago.moneda) }}
                           </div>
-                          <button
-                            @click="eliminarRegistro('proyeccion', pago.id)"
-                            class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                            aria-label="Eliminar"
+                          <div
+                            class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-2"
                           >
-                            <svg
-                              class="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                            <button
+                              @click="abrirModalPagoFijo(pago)"
+                              class="text-slate-300 hover:text-blue-500 transition"
                             >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              ></path>
-                            </svg>
-                          </button>
+                              <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                ></path>
+                              </svg>
+                            </button>
+                            <button
+                              @click="eliminarRegistro('proyeccion', pago.id)"
+                              class="text-slate-300 hover:text-rose-500 transition"
+                            >
+                              <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                ></path>
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
                   <div
                     class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm"
                   >
@@ -916,7 +948,7 @@
                       class="flex justify-between items-end border-b border-slate-50 pb-3 mb-4"
                     >
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                        Gastos Fijos (Obligatorios)
+                        Gastos Fijos
                       </h3>
                       <span class="text-rose-600 font-extrabold text-lg"
                         >S/ {{ totalGastosFijos.toFixed(2) }}</span
@@ -941,32 +973,53 @@
                           <p
                             class="text-[10px] font-medium text-slate-500 mt-0.5"
                           >
-                            Día de pago: {{ pago.dia_cobro }}
+                            Día pago: {{ pago.dia_cobro }}
                           </p>
                         </div>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
                           <div class="font-extrabold text-slate-900">
                             - {{ formatoMoneda(pago.monto, pago.moneda) }}
                           </div>
-                          <button
-                            @click="eliminarRegistro('proyeccion', pago.id)"
-                            class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                            aria-label="Eliminar"
+                          <div
+                            class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-2"
                           >
-                            <svg
-                              class="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                            <button
+                              @click="abrirModalPagoFijo(pago)"
+                              class="text-slate-300 hover:text-blue-500 transition"
                             >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              ></path>
-                            </svg>
-                          </button>
+                              <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                ></path>
+                              </svg>
+                            </button>
+                            <button
+                              @click="eliminarRegistro('proyeccion', pago.id)"
+                              class="text-slate-300 hover:text-rose-500 transition"
+                            >
+                              <svg
+                                class="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                ></path>
+                              </svg>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1046,7 +1099,7 @@
                         </p>
                       </div>
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2 md:gap-4">
                       <div
                         :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
                         class="font-extrabold text-base md:text-lg whitespace-nowrap"
@@ -1054,25 +1107,46 @@
                         {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
                         formatoMoneda(item.monto, item.moneda) }}
                       </div>
-                      <button
-                        @click="eliminarRegistro('transaccion', item.id)"
-                        class="text-slate-300 hover:text-rose-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
-                        aria-label="Eliminar"
+                      <div
+                        class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-1 md:pl-2"
                       >
-                        <svg
-                          class="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                        <button
+                          @click="abrirModalTransaccion(item)"
+                          class="text-slate-300 hover:text-blue-500 transition"
                         >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                          ></path>
-                        </svg>
-                      </button>
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            ></path>
+                          </svg>
+                        </button>
+                        <button
+                          @click="eliminarRegistro('transaccion', item.id)"
+                          class="text-slate-300 hover:text-rose-500 transition"
+                        >
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1130,7 +1204,7 @@
                   <input
                     type="text"
                     v-model="nuevaCuenta.nombre"
-                    placeholder="Nombre (Ej: BBVA, Préstamo, Juan)"
+                    placeholder="Nombre (Ej: BBVA, Préstamo)"
                     class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                   />
                   <div class="flex gap-2 mb-3">
@@ -1164,16 +1238,9 @@
                       <option value="USD">Dólares ($)</option>
                     </select>
                   </div>
-
                   <template
                     v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
                   >
-                    <p
-                      v-if="nuevaCuenta.tipo_cuenta === 'Cobrar'"
-                      class="text-[10px] text-slate-500 mb-2"
-                    >
-                      Registra cuánto dinero te debe esta persona actualmente.
-                    </p>
                     <input
                       type="number"
                       v-model="nuevaCuenta.saldo_inicial"
@@ -1181,7 +1248,6 @@
                       class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
                     />
                   </template>
-
                   <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
                     <input
                       type="number"
@@ -1210,12 +1276,7 @@
                       />
                     </div>
                   </template>
-
                   <template v-else>
-                    <p class="text-[10px] text-slate-500 mb-2 leading-tight">
-                      Registra la deuda total que tienes pendiente de pagar. (El
-                      sistema la volverá negativa).
-                    </p>
                     <input
                       type="number"
                       v-model="nuevaCuenta.saldo_inicial"
@@ -1223,7 +1284,6 @@
                       class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none border-l-4 border-l-rose-500"
                     />
                   </template>
-
                   <button
                     @click="guardarCuenta"
                     class="w-full bg-slate-900 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-md active:scale-95"
@@ -1233,14 +1293,25 @@
                 </div>
 
                 <div
-                  v-show="tab === 'ajustes'"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm self-start"
+                  v-show="tab === 'ajustes' || editandoPagoFijo.estado"
+                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm self-start transition-all"
+                  :class="editandoPagoFijo.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
                 >
-                  <h3
-                    class="font-bold text-slate-800 mb-2 border-b border-slate-50 pb-3 text-sm md:text-base"
+                  <div
+                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
                   >
-                    Nuevo Flujo Fijo (Calendario)
-                  </h3>
+                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
+                      {{ editandoPagoFijo.estado ? 'Editar Proyección Fija' :
+                      'Nuevo Flujo Fijo (Calendario)' }}
+                    </h3>
+                    <button
+                      v-if="editandoPagoFijo.estado"
+                      @click="cancelarEdicionPago"
+                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                   <input
                     type="text"
                     v-model="nuevoPagoFijo.nombre"
@@ -1273,7 +1344,7 @@
                     <input
                       type="number"
                       v-model="nuevoPagoFijo.dia_cobro"
-                      placeholder="Día del mes"
+                      placeholder="Día del mes (1-31)"
                       min="1"
                       max="31"
                       class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
@@ -1281,9 +1352,11 @@
                   </div>
                   <button
                     @click="guardarPagoFijo"
-                    class="w-full bg-slate-900 text-white py-3.5 rounded-xl text-sm font-bold hover:bg-slate-800 transition active:scale-95 shadow-md"
+                    class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition active:scale-95 shadow-md"
+                    :class="editandoPagoFijo.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
                   >
-                    Guardar en Proyección
+                    {{ editandoPagoFijo.estado ? 'Guardar Cambios' : 'Añadir a
+                    Proyección' }}
                   </button>
                 </div>
 
@@ -1383,7 +1456,7 @@
           </button>
           <div class="relative -top-5">
             <button
-              @click="showModal = true"
+              @click="abrirModalTransaccion()"
               class="w-14 h-14 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-slate-900/40 active:scale-90 transition-transform border-[3px] border-slate-50"
             >
               <svg
@@ -1454,7 +1527,7 @@
           ></div>
           <div class="flex justify-between items-center mb-5">
             <h2 class="text-lg md:text-xl font-extrabold text-slate-900">
-              Nueva Operación
+              {{ editandoTx.estado ? 'Editar Operación' : 'Nueva Operación' }}
             </h2>
             <button
               @click="showModal = false"
@@ -1464,13 +1537,16 @@
             </button>
           </div>
 
-          <div class="flex gap-2 p-1 bg-slate-100 rounded-xl mb-5">
+          <div
+            v-if="!editandoTx.estado"
+            class="flex gap-2 p-1 bg-slate-100 rounded-xl mb-5"
+          >
             <button
               @click="tipoOperacion = 'Egreso'"
               :class="tipoOperacion === 'Egreso' ? 'bg-white shadow-sm text-slate-900 font-bold' : 'text-slate-500 font-medium'"
               class="flex-1 py-2 text-xs md:text-sm rounded-lg transition"
             >
-              Gasto / Pago
+              Gasto
             </button>
             <button
               @click="tipoOperacion = 'Ingreso'"
@@ -1486,6 +1562,12 @@
             >
               Mover
             </button>
+          </div>
+          <div
+            v-else
+            class="mb-5 bg-blue-50 text-blue-800 p-3 rounded-xl text-xs font-semibold text-center border border-blue-100"
+          >
+            Modificando un registro de tipo: {{ tipoOperacion }}
           </div>
 
           <div
@@ -1535,8 +1617,16 @@
             v-if="tipoOperacion === 'Transferencia'"
             class="space-y-3 md:space-y-4"
           >
+            <div
+              v-if="editandoTx.estado"
+              class="text-xs text-rose-500 font-semibold mb-2 bg-rose-50 p-2 rounded-lg"
+            >
+              Por seguridad contable, las transferencias deben ser eliminadas y
+              creadas de nuevo, no editadas.
+            </div>
             <select
               v-model="txTransf.origen_id"
+              :disabled="editandoTx.estado"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
             >
               <option value="" disabled>Sale de...</option>
@@ -1546,6 +1636,7 @@
             </select>
             <select
               v-model="txTransf.destino_id"
+              :disabled="editandoTx.estado"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
             >
               <option value="" disabled>Entra a...</option>
@@ -1557,12 +1648,14 @@
               <input
                 type="number"
                 v-model="txTransf.monto"
+                :disabled="editandoTx.estado"
                 placeholder="Monto"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base md:text-lg font-extrabold focus:outline-none"
               />
               <input
                 type="date"
                 v-model="txTransf.fecha"
+                :disabled="editandoTx.estado"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
               />
             </div>
@@ -1570,10 +1663,20 @@
 
           <div class="mt-6 md:mt-8 flex gap-3 pb-8 md:pb-0">
             <button
+              v-if="!editandoTx.estado || tipoOperacion !== 'Transferencia'"
               @click="ejecutarOperacion"
-              class="w-full py-3.5 text-sm font-extrabold text-white bg-slate-900 rounded-xl hover:bg-slate-800 transition active:scale-95 shadow-lg"
+              class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition active:scale-95 shadow-lg"
+              :class="editandoTx.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
             >
-              Confirmar Operación
+              {{ editandoTx.estado ? 'Guardar Cambios' : 'Confirmar Operación'
+              }}
+            </button>
+            <button
+              v-if="editandoTx.estado"
+              @click="showModal = false"
+              class="w-full py-3.5 text-sm font-extrabold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition active:scale-95"
+            >
+              Cancelar
             </button>
           </div>
         </div>

@@ -28,6 +28,7 @@ export const api = {
     };
   },
 
+  // --- TRANSACCIONES ---
   async guardarTransaccion(datos) {
     return await fetch(`${API_URL}/transacciones/`, {
       method: "POST",
@@ -35,7 +36,37 @@ export const api = {
       body: JSON.stringify(datos),
     });
   },
+  async actualizarTransaccion(id, datos) {
+    return await fetch(`${API_URL}/transacciones/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async eliminarTransaccion(id) {
+    return await fetch(`${API_URL}/transacciones/${id}`, { method: "DELETE" });
+  },
 
+  // --- PAGOS FIJOS (PROYECCIÓN) ---
+  async guardarPagoFijo(datos) {
+    return await fetch(`${API_URL}/pagos_fijos/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async actualizarPagoFijo(id, datos) {
+    return await fetch(`${API_URL}/pagos_fijos/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
+  async eliminarPagoFijo(id) {
+    return await fetch(`${API_URL}/pagos_fijos/${id}`, { method: "DELETE" });
+  },
+
+  // --- CUENTAS Y CATEGORÍAS ---
   async guardarCategoria(datos) {
     return await fetch(`${API_URL}/categorias/`, {
       method: "POST",
@@ -43,17 +74,8 @@ export const api = {
       body: JSON.stringify(datos),
     });
   },
-
   async guardarCuenta(datos) {
     return await fetch(`${API_URL}/cuentas/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(datos),
-    });
-  },
-
-  async guardarPagoFijo(datos) {
-    return await fetch(`${API_URL}/pagos_fijos/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(datos),

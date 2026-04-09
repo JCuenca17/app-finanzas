@@ -21,7 +21,7 @@ createApp({
     const showModal = ref(false);
     const tipoOperacion = ref("Egreso");
 
-    // Sistema Global de Notificaciones
+    // Sistema Global de Notificaciones (Toasts)
     const toast = ref({ show: false, message: "", type: "success" });
     let toastTimeout = null;
 
@@ -44,6 +44,10 @@ createApp({
     let chartCatInstance = null;
     let chartFlujoInstance = null;
     let chartDeudaInstance = null;
+
+    // Estados para la Edición (Reutilizar modales)
+    const editandoTx = ref({ estado: false, id: null });
+    const editandoPagoFijo = ref({ estado: false, id: null });
 
     const tx = ref({
       monto: "",
@@ -185,9 +189,8 @@ createApp({
         result.porcentajeCobertura = Math.round(cob);
       }
 
-      // Textos amigables
       if (deuda === 0) {
-        result.estado = "Todo en orden";
+        result.estado = "Sin obligaciones activas";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
@@ -195,32 +198,32 @@ createApp({
           "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
         result.mensaje =
-          "No tienes deudas de tarjetas en este momento. ¡Sigue así!";
+          "Excelente estado de solvencia. No existen pasivos registrados en Soles pendientes de pago.";
       } else if (balance >= 0) {
-        result.estado = "Bajo Control";
+        result.estado = "Superávit Proyectado";
         result.textColor = "text-emerald-600";
         result.iconBg = "bg-emerald-500";
         result.borderColor = "border-emerald-200";
         result.alertBoxClasses =
           "bg-emerald-50 border-emerald-200 text-emerald-800";
         result.colorGrafico = "#10b981";
-        result.mensaje = `Con tu dinero actual y tu sueldo podrás pagar tus tarjetas tranqui. Te sobrarán S/ ${balance.toFixed(2)}.`;
+        result.mensaje = `Tras cubrir las obligaciones de crédito y gastos fijos, existirá un excedente líquido de S/ ${balance.toFixed(2)}.`;
       } else if (balance + ahorro >= 0) {
-        result.estado = "Cuidado, faltan fondos";
+        result.estado = "Alerta Amarilla";
         result.textColor = "text-amber-600";
         result.iconBg = "bg-amber-500";
         result.borderColor = "border-amber-200";
         result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
         result.colorGrafico = "#f59e0b";
-        result.mensaje = `Tu sueldo no alcanza para la tarjeta. Te faltan S/ ${Math.abs(balance).toFixed(2)}. Tendrás que sacar de tus ahorros.`;
+        result.mensaje = `Déficit líquido proyectado de S/ ${Math.abs(balance).toFixed(2)}. Será necesario comprometer capital de la reserva de ahorros para evitar mora.`;
       } else {
-        result.estado = "Peligro de Deuda";
+        result.estado = "Insolvencia Crítica";
         result.textColor = "text-rose-600";
         result.iconBg = "bg-rose-500";
         result.borderColor = "border-rose-200";
         result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
         result.colorGrafico = "#f43f5e";
-        result.mensaje = `Incluso usando todos tus ahorros te van a faltar S/ ${Math.abs(balance + ahorro).toFixed(2)}. Evita gastar más.`;
+        result.mensaje = `El déficit supera la reserva total de ahorros en S/ ${Math.abs(balance + ahorro).toFixed(2)}. Se requiere reestructuración de deuda inmediata.`;
       }
       return result;
     });
@@ -499,7 +502,46 @@ createApp({
       }
     };
 
+    // --- SISTEMA DE EDICIÓN Y CREACIÓN (CRUD) ---
+
+    // Abre el modal limpio para Nueva Transacción
+    const abrirModalTransaccion = (itemAEditar = null) => {
+      if (itemAEditar) {
+        // Modo Edición
+        editandoTx.value = { estado: true, id: itemAEditar.id };
+        tipoOperacion.value = itemAEditar.tipo_flujo;
+        tx.value = {
+          monto: itemAEditar.monto,
+          descripcion: itemAEditar.descripcion,
+          fecha: itemAEditar.fecha,
+          cuenta_id: itemAEditar.cuenta, // Asegúrate que el backend envíe el ID y no solo el nombre
+          categoria_id: itemAEditar.categoria,
+        };
+      } else {
+        // Modo Nuevo
+        editandoTx.value = { estado: false, id: null };
+        tipoOperacion.value = "Egreso";
+        tx.value = {
+          monto: "",
+          descripcion: "",
+          fecha: new Date().toISOString().split("T")[0],
+          cuenta_id: "",
+          categoria_id: "",
+        };
+        txTransf.value = {
+          origen_id: "",
+          destino_id: "",
+          monto: "",
+          fecha: new Date().toISOString().split("T")[0],
+          descripcion: "",
+        };
+      }
+      showModal.value = true;
+    };
+
     const ejecutarOperacion = async () => {
+      cargando.value = true;
+
       if (tipoOperacion.value === "Transferencia") {
         if (
           !txTransf.value.origen_id ||
@@ -507,14 +549,15 @@ createApp({
           !txTransf.value.monto
         ) {
           mostrarToast("Falta completar datos", "warning");
+          cargando.value = false;
           return;
         }
         if (txTransf.value.origen_id === txTransf.value.destino_id) {
           mostrarToast("Las cuentas no pueden ser iguales", "warning");
+          cargando.value = false;
           return;
         }
 
-        cargando.value = true;
         const catSalida = categorias.value.find(
           (c) => c.nombre === "Transferencia Saliente",
         );
@@ -554,20 +597,27 @@ createApp({
           !tx.value.descripcion
         ) {
           mostrarToast("Por favor, llena todos los campos", "warning");
+          cargando.value = false;
           return;
         }
 
-        cargando.value = true;
         try {
-          await api.guardarTransaccion({
+          const datosParaBD = {
             ...tx.value,
             cuenta_id: parseInt(tx.value.cuenta_id),
             categoria_id: parseInt(tx.value.categoria_id),
             monto: parseFloat(tx.value.monto),
-          });
+          };
+
+          if (editandoTx.value.estado) {
+            await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
+            mostrarToast("Operación actualizada con éxito", "success");
+          } else {
+            await api.guardarTransaccion(datosParaBD);
+            mostrarToast("Operación registrada con éxito", "success");
+          }
           tx.value.monto = "";
           tx.value.descripcion = "";
-          mostrarToast("Operación registrada con éxito", "success");
         } catch (error) {
           mostrarToast("Ocurrió un error en el servidor", "error");
         }
@@ -575,6 +625,87 @@ createApp({
 
       showModal.value = false;
       await cargarDatos();
+      cargando.value = false;
+    };
+
+    // Modal para Proyección Fija
+    const abrirModalPagoFijo = (pagoAEditar) => {
+      editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
+      nuevoPagoFijo.value = {
+        nombre: pagoAEditar.nombre,
+        monto: pagoAEditar.monto,
+        tipo_flujo: pagoAEditar.tipo_flujo,
+        dia_cobro: pagoAEditar.dia_cobro,
+        moneda: pagoAEditar.moneda,
+      };
+      tab.value = "ajustes"; // Te lleva a la pestaña donde está el formulario
+    };
+
+    const cancelarEdicionPago = () => {
+      editandoPagoFijo.value = { estado: false, id: null };
+      nuevoPagoFijo.value = {
+        nombre: "",
+        monto: "",
+        tipo_flujo: "Egreso",
+        dia_cobro: "",
+        moneda: "PEN",
+      };
+    };
+
+    const guardarPagoFijo = async () => {
+      if (
+        !nuevoPagoFijo.value.nombre ||
+        !nuevoPagoFijo.value.monto ||
+        !nuevoPagoFijo.value.dia_cobro
+      ) {
+        mostrarToast("Faltan datos en la proyección", "warning");
+        return;
+      }
+      cargando.value = true;
+      try {
+        const payload = {
+          usuario_id: currentUserId.value,
+          nombre: nuevoPagoFijo.value.nombre,
+          monto: parseFloat(nuevoPagoFijo.value.monto),
+          tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
+          dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
+          moneda: nuevoPagoFijo.value.moneda,
+        };
+
+        if (editandoPagoFijo.value.estado) {
+          await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
+          mostrarToast("Proyección actualizada con éxito", "success");
+        } else {
+          await api.guardarPagoFijo(payload);
+          mostrarToast("Proyección guardada con éxito", "success");
+        }
+
+        cancelarEdicionPago(); // Limpia el formulario
+        await cargarDatos();
+      } catch (error) {
+        mostrarToast("Error de servidor", "error");
+      }
+      cargando.value = false;
+    };
+
+    // Eliminar global (Conectado al Backend)
+    const eliminarRegistro = async (tipo, id) => {
+      if (!confirm("¿Estás seguro de que deseas eliminar este registro?"))
+        return;
+
+      cargando.value = true;
+      try {
+        if (tipo === "transaccion") {
+          await api.eliminarTransaccion(id);
+        } else if (tipo === "proyeccion") {
+          await api.eliminarPagoFijo(id);
+        }
+        await cargarDatos();
+        mostrarToast("Registro eliminado correctamente", "success");
+      } catch (error) {
+        console.error("Error al eliminar:", error);
+        mostrarToast("Hubo un error al intentar eliminar", "error");
+      }
       cargando.value = false;
     };
 
@@ -647,50 +778,6 @@ createApp({
       cargando.value = false;
     };
 
-    const guardarPagoFijo = async () => {
-      if (
-        !nuevoPagoFijo.value.nombre ||
-        !nuevoPagoFijo.value.monto ||
-        !nuevoPagoFijo.value.dia_cobro
-      ) {
-        mostrarToast("Faltan datos en la proyección", "warning");
-        return;
-      }
-      cargando.value = true;
-      try {
-        const payload = {
-          usuario_id: currentUserId.value,
-          nombre: nuevoPagoFijo.value.nombre,
-          monto: parseFloat(nuevoPagoFijo.value.monto),
-          tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
-          dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
-          moneda: nuevoPagoFijo.value.moneda,
-        };
-        await api.guardarPagoFijo(payload);
-        nuevoPagoFijo.value = {
-          nombre: "",
-          monto: "",
-          tipo_flujo: "Egreso",
-          dia_cobro: "",
-          moneda: "PEN",
-        };
-        await cargarDatos();
-        mostrarToast("Proyección guardada con éxito", "success");
-      } catch (error) {
-        mostrarToast("Error de servidor", "error");
-      }
-      cargando.value = false;
-    };
-
-    // Función mock para eliminar (Prepara el terreno para el backend)
-    const eliminarRegistro = (tipo, id) => {
-      mostrarToast(
-        "Falta conectar la función DELETE en tu Backend (Python) para poder borrar elementos.",
-        "warning",
-      );
-      console.log(`Intento de eliminar ${tipo} con ID: ${id}`);
-    };
-
     onMounted(() => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
@@ -737,6 +824,11 @@ createApp({
       toast,
       mostrarToast,
       eliminarRegistro,
+      abrirModalTransaccion,
+      abrirModalPagoFijo,
+      cancelarEdicionPago,
+      editandoTx,
+      editandoPagoFijo,
       cuentas,
       categorias,
       categoriasFiltradas,
