@@ -305,7 +305,6 @@
                     </div>
                   </div>
                 </div>
-
                 <div
                   class="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-gradient-to-br from-fuchsia-600 to-purple-700 text-white shadow-lg relative overflow-hidden group"
                 >
@@ -360,7 +359,7 @@
               </div>
 
               <div
-                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col flex-1 min-h-0"
+                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col flex-1 min-h-0 mt-2"
               >
                 <div
                   class="px-4 md:px-6 py-3 border-b border-slate-50 flex-shrink-0 flex justify-between items-center"
@@ -407,7 +406,7 @@
                     <div class="flex items-center gap-2">
                       <div
                         :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
-                        class="font-extrabold text-sm md:text-base whitespace-nowrap"
+                        class="font-extrabold text-sm md:text-base whitespace-nowrap text-right"
                       >
                         {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
                         formatoMoneda(item.monto, item.moneda) }}
@@ -524,7 +523,6 @@
                     </p>
                   </div>
                 </div>
-
                 <div class="col-span-full">
                   <h3
                     class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-6 mb-1"
@@ -818,29 +816,6 @@
                     + Añadir Proyección
                   </button>
                 </div>
-                <div
-                  class="bg-blue-50 border border-blue-100 p-4 md:p-5 rounded-2xl mb-6 text-xs md:text-sm text-blue-800 shadow-sm flex items-start gap-3"
-                >
-                  <svg
-                    class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clip-rule="evenodd"
-                    ></path>
-                  </svg>
-                  <div>
-                    <p class="font-bold mb-1">Nota sobre Pagos Compartidos:</p>
-                    <p>
-                      Si pagas algo en grupo (ej. Plan Spotify), registra aquí
-                      <b>solo tu parte del gasto</b>. Lo que te deben los demás
-                      regístralo como "Por Cobrar" en la pestaña Ajustes.
-                    </p>
-                  </div>
-                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <div
                     class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm"
@@ -1039,7 +1014,6 @@
                   </h3>
                   <div class="flex-1 w-full" ref="chartCatRef"></div>
                 </div>
-
                 <div
                   class="col-span-1 lg:col-span-2 bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 flex flex-col mt-2"
                 >
@@ -1052,7 +1026,6 @@
                     Selecciona a una persona o etiqueta para ver todo el flujo
                     de dinero (lo que te depositan vs lo que tú gastas).
                   </p>
-
                   <select
                     v-model="tagSearch"
                     class="w-full mb-4 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 bg-slate-50 font-semibold"
@@ -1064,7 +1037,6 @@
                       {{ et.nombre }}
                     </option>
                   </select>
-
                   <div
                     v-if="tagSearch && analisisTag.operaciones.length > 0"
                     class="space-y-4"
@@ -1116,7 +1088,6 @@
                         </p>
                       </div>
                     </div>
-
                     <div
                       class="divide-y divide-slate-100 border border-slate-100 rounded-xl overflow-hidden mt-4"
                     >
@@ -1829,10 +1800,12 @@
           <div
             class="w-10 h-1.5 bg-slate-200 rounded-full mx-auto mb-5 md:hidden"
           ></div>
+
           <div class="flex justify-between items-center mb-5">
             <h2 class="text-lg md:text-xl font-extrabold text-slate-900">
-              <span v-if="editandoTx.estado">Editar Operación</span
-              ><span v-else>Nueva Operación</span>
+              <span v-if="isRescateCashback">Abonar Cashback</span>
+              <span v-else-if="editandoTx.estado">Editar Operación</span>
+              <span v-else>Nueva Operación</span>
             </h2>
             <button
               @click="showModal = false"
@@ -1843,7 +1816,7 @@
           </div>
 
           <div
-            v-if="!editandoTx.estado"
+            v-if="!editandoTx.estado && !isRescateCashback"
             class="flex gap-2 p-1 bg-slate-100 rounded-xl mb-5"
           >
             <button
@@ -1868,8 +1841,16 @@
               Mover
             </button>
           </div>
+
           <div
-            v-else
+            v-if="isRescateCashback"
+            class="mb-5 bg-fuchsia-50 text-fuchsia-800 p-3 rounded-xl text-xs font-semibold text-center border border-fuchsia-100"
+          >
+            Estás usando tu Cashback. Asegúrate de elegir la Tarjeta de Crédito
+            correcta. (Disponible: S/ {{ bolsaCashback.disponible.toFixed(2) }})
+          </div>
+          <div
+            v-else-if="editandoTx.estado"
             class="mb-5 bg-blue-50 text-blue-800 p-3 rounded-xl text-xs font-semibold text-center border border-blue-100"
           >
             Modificando registro de tipo: {{ tipoOperacion }}
@@ -1883,16 +1864,28 @@
               v-model="tx.cuenta_id"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
             >
-              <option value="" disabled>Cuenta origen/destino...</option>
-              <option v-for="c in cuentas" :value="c.id_cuenta">
-                {{ c.nombre }} ({{ c.moneda }})
+              <option value="" disabled>
+                <template v-if="isRescateCashback"
+                  >Elige tu Tarjeta de Crédito...</template
+                >
+                <template v-else>Cuenta origen/destino...</template>
               </option>
+              <template v-for="c in cuentas" :key="c.id_cuenta">
+                <option
+                  :value="c.id_cuenta"
+                  v-if="!isRescateCashback || c.tipo_cuenta === 'Credito'"
+                >
+                  {{ c.nombre }} ({{ c.moneda }})
+                </option>
+              </template>
             </select>
 
             <div class="grid grid-cols-2 gap-3 md:gap-4">
               <select
                 v-model="tx.categoria_id"
+                :disabled="isRescateCashback"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
+                :class="isRescateCashback ? 'opacity-50 cursor-not-allowed' : ''"
               >
                 <option value="" disabled>Categoría...</option>
                 <option v-for="cat in categoriasFiltradas" :value="cat.id">
@@ -1901,7 +1894,9 @@
               </select>
               <select
                 v-model="tx.etiqueta_id"
+                :disabled="isRescateCashback"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none text-blue-600"
+                :class="isRescateCashback ? 'opacity-50 cursor-not-allowed' : ''"
               >
                 <option value="">Sin Etiqueta</option>
                 <option v-for="et in etiquetas" :value="et.id">
@@ -1913,8 +1908,15 @@
             <div class="grid grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label
+                  v-if="!isRescateCashback"
                   class="text-[10px] font-bold text-slate-400 uppercase ml-1"
-                  >Monto Gastado</label
+                  >Monto {{ tipoOperacion === 'Egreso' ? 'Gastado' : 'Ingresado'
+                  }}</label
+                >
+                <label
+                  v-else
+                  class="text-[10px] font-bold text-fuchsia-500 uppercase ml-1"
+                  >Cashback a Usar</label
                 >
                 <input
                   type="number"
@@ -1926,7 +1928,7 @@
               <div v-if="tipoOperacion === 'Egreso'">
                 <label
                   class="text-[10px] font-bold text-emerald-500 uppercase ml-1"
-                  >Cashback (+)</label
+                  >Cashback Generado (+)</label
                 >
                 <input
                   type="number"
@@ -1962,7 +1964,7 @@
             <input
               type="text"
               v-model="tx.descripcion"
-              placeholder="Concepto (Ej. Pago luz, Almuerzo)"
+              :placeholder="isRescateCashback ? 'Ej. Abono a Tarjeta' : 'Concepto (Ej. Pago luz, Almuerzo)'"
               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-medium focus:outline-none"
             />
           </div>

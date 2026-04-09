@@ -16,7 +16,7 @@ createApp({
     const auth = useAuth();
     const ui = useUI();
 
-    // 2. Instanciar gestor de datos (le pasamos el callback de actualización visual)
+    // 2. Instanciar gestor de datos
     const onDatosActualizados = () => {
       if (ui.tab.value === "analitica")
         nextTick(() => charts.renderizarGraficosAnalitica());
@@ -84,7 +84,7 @@ createApp({
       if (newTab === "deudas") nextTick(() => charts.renderizarGraficoDeuda());
     });
 
-    // 6. Exponer todo al HTML (El operador spread "..." desempaqueta los objetos)
+    // 6. Exponer todo al HTML
     return {
       ...auth,
       ...ui,
