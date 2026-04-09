@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Lógica visual y estado de la aplicación (Vue 3)
 
 import { api } from "./api.js";
 
@@ -14,26 +13,22 @@ createApp({
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     // -----------------------------
 
-    // Estados Globales
     const cargando = ref(true);
     const isLoggedIn = ref(false);
     const currentUserId = ref("");
-    const tab = ref("inicio");
+    const tab = ref("inicio"); // inicio, cuentas, historial, pagos, ajustes, mas
     const showModal = ref(false);
     const tipoOperacion = ref("Egreso");
 
-    // Datos del Servidor
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
     const pagosFijos = ref([]);
 
-    // Referencias de UI
     const chartRef = ref(null);
     let chartInstance = null;
     const hayGastosParaGrafico = ref(false);
 
-    // Formularios
     const tx = ref({
       monto: "",
       descripcion: "",
@@ -48,6 +43,7 @@ createApp({
       fecha: new Date().toISOString().split("T")[0],
       descripcion: "",
     });
+
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
     const nuevaCuenta = ref({
       nombre: "",
@@ -66,7 +62,6 @@ createApp({
       moneda: "PEN",
     });
 
-    // Cálculos
     const saldosLiquidos = computed(() => {
       const saldos = { PEN: 0, USD: 0 };
       cuentas.value
@@ -97,13 +92,112 @@ createApp({
       );
     });
 
-    // Utilidades
     const formatoMoneda = (monto, moneda) => {
       const simbolo = moneda === "USD" ? "$" : "S/";
       return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
     };
 
-    // Autenticación
+    const renderizarGrafico = () => {
+      if (!chartRef.value) return;
+
+      const egresos = historial.value.filter(
+        (h) =>
+          h.tipo_flujo === "Egreso" &&
+          !h.categoria_nombre.includes("Transferencia"),
+      );
+      const datosAgrupados = {};
+
+      egresos.forEach((egreso) => {
+        if (!datosAgrupados[egreso.categoria_nombre])
+          datosAgrupados[egreso.categoria_nombre] = 0;
+        datosAgrupados[egreso.categoria_nombre] += egreso.monto;
+      });
+
+      const labels = Object.keys(datosAgrupados);
+      const series = Object.values(datosAgrupados);
+
+      if (series.length === 0) {
+        hayGastosParaGrafico.value = false;
+        return;
+      }
+
+      hayGastosParaGrafico.value = true;
+
+      const options = {
+        series: series,
+        labels: labels,
+        chart: {
+          type: "donut",
+          height: 350,
+          fontFamily: "inherit",
+          background: "transparent",
+          toolbar: { show: false },
+        },
+        plotOptions: {
+          pie: {
+            donut: {
+              size: "75%",
+              labels: {
+                show: true,
+                name: {
+                  show: true,
+                  fontSize: "12px",
+                  color: "#64748b",
+                  fontWeight: 600,
+                },
+                value: {
+                  show: true,
+                  fontSize: "24px",
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  formatter: function (val) {
+                    return "S/ " + parseFloat(val).toFixed(2);
+                  },
+                },
+                total: {
+                  show: true,
+                  label: "Total Mes",
+                  color: "#64748b",
+                  fontWeight: 600,
+                  formatter: function (w) {
+                    return (
+                      "S/ " +
+                      w.globals.seriesTotals
+                        .reduce((a, b) => a + b, 0)
+                        .toFixed(2)
+                    );
+                  },
+                },
+              },
+            },
+          },
+        },
+        dataLabels: { enabled: false },
+        stroke: { width: 0 },
+        theme: { palette: "palette1" },
+        legend: {
+          position: "bottom",
+          fontSize: "13px",
+          fontWeight: 600,
+          markers: { radius: 12 },
+        },
+        tooltip: {
+          y: {
+            formatter: function (val) {
+              return "S/ " + val.toFixed(2);
+            },
+          },
+        },
+      };
+
+      if (chartInstance) {
+        chartInstance.updateOptions(options);
+      } else {
+        chartInstance = new ApexCharts(chartRef.value, options);
+        chartInstance.render();
+      }
+    };
+
     const iniciarSesionGoogle = async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -126,16 +220,13 @@ createApp({
       cargando.value = false;
     };
 
-    // Carga de Datos unificada
     const cargarDatos = async () => {
       try {
         const datos = await api.obtenerDatosCompletos(currentUserId.value);
-
         cuentas.value = datos.cuentas;
         categorias.value = datos.categorias;
         pagosFijos.value = datos.pagosFijos;
 
-        // Mapear historial con nombres de categorías
         historial.value = datos.historialRaw.map((h) => ({
           ...h,
           categoria_nombre:
@@ -143,16 +234,12 @@ createApp({
             h.categoria,
         }));
 
-        // Aquí insertaremos la lógica del gráfico más adelante
-        if (tab.value === "inicio") {
-          // nextTick(() => renderizarGrafico());
-        }
+        if (tab.value === "inicio") nextTick(() => renderizarGrafico());
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
     };
 
-    // Operaciones Core
     const ejecutarOperacion = async () => {
       cargando.value = true;
 
@@ -162,30 +249,12 @@ createApp({
           !txTransf.value.destino_id ||
           !txTransf.value.monto
         ) {
-          alert("Completa todos los datos de la transferencia");
+          alert("Completa todos los datos");
           cargando.value = false;
           return;
         }
         if (txTransf.value.origen_id === txTransf.value.destino_id) {
-          alert("No puedes transferir a la misma cuenta");
-          cargando.value = false;
-          return;
-        }
-
-        const cuentaOrigen = cuentas.value.find(
-          (c) => c.id_cuenta == txTransf.value.origen_id,
-        );
-        const cuentaDestino = cuentas.value.find(
-          (c) => c.id_cuenta == txTransf.value.destino_id,
-        );
-        if (
-          cuentaOrigen &&
-          cuentaDestino &&
-          cuentaOrigen.moneda !== cuentaDestino.moneda
-        ) {
-          alert(
-            "No se pueden hacer transferencias directas entre diferentes monedas por el momento.",
-          );
+          alert("Cuentas iguales");
           cargando.value = false;
           return;
         }
@@ -196,11 +265,8 @@ createApp({
         const catEntrada = categorias.value.find(
           (c) => c.nombre === "Transferencia Entrante",
         );
+        const concepto = txTransf.value.descripcion || "Transferencia";
 
-        const concepto =
-          txTransf.value.descripcion || "Transferencia entre cuentas";
-
-        // Ejecutar ambas partes de la transferencia
         await Promise.all([
           api.guardarTransaccion({
             cuenta_id: parseInt(txTransf.value.origen_id),
@@ -217,7 +283,6 @@ createApp({
             descripcion: concepto,
           }),
         ]);
-
         txTransf.value.monto = "";
         txTransf.value.descripcion = "";
       } else {
@@ -227,11 +292,10 @@ createApp({
           !tx.value.monto ||
           !tx.value.descripcion
         ) {
-          alert("Completa todos los datos obligatorios.");
+          alert("Datos incompletos");
           cargando.value = false;
           return;
         }
-
         await api.guardarTransaccion({
           ...tx.value,
           cuenta_id: parseInt(tx.value.cuenta_id),
@@ -314,7 +378,6 @@ createApp({
       await cargarDatos();
     };
 
-    // Inicialización
     onMounted(() => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
@@ -345,11 +408,9 @@ createApp({
       });
     });
 
-    // Observador de pestañas
+    // Observa cuando entras a la pestaña de inicio para dibujar el gráfico
     Vue.watch(tab, (newTab) => {
-      if (newTab === "inicio") {
-        // nextTick(() => renderizarGrafico());
-      }
+      if (newTab === "inicio") nextTick(() => renderizarGrafico());
     });
 
     return {
