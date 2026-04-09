@@ -52,7 +52,6 @@ export function useFinanceData(
   });
   const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
   const nuevaEtiq = ref({ nombre: "" });
-  // NUEVO CAMPO: pago_del_mes
   const nuevaCuenta = ref({
     nombre: "",
     tipo_cuenta: "Debito",
@@ -92,11 +91,14 @@ export function useFinanceData(
       pagosFijos.value = datos.pagosFijos;
       etiquetas.value = datos.etiquetas;
       bolsaCashback.value = datos.bolsaCashback;
+      // Protección String() añadida aquí
       historial.value = datos.historialRaw.map((h) => ({
         ...h,
-        categoria_nombre:
+        categoria_nombre: String(
           categorias.value.find((c) => c.id == h.categoria)?.nombre ||
-          h.categoria,
+            h.categoria_nombre ||
+            "Sin Categoría",
+        ),
       }));
       if (onDatosActualizados) onDatosActualizados();
     } catch (error) {

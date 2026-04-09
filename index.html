@@ -252,7 +252,7 @@
           <div class="flex-1 overflow-hidden relative">
             <div
               v-show="tab === 'inicio'"
-              class="absolute inset-0 w-full h-full flex flex-col px-4 md:px-8 gap-3 md:gap-5 pb-28 md:pb-6 overflow-y-auto"
+              class="absolute inset-0 w-full h-full flex flex-col px-4 md:px-8 pb-36 md:pb-6 overflow-y-auto"
             >
               <div
                 class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5 flex-shrink-0"
@@ -263,7 +263,7 @@
                   <p
                     class="text-[10px] md:text-xs font-semibold text-slate-300 uppercase tracking-widest mb-1 relative z-10"
                   >
-                    Liquidez Actual
+                    Liquidez Actual (Efectivo + Débito)
                   </p>
                   <div class="relative z-10">
                     <h2
@@ -287,7 +287,7 @@
                   <p
                     class="text-[10px] md:text-xs font-semibold text-blue-200 uppercase tracking-widest mb-1 relative z-10"
                   >
-                    Ahorro Guardado
+                    Ahorros
                   </p>
                   <div class="relative z-10">
                     <h2
@@ -314,7 +314,7 @@
                     <p
                       class="text-[10px] md:text-xs font-semibold text-fuchsia-200 uppercase tracking-widest"
                     >
-                      Bóveda Cashback
+                      Cashback
                     </p>
                     <button
                       @click="editarCashbackInicial()"
@@ -359,7 +359,7 @@
               </div>
 
               <div
-                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 flex-shrink-0 mt-1 md:mt-2"
+                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 flex-shrink-0 mt-3 md:mt-2"
               >
                 <div
                   class="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-white border border-slate-100 shadow-sm relative overflow-hidden flex items-center justify-between"
@@ -448,7 +448,7 @@
               </div>
 
               <div
-                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col flex-1 min-h-0 mt-2"
+                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col flex-1 min-h-0 mt-3 md:mt-2"
               >
                 <div
                   class="px-4 md:px-6 py-3 border-b border-slate-50 flex-shrink-0 flex justify-between items-center"
@@ -469,30 +469,35 @@
                     :key="item.id"
                     class="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition group"
                   >
-                    <div class="flex items-center gap-3">
+                    <div
+                      class="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-2"
+                    >
                       <div
                         class="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0"
                         :class="item.tipo_flujo === 'Ingreso' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'"
                       >
                         {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }}
                       </div>
-                      <div class="min-w-0">
+                      <div class="min-w-0 flex-1">
                         <p
                           class="font-bold text-slate-900 text-xs md:text-sm truncate"
                         >
                           {{ item.descripcion }}
                         </p>
                         <p
-                          class="text-[10px] md:text-xs font-medium mt-0.5 truncate text-slate-500"
+                          class="text-[10px] md:text-xs font-medium mt-0.5 truncate"
+                          :class="item.categoria_nombre && String(item.categoria_nombre).includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
                         >
                           {{ item.fecha }} • {{ item.cuenta }}
-                          <span v-if="item.etiqueta_nombre">
-                            • {{ item.etiqueta_nombre }}</span
+                          <span
+                            v-if="item.etiqueta_nombre"
+                            class="font-bold text-slate-600 bg-slate-100 px-1 rounded"
+                            >@{{ item.etiqueta_nombre }}</span
                           >
                         </p>
                       </div>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
                       <div
                         :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
                         class="font-extrabold text-sm md:text-base whitespace-nowrap text-right"
@@ -501,14 +506,14 @@
                         formatoMoneda(item.monto, item.moneda) }}
                       </div>
                       <div
-                        class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-2"
+                        class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-1 md:pl-2"
                       >
                         <button
                           @click="abrirModalTransaccion(item)"
                           class="text-slate-300 hover:text-blue-500 transition"
                         >
                           <svg
-                            class="w-4 h-4"
+                            class="w-4 h-4 md:w-5 md:h-5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -526,7 +531,7 @@
                           class="text-slate-300 hover:text-rose-500 transition"
                         >
                           <svg
-                            class="w-4 h-4"
+                            class="w-4 h-4 md:w-5 md:h-5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -548,7 +553,7 @@
 
             <div
               v-show="tab === 'cuentas'"
-              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-28 md:pb-6"
+              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-36 md:pb-6"
             >
               <div
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 max-w-5xl mx-auto"
@@ -675,7 +680,7 @@
 
             <div
               v-show="tab === 'deudas'"
-              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-28 md:pb-6"
+              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-36 md:pb-6"
             >
               <div class="max-w-5xl mx-auto space-y-6">
                 <div
@@ -902,7 +907,7 @@
 
             <div
               v-show="tab === 'pagos'"
-              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-28 md:pb-6"
+              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-36 md:pb-6"
             >
               <div class="max-w-5xl mx-auto">
                 <div
@@ -929,28 +934,6 @@
                     + Añadir Proyección
                   </button>
                 </div>
-                <div
-                  class="bg-blue-50 border border-blue-100 p-4 md:p-5 rounded-2xl mb-6 text-xs md:text-sm text-blue-800 shadow-sm flex items-start gap-3"
-                >
-                  <svg
-                    class="w-5 h-5 flex-shrink-0 mt-0.5 text-blue-600"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                      clip-rule="evenodd"
-                    ></path>
-                  </svg>
-                  <div>
-                    <p class="font-bold mb-1">Nota sobre Pagos Compartidos:</p>
-                    <p>
-                      Si pagas algo en grupo (ej. Plan Spotify), registra aquí
-                      <b>solo tu parte del gasto</b>.
-                    </p>
-                  </div>
-                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                   <div
                     class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm"
@@ -967,12 +950,20 @@
                     </div>
                     <div class="divide-y divide-slate-50">
                       <div
+                        v-if="pagosFijosIngresos.length === 0"
+                        class="py-6 text-center text-slate-500 text-xs md:text-sm"
+                      >
+                        No hay ingresos registrados.
+                      </div>
+                      <div
                         v-for="pago in pagosFijosIngresos"
                         :key="pago.id"
-                        class="py-3 flex justify-between items-center px-1 group"
+                        class="py-3 flex justify-between items-start px-1 group"
                       >
-                        <div>
-                          <p class="font-bold text-slate-900 text-sm">
+                        <div class="flex-1 min-w-0 pr-2">
+                          <p
+                            class="font-bold text-slate-900 text-sm break-words"
+                          >
                             {{ pago.nombre }}
                           </p>
                           <p
@@ -981,12 +972,16 @@
                             Día tope estimado: {{ pago.dia_cobro }}
                           </p>
                         </div>
-                        <div class="flex items-center gap-2">
-                          <div class="font-extrabold text-emerald-600">
+                        <div
+                          class="flex flex-col items-end gap-1.5 flex-shrink-0"
+                        >
+                          <div
+                            class="font-extrabold text-emerald-600 whitespace-nowrap"
+                          >
                             + {{ formatoMoneda(pago.monto, pago.moneda) }}
                           </div>
                           <div
-                            class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-2"
+                            class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
                           >
                             <button
                               @click="abrirModalPagoFijo(pago)"
@@ -1004,8 +999,9 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg></button
-                            ><button
+                              </svg>
+                            </button>
+                            <button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1043,12 +1039,20 @@
                     </div>
                     <div class="divide-y divide-slate-50">
                       <div
+                        v-if="pagosFijosEgresos.length === 0"
+                        class="py-6 text-center text-slate-500 text-xs md:text-sm"
+                      >
+                        No hay gastos fijos registrados.
+                      </div>
+                      <div
                         v-for="pago in pagosFijosEgresos"
                         :key="pago.id"
-                        class="py-3 flex justify-between items-center px-1 group"
+                        class="py-3 flex justify-between items-start px-1 group"
                       >
-                        <div>
-                          <p class="font-bold text-slate-900 text-sm">
+                        <div class="flex-1 min-w-0 pr-2">
+                          <p
+                            class="font-bold text-slate-900 text-sm break-words"
+                          >
                             {{ pago.nombre }}
                           </p>
                           <p
@@ -1057,12 +1061,16 @@
                             Día pago: {{ pago.dia_cobro }}
                           </p>
                         </div>
-                        <div class="flex items-center gap-2">
-                          <div class="font-extrabold text-slate-900">
+                        <div
+                          class="flex flex-col items-end gap-1.5 flex-shrink-0"
+                        >
+                          <div
+                            class="font-extrabold text-slate-900 whitespace-nowrap"
+                          >
                             - {{ formatoMoneda(pago.monto, pago.moneda) }}
                           </div>
                           <div
-                            class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-2"
+                            class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
                           >
                             <button
                               @click="abrirModalPagoFijo(pago)"
@@ -1080,8 +1088,9 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg></button
-                            ><button
+                              </svg>
+                            </button>
+                            <button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1110,7 +1119,7 @@
 
             <div
               v-show="tab === 'analitica'"
-              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-28 md:pb-6"
+              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-36 md:pb-6"
             >
               <div
                 class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-6xl mx-auto"
@@ -1212,25 +1221,33 @@
 
             <div
               v-show="tab === 'historial'"
-              class="absolute inset-0 w-full h-full flex flex-col px-4 md:px-8 pb-28 md:pb-6"
+              class="absolute inset-0 w-full h-full flex flex-col px-4 md:px-8 pb-36 md:pb-6"
             >
               <div
                 class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col h-full max-w-4xl mx-auto w-full"
               >
                 <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
                   <div
+                    v-if="historial.length === 0"
+                    class="p-10 text-center text-slate-500 text-sm"
+                  >
+                    No hay operaciones registradas.
+                  </div>
+                  <div
                     v-for="item in historial"
                     :key="item.id"
                     class="p-4 flex items-center justify-between hover:bg-slate-50 transition group"
                   >
-                    <div class="flex items-center gap-3 md:gap-4">
+                    <div
+                      class="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-2"
+                    >
                       <div
                         class="w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center font-bold text-base md:text-xl flex-shrink-0"
                         :class="item.tipo_flujo === 'Ingreso' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'"
                       >
                         {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }}
                       </div>
-                      <div class="min-w-0">
+                      <div class="min-w-0 flex-1">
                         <p
                           class="font-bold text-slate-900 text-sm md:text-base truncate"
                         >
@@ -1238,7 +1255,7 @@
                         </p>
                         <p
                           class="text-[10px] md:text-xs font-medium mt-0.5 truncate"
-                          :class="item.categoria_nombre && item.categoria_nombre.includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
+                          :class="item.categoria_nombre && String(item.categoria_nombre).includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
                         >
                           {{ item.fecha }} • {{ item.cuenta }}
                           <span
@@ -1249,7 +1266,7 @@
                         </p>
                       </div>
                     </div>
-                    <div class="flex items-center gap-2 md:gap-4">
+                    <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
                       <div
                         :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
                         class="font-extrabold text-base md:text-lg whitespace-nowrap text-right"
@@ -1293,7 +1310,7 @@
 
             <div
               v-show="tab === 'ajustes' || tab === 'mas'"
-              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-28 md:pb-6"
+              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-36 md:pb-6"
             >
               <div
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto"
@@ -1658,6 +1675,12 @@
                     </h4>
                     <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
                       <div
+                        v-if="etiquetas.length === 0"
+                        class="text-xs text-slate-500 py-2"
+                      >
+                        Aún no has registrado contactos o etiquetas.
+                      </div>
+                      <div
                         v-for="et in etiquetas"
                         :key="et.id"
                         class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg group border border-slate-100 hover:border-slate-200 transition"
@@ -1732,7 +1755,7 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                d="M4 6a2 2 0 012-2h2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
               ></path></svg
             ><span class="text-[9px] font-bold">Inicio</span>
           </button>

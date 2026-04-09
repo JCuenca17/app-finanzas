@@ -20,11 +20,12 @@ export function useCalculations(data, ui) {
     return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
   };
 
+  // Se añade String() protector para evitar bugs de .includes() en JS
   const categoriasFiltradas = computed(() =>
     categorias.value.filter(
       (c) =>
         c.tipo_flujo === tipoOperacion.value &&
-        !c.nombre.includes("Transferencia"),
+        !String(c.nombre || "").includes("Transferencia"),
     ),
   );
 
@@ -110,7 +111,6 @@ export function useCalculations(data, ui) {
     return saldos;
   });
 
-  // NUEVO CÁLCULO: Crédito Disponible en Tarjetas
   const creditoDisponible = computed(() => {
     let disponiblePEN = 0;
     let disponibleUSD = 0;
@@ -124,7 +124,6 @@ export function useCalculations(data, ui) {
     return { PEN: disponiblePEN, USD: disponibleUSD };
   });
 
-  // NUEVO CÁLCULO: Proyección de Dinero al próximo mes
   const proyeccionProximoMes = computed(() => {
     const liquidez = saldosLiquidos.value.PEN;
     const ahorro = saldosAhorro.value.PEN;
@@ -157,7 +156,6 @@ export function useCalculations(data, ui) {
     );
   });
 
-  // TERMÓMETRO DE DEUDA
   const diagnosticoDeuda = computed(() => {
     const liquidez = saldosLiquidos.value.PEN;
     const ahorro = saldosAhorro.value.PEN;
@@ -269,6 +267,6 @@ export function useCalculations(data, ui) {
     saldosAhorro,
     diagnosticoDeuda,
     creditoDisponible,
-    proyeccionProximoMes, // Expuestas al frontend
+    proyeccionProximoMes,
   };
 }
