@@ -1,17 +1,20 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
+// ARCHIVO: Lógica visual y estado de la aplicación (Vue 3)
+
+import { api } from "./api.js";
 
 const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
 createApp({
   setup() {
-    // --- CREDENCIALES (RECUERDA PONER LAS TUYAS) ---
+    // --- CREDENCIALES SUPABASE ---
     const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
     const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
-    const API_URL = "https://finanzas-backend-dgv5.onrender.com";
-
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // -----------------------------
 
+    // Estados Globales
     const cargando = ref(true);
     const isLoggedIn = ref(false);
     const currentUserId = ref("");
@@ -19,16 +22,18 @@ createApp({
     const showModal = ref(false);
     const tipoOperacion = ref("Egreso");
 
+    // Datos del Servidor
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
     const pagosFijos = ref([]);
 
-    // REFERENCIAS PARA EL GRÁFICO
+    // Referencias de UI
     const chartRef = ref(null);
     let chartInstance = null;
     const hayGastosParaGrafico = ref(false);
 
+    // Formularios
     const tx = ref({
       monto: "",
       descripcion: "",
@@ -43,7 +48,6 @@ createApp({
       fecha: new Date().toISOString().split("T")[0],
       descripcion: "",
     });
-
     const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
     const nuevaCuenta = ref({
       nombre: "",
@@ -62,6 +66,7 @@ createApp({
       moneda: "PEN",
     });
 
+    // Cálculos
     const saldosLiquidos = computed(() => {
       const saldos = { PEN: 0, USD: 0 };
       cuentas.value
@@ -69,8 +74,7 @@ createApp({
           (c) => c.tipo_cuenta === "Debito" || c.tipo_cuenta === "Efectivo",
         )
         .forEach((c) => {
-          const mon = c.moneda || "PEN";
-          saldos[mon] += c.saldo_actual;
+          saldos[c.moneda || "PEN"] += c.saldo_actual;
         });
       return saldos;
     });
@@ -80,8 +84,7 @@ createApp({
       cuentas.value
         .filter((c) => c.tipo_cuenta === "Ahorro")
         .forEach((c) => {
-          const mon = c.moneda || "PEN";
-          saldos[mon] += c.saldo_actual;
+          saldos[c.moneda || "PEN"] += c.saldo_actual;
         });
       return saldos;
     });
@@ -94,108 +97,13 @@ createApp({
       );
     });
 
+    // Utilidades
     const formatoMoneda = (monto, moneda) => {
       const simbolo = moneda === "USD" ? "$" : "S/";
       return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
     };
 
-    // FUNCIÓN PARA RENDERIZAR APEXCHARTS
-    const renderizarGrafico = () => {
-      if (!chartRef.value) return;
-
-      // 1. Filtrar solo Egresos reales (no transferencias)
-      const egresos = historial.value.filter(
-        (h) =>
-          h.tipo_flujo === "Egreso" &&
-          !h.categoria_nombre.includes("Transferencia"),
-      );
-
-      // 2. Agrupar montos por categoría
-      const datosAgrupados = {};
-      egresos.forEach((egreso) => {
-        if (!datosAgrupados[egreso.categoria_nombre]) {
-          datosAgrupados[egreso.categoria_nombre] = 0;
-        }
-        datosAgrupados[egreso.categoria_nombre] += egreso.monto;
-      });
-
-      const labels = Object.keys(datosAgrupados);
-      const series = Object.values(datosAgrupados);
-
-      if (series.length === 0) {
-        hayGastosParaGrafico.value = false;
-        return;
-      }
-
-      hayGastosParaGrafico.value = true;
-
-      const options = {
-        series: series,
-        labels: labels,
-        chart: {
-          type: "donut",
-          height: 320,
-          fontFamily: "inherit",
-          background: "transparent",
-          toolbar: { show: false },
-        },
-        plotOptions: {
-          pie: {
-            donut: {
-              size: "75%",
-              labels: {
-                show: true,
-                name: { show: true, fontSize: "13px", color: "#64748b" },
-                value: {
-                  show: true,
-                  fontSize: "20px",
-                  fontWeight: 700,
-                  color: "#0f172a",
-                  formatter: function (val) {
-                    return "S/ " + parseFloat(val).toFixed(2);
-                  },
-                },
-                total: {
-                  show: true,
-                  label: "Total Gastos",
-                  color: "#64748b",
-                  formatter: function (w) {
-                    const total = w.globals.seriesTotals.reduce(
-                      (a, b) => a + b,
-                      0,
-                    );
-                    return "S/ " + total.toFixed(2);
-                  },
-                },
-              },
-            },
-          },
-        },
-        dataLabels: { enabled: false }, // Ocultar etiquetas feas de porcentaje encima del grafico
-        stroke: { width: 0 }, // Sin bordes molestos
-        theme: { palette: "palette1" }, // Paleta moderna integrada
-        legend: {
-          position: "bottom",
-          fontSize: "13px",
-          markers: { radius: 12 },
-        },
-        tooltip: {
-          y: {
-            formatter: function (val) {
-              return "S/ " + val.toFixed(2);
-            },
-          },
-        },
-      };
-
-      if (chartInstance) {
-        chartInstance.updateOptions(options);
-      } else {
-        chartInstance = new ApexCharts(chartRef.value, options);
-        chartInstance.render();
-      }
-    };
-
+    // Autenticación
     const iniciarSesionGoogle = async () => {
       await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -218,40 +126,33 @@ createApp({
       cargando.value = false;
     };
 
+    // Carga de Datos unificada
     const cargarDatos = async () => {
       try {
-        const [resCuentas, resHistorial, resCategorias, resPagosFijos] =
-          await Promise.all([
-            fetch(`${API_URL}/cuentas/${currentUserId.value}`),
-            fetch(`${API_URL}/historial/${currentUserId.value}`),
-            fetch(`${API_URL}/categorias/`),
-            fetch(`${API_URL}/pagos_fijos/${currentUserId.value}`),
-          ]);
+        const datos = await api.obtenerDatosCompletos(currentUserId.value);
 
-        if (resCuentas.ok) cuentas.value = (await resCuentas.json()).cuentas;
-        if (resHistorial.ok) {
-          const histData = await resHistorial.json();
-          historial.value = histData.historial.map((h) => ({
-            ...h,
-            categoria_nombre:
-              categorias.value.find((c) => c.id == h.categoria)?.nombre ||
-              h.categoria,
-          }));
-        }
-        if (resCategorias.ok)
-          categorias.value = (await resCategorias.json()).categorias;
-        if (resPagosFijos.ok)
-          pagosFijos.value = (await resPagosFijos.json()).pagos_fijos;
+        cuentas.value = datos.cuentas;
+        categorias.value = datos.categorias;
+        pagosFijos.value = datos.pagosFijos;
 
-        // Llamar al gráfico al terminar de cargar los datos
+        // Mapear historial con nombres de categorías
+        historial.value = datos.historialRaw.map((h) => ({
+          ...h,
+          categoria_nombre:
+            categorias.value.find((c) => c.id == h.categoria)?.nombre ||
+            h.categoria,
+        }));
+
+        // Aquí insertaremos la lógica del gráfico más adelante
         if (tab.value === "inicio") {
-          nextTick(() => renderizarGrafico());
+          // nextTick(() => renderizarGrafico());
         }
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
     };
 
+    // Operaciones Core
     const ejecutarOperacion = async () => {
       cargando.value = true;
 
@@ -283,7 +184,7 @@ createApp({
           cuentaOrigen.moneda !== cuentaDestino.moneda
         ) {
           alert(
-            "Por ahora, no se pueden hacer transferencias directas entre diferentes monedas.",
+            "No se pueden hacer transferencias directas entre diferentes monedas por el momento.",
           );
           cargando.value = false;
           return;
@@ -296,38 +197,26 @@ createApp({
           (c) => c.nombre === "Transferencia Entrante",
         );
 
-        if (!catSalida || !catEntrada) {
-          alert("Faltan las categorías de sistema en la Base de Datos.");
-          cargando.value = false;
-          return;
-        }
-
         const concepto =
           txTransf.value.descripcion || "Transferencia entre cuentas";
 
-        await fetch(`${API_URL}/transacciones/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        // Ejecutar ambas partes de la transferencia
+        await Promise.all([
+          api.guardarTransaccion({
             cuenta_id: parseInt(txTransf.value.origen_id),
             categoria_id: catSalida.id,
             monto: parseFloat(txTransf.value.monto),
             fecha: txTransf.value.fecha,
             descripcion: concepto,
           }),
-        });
-
-        await fetch(`${API_URL}/transacciones/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+          api.guardarTransaccion({
             cuenta_id: parseInt(txTransf.value.destino_id),
             categoria_id: catEntrada.id,
             monto: parseFloat(txTransf.value.monto),
             fecha: txTransf.value.fecha,
             descripcion: concepto,
           }),
-        });
+        ]);
 
         txTransf.value.monto = "";
         txTransf.value.descripcion = "";
@@ -343,15 +232,11 @@ createApp({
           return;
         }
 
-        await fetch(`${API_URL}/transacciones/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...tx.value,
-            cuenta_id: parseInt(tx.value.cuenta_id),
-            categoria_id: parseInt(tx.value.categoria_id),
-            monto: parseFloat(tx.value.monto),
-          }),
+        await api.guardarTransaccion({
+          ...tx.value,
+          cuenta_id: parseInt(tx.value.cuenta_id),
+          categoria_id: parseInt(tx.value.categoria_id),
+          monto: parseFloat(tx.value.monto),
         });
         tx.value.monto = "";
         tx.value.descripcion = "";
@@ -364,18 +249,13 @@ createApp({
 
     const guardarCategoria = async () => {
       if (!nuevaCat.value.nombre) return;
-      await fetch(`${API_URL}/categorias/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(nuevaCat.value),
-      });
+      await api.guardarCategoria(nuevaCat.value);
       nuevaCat.value.nombre = "";
       await cargarDatos();
     };
 
     const guardarCuenta = async () => {
       if (!nuevaCuenta.value.nombre) return;
-
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaCuenta.value.nombre,
@@ -395,13 +275,7 @@ createApp({
             ? parseInt(nuevaCuenta.value.dia_pago || 0)
             : null,
       };
-
-      await fetch(`${API_URL}/cuentas/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
+      await api.guardarCuenta(payload);
       nuevaCuenta.value = {
         nombre: "",
         tipo_cuenta: "Debito",
@@ -421,7 +295,6 @@ createApp({
         !nuevoPagoFijo.value.dia_cobro
       )
         return;
-
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevoPagoFijo.value.nombre,
@@ -430,13 +303,7 @@ createApp({
         dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
         moneda: nuevoPagoFijo.value.moneda,
       };
-
-      await fetch(`${API_URL}/pagos_fijos/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
+      await api.guardarPagoFijo(payload);
       nuevoPagoFijo.value = {
         nombre: "",
         monto: "",
@@ -447,6 +314,7 @@ createApp({
       await cargarDatos();
     };
 
+    // Inicialización
     onMounted(() => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
@@ -477,10 +345,10 @@ createApp({
       });
     });
 
-    // Asegurarnos de que el gráfico se dibuje si cambiamos de pestaña y volvemos al inicio
+    // Observador de pestañas
     Vue.watch(tab, (newTab) => {
       if (newTab === "inicio") {
-        nextTick(() => renderizarGrafico());
+        // nextTick(() => renderizarGrafico());
       }
     });
 
@@ -504,7 +372,7 @@ createApp({
       nuevaCuenta,
       nuevoPagoFijo,
       chartRef,
-      hayGastosParaGrafico, // Referencias del gráfico
+      hayGastosParaGrafico,
       iniciarSesionGoogle,
       cerrarSesion,
       ejecutarOperacion,
