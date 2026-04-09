@@ -5,12 +5,10 @@ const { createApp, ref, computed, onMounted } = Vue;
 
 createApp({
   setup() {
-    // Credenciales y Rutas
+    // --- CREDENCIALES ---
     const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
     const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
     const API_URL = "https://finanzas-backend-dgv5.onrender.com";
-
-    // --------------------
 
     const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -24,6 +22,7 @@ createApp({
     const cuentas = ref([]);
     const categorias = ref([]);
     const historial = ref([]);
+    const pagosFijos = ref([]); // NUEVO ESTADO
 
     const tx = ref({
       monto: "",
@@ -51,7 +50,15 @@ createApp({
       dia_pago: "",
     });
 
-    // CÁLCULOS SEPARADOS PARA GASTO VS AHORRO
+    // NUEVO FORMULARIO
+    const nuevoPagoFijo = ref({
+      nombre: "",
+      monto: "",
+      tipo_flujo: "Egreso",
+      dia_cobro: "",
+      moneda: "PEN",
+    });
+
     const saldosLiquidos = computed(() => {
       const saldos = { PEN: 0, USD: 0 };
       cuentas.value
@@ -103,16 +110,19 @@ createApp({
       currentUserId.value = "";
       cuentas.value = [];
       historial.value = [];
+      pagosFijos.value = [];
       cargando.value = false;
     };
 
     const cargarDatos = async () => {
       try {
-        const [resCuentas, resHistorial, resCategorias] = await Promise.all([
-          fetch(`${API_URL}/cuentas/${currentUserId.value}`),
-          fetch(`${API_URL}/historial/${currentUserId.value}`),
-          fetch(`${API_URL}/categorias/`),
-        ]);
+        const [resCuentas, resHistorial, resCategorias, resPagosFijos] =
+          await Promise.all([
+            fetch(`${API_URL}/cuentas/${currentUserId.value}`),
+            fetch(`${API_URL}/historial/${currentUserId.value}`),
+            fetch(`${API_URL}/categorias/`),
+            fetch(`${API_URL}/pagos_fijos/${currentUserId.value}`),
+          ]);
 
         if (resCuentas.ok) cuentas.value = (await resCuentas.json()).cuentas;
         if (resHistorial.ok) {
@@ -126,6 +136,8 @@ createApp({
         }
         if (resCategorias.ok)
           categorias.value = (await resCategorias.json()).categorias;
+        if (resPagosFijos.ok)
+          pagosFijos.value = (await resPagosFijos.json()).pagos_fijos;
       } catch (error) {
         console.error("Error conectando con la API:", error);
       }
@@ -162,7 +174,7 @@ createApp({
           cuentaOrigen.moneda !== cuentaDestino.moneda
         ) {
           alert(
-            "Por ahora, no se pueden hacer transferencias directas entre diferentes monedas (Soles a Dólares).",
+            "Por ahora, no se pueden hacer transferencias directas entre diferentes monedas.",
           );
           cargando.value = false;
           return;
@@ -293,6 +305,40 @@ createApp({
       await cargarDatos();
     };
 
+    // NUEVA FUNCIÓN
+    const guardarPagoFijo = async () => {
+      if (
+        !nuevoPagoFijo.value.nombre ||
+        !nuevoPagoFijo.value.monto ||
+        !nuevoPagoFijo.value.dia_cobro
+      )
+        return;
+
+      const payload = {
+        usuario_id: currentUserId.value,
+        nombre: nuevoPagoFijo.value.nombre,
+        monto: parseFloat(nuevoPagoFijo.value.monto),
+        tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
+        dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
+        moneda: nuevoPagoFijo.value.moneda,
+      };
+
+      await fetch(`${API_URL}/pagos_fijos/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      nuevoPagoFijo.value = {
+        nombre: "",
+        monto: "",
+        tipo_flujo: "Egreso",
+        dia_cobro: "",
+        moneda: "PEN",
+      };
+      await cargarDatos();
+    };
+
     onMounted(() => {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
@@ -336,15 +382,18 @@ createApp({
       historial,
       saldosLiquidos,
       saldosAhorro,
+      pagosFijos,
       tx,
       txTransf,
       nuevaCat,
       nuevaCuenta,
+      nuevoPagoFijo,
       iniciarSesionGoogle,
       cerrarSesion,
       ejecutarOperacion,
       guardarCategoria,
       guardarCuenta,
+      guardarPagoFijo,
       formatoMoneda,
     };
   },

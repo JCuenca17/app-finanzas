@@ -104,6 +104,13 @@
               Panel Principal
             </button>
             <button
+              @click="tab = 'pagos'"
+              :class="tab === 'pagos' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'"
+              class="w-full text-left px-4 py-2.5 text-sm font-medium rounded-lg transition"
+            >
+              Pagos Fijos
+            </button>
+            <button
               @click="tab = 'ajustes'"
               :class="tab === 'ajustes' ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'"
               class="w-full text-left px-4 py-2.5 text-sm font-medium rounded-lg transition"
@@ -205,7 +212,7 @@
                     <span
                       class="text-xs font-bold text-slate-400 uppercase tracking-wider"
                       :class="{'text-blue-500': c.tipo_cuenta === 'Ahorro'}"
-                      >{{ c.tipo_cuenta }} • {{ c.moneda }}</span
+                      >{{ c.tipo_cuenta }} * {{ c.moneda }}</span
                     >
                     <h4 class="font-bold text-slate-900 text-lg">
                       {{ c.nombre }}
@@ -233,14 +240,14 @@
                         class="mt-3 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100"
                       >
                         <div class="flex justify-between mb-1">
-                          <span>Límite:</span>
-                          <span class="font-semibold"
+                          <span>Límite:</span
+                          ><span class="font-semibold"
                             >{{ formatoMoneda(c.limite || 0, c.moneda) }}</span
                           >
                         </div>
                         <div class="flex justify-between mb-2">
-                          <span>Disponible:</span>
-                          <span class="font-semibold text-emerald-600"
+                          <span>Disponible:</span
+                          ><span class="font-semibold text-emerald-600"
                             >{{ formatoMoneda((c.limite || 0) -
                             Math.abs(c.saldo_actual), c.moneda) }}</span
                           >
@@ -248,8 +255,8 @@
                         <div
                           class="flex justify-between border-t border-slate-200 pt-2"
                         >
-                          <span>Corte: Día {{ c.dia_corte || '--' }}</span>
-                          <span>Pago: Día {{ c.dia_pago || '--' }}</span>
+                          <span>Corte: Día {{ c.dia_corte || '--' }}</span
+                          ><span>Pago: Día {{ c.dia_pago || '--' }}</span>
                         </div>
                       </div>
                     </template>
@@ -286,7 +293,7 @@
                       class="text-xs mt-0.5"
                       :class="item.categoria_nombre && item.categoria_nombre.includes('Transferencia') ? 'text-blue-500 font-medium' : 'text-slate-500'"
                     >
-                      {{ item.fecha }} • {{ item.cuenta }} • {{
+                      {{ item.fecha }} * {{ item.cuenta }} * {{
                       item.categoria_nombre }}
                     </p>
                   </div>
@@ -296,6 +303,98 @@
                   >
                     {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
                     formatoMoneda(item.monto, item.moneda) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div
+            v-if="tab === 'pagos'"
+            class="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            <div
+              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm self-start"
+            >
+              <h3 class="font-semibold text-slate-800 mb-4 border-b pb-2">
+                Nuevo Registro Fijo
+              </h3>
+              <input
+                type="text"
+                v-model="nuevoPagoFijo.nombre"
+                placeholder="Nombre (Ej: Sueldo YOFC, Alquiler)"
+                class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+              />
+              <div class="flex gap-2 mb-3">
+                <select
+                  v-model="nuevoPagoFijo.tipo_flujo"
+                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                >
+                  <option value="Ingreso">Recibo Dinero</option>
+                  <option value="Egreso">Tengo que Pagar</option>
+                </select>
+                <select
+                  v-model="nuevoPagoFijo.moneda"
+                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                >
+                  <option value="PEN">Soles (S/)</option>
+                  <option value="USD">Dólares ($)</option>
+                </select>
+              </div>
+              <div class="flex gap-2 mb-4">
+                <input
+                  type="number"
+                  v-model="nuevoPagoFijo.monto"
+                  placeholder="Monto"
+                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                />
+                <input
+                  type="number"
+                  v-model="nuevoPagoFijo.dia_cobro"
+                  placeholder="Día del mes (1-31)"
+                  min="1"
+                  max="31"
+                  class="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
+                />
+              </div>
+              <button
+                @click="guardarPagoFijo"
+                class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-medium hover:bg-slate-800 transition"
+              >
+                Añadir a Proyección
+              </button>
+            </div>
+
+            <div
+              class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm self-start"
+            >
+              <h3 class="font-semibold text-slate-800 mb-4 border-b pb-2">
+                Mi Calendario Financiero
+              </h3>
+              <div class="divide-y divide-slate-100">
+                <div
+                  v-if="pagosFijos.length === 0"
+                  class="py-4 text-center text-slate-500 text-sm"
+                >
+                  No hay pagos registrados.
+                </div>
+                <div
+                  v-for="pago in pagosFijos"
+                  :key="pago.id"
+                  class="py-3 flex justify-between items-center"
+                >
+                  <div>
+                    <p class="font-medium text-slate-900">{{ pago.nombre }}</p>
+                    <p class="text-xs text-slate-500">
+                      Día {{ pago.dia_cobro }} de cada mes
+                    </p>
+                  </div>
+                  <div
+                    class="font-medium"
+                    :class="pago.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
+                  >
+                    {{ pago.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
+                    formatoMoneda(pago.monto, pago.moneda) }}
                   </div>
                 </div>
               </div>
@@ -315,7 +414,6 @@
                 placeholder="Nombre (Ej: Warda BCP, BBVA, CMR)"
                 class="w-full mb-3 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
               />
-
               <div class="flex gap-2 mb-3">
                 <select
                   v-model="nuevaCuenta.tipo_cuenta"
@@ -334,7 +432,6 @@
                   <option value="USD">Dólares ($)</option>
                 </select>
               </div>
-
               <template v-if="nuevaCuenta.tipo_cuenta !== 'Credito'">
                 <input
                   type="number"
@@ -343,7 +440,6 @@
                   class="w-full mb-4 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:border-slate-400"
                 />
               </template>
-
               <template v-else>
                 <input
                   type="number"
@@ -376,7 +472,6 @@
                   />
                 </div>
               </template>
-
               <button
                 @click="guardarCuenta"
                 class="w-full bg-slate-100 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-slate-200 transition"
