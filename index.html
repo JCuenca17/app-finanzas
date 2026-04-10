@@ -131,7 +131,7 @@
         width: 100%;
       }
 
-      /* Colores Específicos de Bancos (Professional Gradients) */
+      /* Colores Específicos de Bancos */
       .bg-bank-bcp {
         background: linear-gradient(135deg, #002a8d 0%, #001546 100%);
         color: white;
@@ -301,24 +301,18 @@
               Historial
             </button>
             <button
-              @click="tab = 'perfil'"
-              :class="tab === 'perfil' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
-              class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
-            >
-              Mi Perfil
-            </button>
-            <button
               @click="tab = 'ajustes'"
               :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              Ajustes
+              Ajustes Mestro
             </button>
           </nav>
 
           <div class="p-4 border-t border-slate-100 flex flex-col gap-2">
-            <div
-              class="flex items-center gap-3 truncate px-3 py-2 bg-slate-50 rounded-xl border border-slate-100"
+            <button
+              @click="tab = 'perfil'"
+              class="flex items-center gap-3 truncate px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 transition text-left cursor-pointer w-full"
             >
               <img
                 v-if="userAvatar"
@@ -331,17 +325,20 @@
               >
                 {{ userName.charAt(0).toUpperCase() }}
               </div>
-              <p class="text-xs font-bold text-slate-900 truncate">
-                {{ userName }}
-              </p>
-            </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-xs font-bold text-slate-900 truncate">
+                  {{ userName }}
+                </p>
+                <p class="text-[9px] text-slate-500 font-medium">Mi Perfil</p>
+              </div>
+            </button>
             <button
               @click="cerrarSesion"
               class="w-full text-left px-4 py-3 text-sm text-rose-600 font-bold hover:bg-rose-50 rounded-xl transition flex items-center justify-between"
             >
               Cerrar Sesión
               <svg
-                class="w-5 h-5 opacity-70"
+                class="w-4 h-4 opacity-70"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -689,11 +686,21 @@
             >
               <div class="max-w-5xl mx-auto mt-2 mb-8 space-y-8">
                 <div>
-                  <h3
-                    class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-2 mb-3"
+                  <div
+                    class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4 mt-2"
                   >
-                    Mi Dinero Líquido y Ahorros
-                  </h3>
+                    <h3
+                      class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1"
+                    >
+                      Mi Dinero Líquido y Ahorros
+                    </h3>
+                    <button
+                      @click="abrirModalNuevaCuenta()"
+                      class="text-blue-600 font-bold text-xs hover:text-blue-800 transition"
+                    >
+                      + Añadir Activo
+                    </button>
+                  </div>
                   <div
                     v-if="cuentasActivas.length === 0"
                     class="col-span-full py-6 text-center text-slate-500 text-sm"
@@ -722,7 +729,7 @@
                           </h4>
                           <p
                             v-if="c.es_warda"
-                            class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full inline-block mt-0.5"
+                            class="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full inline-block mt-0.5 backdrop-blur-sm"
                           >
                             Warda Ahorro
                           </p>
@@ -764,11 +771,21 @@
                 </div>
 
                 <div>
-                  <h3
-                    class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mb-3"
+                  <div
+                    class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4 mt-6"
                   >
-                    Cuentas Por Cobrar (Me deben)
-                  </h3>
+                    <h3
+                      class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1"
+                    >
+                      Cuentas Por Cobrar (Me deben)
+                    </h3>
+                    <button
+                      @click="abrirModalNuevaCuenta()"
+                      class="text-emerald-600 font-bold text-xs hover:text-emerald-800 transition"
+                    >
+                      + Añadir Cuenta
+                    </button>
+                  </div>
                   <div
                     v-if="cuentasPorCobrar.length === 0"
                     class="col-span-full py-6 text-center text-slate-500 text-sm"
@@ -963,18 +980,28 @@
                   </div>
                 </div>
 
-                <h3
-                  class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1 mt-8 mb-3"
+                <div
+                  class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4 mt-8"
                 >
-                  Mis Cuotas del Mes a Pagar
-                </h3>
+                  <h3
+                    class="text-sm font-bold text-slate-800 uppercase tracking-widest pl-1"
+                  >
+                    Mis Cuotas del Mes a Pagar
+                  </h3>
+                  <button
+                    @click="abrirModalNuevaCuenta()"
+                    class="text-rose-600 font-bold text-xs hover:text-rose-800 transition"
+                  >
+                    + Añadir Pasivo
+                  </button>
+                </div>
+
                 <div
                   v-if="deudasActivas.length === 0"
                   class="col-span-full py-6 text-center text-slate-500 text-sm"
                 >
                   No tienes deudas registradas.
                 </div>
-
                 <div
                   class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5"
                 >
@@ -1094,7 +1121,7 @@
                     </p>
                   </div>
                   <button
-                    @click="showModal = false; tab = 'ajustes'"
+                    @click="abrirModalNuevoPagoFijo()"
                     class="bg-white/10 hover:bg-white/20 text-white px-5 py-3 rounded-xl text-sm font-bold transition border border-white/20 whitespace-nowrap"
                   >
                     + Añadir Proyección
@@ -1595,331 +1622,53 @@
             </div>
 
             <div
-              v-show="tab === 'ajustes' || tab === 'mas'"
+              v-show="tab === 'ajustes'"
               class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-40 md:pb-6"
             >
-              <div
-                class="columns-1 md:columns-2 lg:columns-3 gap-4 md:gap-6 max-w-6xl mx-auto mt-2 mb-8"
-              >
-                <div
-                  v-if="tab === 'mas'"
-                  class="md:hidden break-inside-avoid mb-6 w-full inline-block space-y-3"
-                >
-                  <button
-                    @click="tab = 'perfil'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center text-blue-600"
-                  >
-                    Mi Perfil <span class="text-blue-400">&rarr;</span>
-                  </button>
-                  <button
-                    @click="tab = 'analitica'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
-                  >
-                    Analítica Visual <span class="text-slate-400">&rarr;</span>
-                  </button>
-                  <button
-                    @click="tab = 'pagos'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
-                  >
-                    Proyección Mensual de Flujo
-                    <span class="text-slate-400">&rarr;</span>
-                  </button>
-                  <button
-                    @click="tab = 'ajustes'"
-                    class="w-full bg-white p-4 rounded-2xl border border-slate-100 shadow-sm font-bold text-sm text-left flex justify-between items-center"
-                  >
-                    Configuración de Sistema
-                    <span class="text-slate-400">&rarr;</span>
-                  </button>
-                </div>
-
-                <div
-                  v-show="tab === 'ajustes' || editandoCuenta.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm transition-all break-inside-avoid mb-6 w-full inline-block"
-                  :class="editandoCuenta.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
+              <div class="max-w-5xl mx-auto mt-2 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div
-                    class="flex justify-between items-center mb-4 border-b border-slate-50 pb-3"
+                    class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col max-h-[500px]"
                   >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoCuenta.estado"
-                        >Editar Cuenta/Deuda</span
-                      ><span v-else>Crear Activo o Pasivo</span>
-                    </h3>
-                    <button
-                      v-if="editandoCuenta.estado"
-                      @click="cancelarEdicionCuenta"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    v-model="nuevaCuenta.nombre"
-                    placeholder="Nombre (Ej: Visa BCP, Ahorros BBVA)"
-                    class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                  />
-
-                  <div class="flex gap-2 mb-3">
-                    <select
-                      v-model="nuevaCuenta.tipo_cuenta"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <optgroup label="Mis Activos">
-                        <option value="Debito">Débito</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Ahorro">Ahorro</option>
-                        <option value="Cobrar">Por Cobrar</option>
-                      </optgroup>
-                      <optgroup label="Mis Pasivos">
-                        <option value="Credito">Tarjeta Crédito</option>
-                        <option value="Prestamo">Préstamo Bancario</option>
-                        <option value="Pagar">Por Pagar a Terceros</option>
-                      </optgroup>
-                    </select>
-                    <select
-                      v-model="nuevaCuenta.moneda"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="PEN">Soles (S/)</option>
-                      <option value="USD">Dólares ($)</option>
-                    </select>
-                  </div>
-
-                  <div class="mb-3">
-                    <label
-                      class="text-[10px] font-bold text-slate-400 uppercase ml-1"
-                      >Entidad Financiera (Para diseño)</label
-                    >
-                    <select
-                      v-model="nuevaCuenta.banco"
-                      class="w-full mt-0.5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white font-medium"
-                    >
-                      <option value="Otro">Otro / Ninguno</option>
-                      <option value="BCP">BCP</option>
-                      <option value="BBVA">BBVA</option>
-                      <option value="Interbank">Interbank</option>
-                      <option value="Scotiabank">Scotiabank</option>
-                    </select>
-                  </div>
-
-                  <template
-                    v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
-                  >
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.saldo_inicial"
-                      placeholder="Saldo a favor"
-                      class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
                     <div
-                      v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
-                      class="flex items-center gap-2 mb-5 px-1 bg-emerald-50 p-2 rounded-xl border border-emerald-100"
+                      class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3"
                     >
-                      <input
-                        type="checkbox"
-                        id="es_warda_check"
-                        v-model="nuevaCuenta.es_warda"
-                        class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                      />
-                      <label
-                        for="es_warda_check"
-                        class="text-[11px] font-bold text-emerald-800 cursor-pointer leading-tight"
-                        >Configurar como cuenta 'Warda' (Recibe redondeos
-                        automáticos)</label
+                      <h3 class="font-bold text-slate-800 text-sm md:text-base">
+                        Categorías Maestro
+                      </h3>
+                      <button
+                        @click="abrirModalNuevaCategoria()"
+                        class="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition"
                       >
+                        + Nueva
+                      </button>
                     </div>
-                  </template>
-
-                  <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
-                    <input
-                      type="number"
-                      v-model="nuevaCuenta.limite"
-                      placeholder="Límite Total de la Tarjeta"
-                      class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                    <div class="flex gap-2 mb-3">
-                      <input
-                        type="number"
-                        v-model="nuevaCuenta.saldo_inicial"
-                        placeholder="Deuda Total Actual"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                      /><input
-                        type="number"
-                        v-model="nuevaCuenta.pago_del_mes"
-                        placeholder="Cuota del Mes"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none text-rose-600 font-bold"
-                      />
-                    </div>
-                    <div class="flex gap-2 mb-5">
-                      <input
-                        type="number"
-                        v-model="nuevaCuenta.dia_corte"
-                        placeholder="Día Corte"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                      /><input
-                        type="number"
-                        v-model="nuevaCuenta.dia_pago"
-                        placeholder="Día Pago"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                      />
-                    </div>
-                  </template>
-                  <template v-else>
-                    <div class="flex gap-2 mb-5">
-                      <input
-                        type="number"
-                        v-model="nuevaCuenta.saldo_inicial"
-                        placeholder="Deuda Total Pendiente"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none border-l-4 border-l-rose-500"
-                      /><input
-                        type="number"
-                        v-model="nuevaCuenta.pago_del_mes"
-                        placeholder="Cuota del Mes"
-                        class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none text-rose-600 font-bold"
-                      />
-                    </div>
-                  </template>
-                  <button
-                    @click="guardarCuenta"
-                    class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition shadow-md active:scale-95"
-                    :class="editandoCuenta.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
-                  >
-                    Guardar Cambios
-                  </button>
-                </div>
-
-                <div
-                  v-show="tab === 'ajustes' || editandoPagoFijo.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm transition-all break-inside-avoid mb-6 w-full inline-block"
-                  :class="editandoPagoFijo.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
-                  <div
-                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
-                  >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoPagoFijo.estado"
-                        >Editar Proyección</span
-                      ><span v-else>Nuevo Flujo Fijo</span>
-                    </h3>
-                    <button
-                      v-if="editandoPagoFijo.estado"
-                      @click="cancelarEdicionPago"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    v-model="nuevoPagoFijo.nombre"
-                    placeholder="Nombre (Ej: Sueldo, Netflix)"
-                    class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                  />
-                  <div class="flex gap-2 mb-3">
-                    <select
-                      v-model="nuevoPagoFijo.tipo_flujo"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="Ingreso">Ingreso Seguro</option>
-                      <option value="Egreso">Gasto Fijo</option></select
-                    ><select
-                      v-model="nuevoPagoFijo.moneda"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="PEN">Soles (S/)</option>
-                      <option value="USD">Dólares ($)</option>
-                    </select>
-                  </div>
-                  <div class="flex gap-2 mb-5">
-                    <input
-                      type="number"
-                      v-model="nuevoPagoFijo.monto"
-                      placeholder="Monto"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    /><input
-                      type="number"
-                      v-model="nuevoPagoFijo.dia_cobro"
-                      placeholder="Día del mes"
-                      min="1"
-                      max="31"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                  </div>
-                  <button
-                    @click="guardarPagoFijo"
-                    class="w-full text-white py-3.5 rounded-xl text-sm font-bold transition active:scale-95 shadow-md"
-                    :class="editandoPagoFijo.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
-                  >
-                    Guardar Cambios
-                  </button>
-                </div>
-
-                <div
-                  v-show="tab === 'ajustes' || editandoCat.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm transition-all break-inside-avoid mb-6 w-full inline-block"
-                  :class="editandoCat.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
-                  <div
-                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
-                  >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoCat.estado">Editar Categoría</span
-                      ><span v-else>Categorías Maestro</span>
-                    </h3>
-                    <button
-                      v-if="editandoCat.estado"
-                      @click="cancelarEdicionCategoria"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                  <div class="flex gap-2 mb-4">
-                    <input
-                      type="text"
-                      v-model="nuevaCat.nombre"
-                      placeholder="Nombre Categoría"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    /><select
-                      v-model="nuevaCat.tipo_flujo"
-                      class="w-32 px-2 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none bg-white"
-                    >
-                      <option value="Ingreso">Ingreso</option>
-                      <option value="Egreso">Egreso</option>
-                    </select>
-                  </div>
-                  <button
-                    @click="guardarCategoria"
-                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6 shadow-md"
-                    :class="editandoCat.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"
-                  >
-                    Guardar Categoría
-                  </button>
-                  <div v-if="!editandoCat.estado">
-                    <h4
-                      class="font-bold text-xs text-slate-400 uppercase tracking-widest mb-3"
-                    >
-                      Mis Categorías
-                    </h4>
-                    <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    <div class="flex-1 overflow-y-auto pr-1 space-y-2">
+                      <div
+                        v-if="categorias.length === 0"
+                        class="text-xs text-slate-500 py-2 text-center"
+                      >
+                        No hay categorías.
+                      </div>
                       <div
                         v-for="cat in categorias"
                         :key="cat.id"
-                        class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg group border border-slate-100 hover:border-slate-200 transition"
+                        class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 transition group"
                       >
                         <span
                           class="text-sm font-semibold text-slate-700 truncate mr-2"
-                          >{{ cat.nombre }} ({{ cat.tipo_flujo.substring(0,3)
-                          }})</span
+                          >{{ cat.nombre }}
+                          <span
+                            class="text-[10px] text-slate-400 font-medium ml-1"
+                            >({{ cat.tipo_flujo.substring(0,3) }})</span
+                          ></span
                         >
                         <div
                           class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
                         >
                           <button
                             @click="abrirModalCategoria(cat)"
-                            class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition"
+                            class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition shadow-sm bg-white"
                           >
                             <svg
                               class="w-3.5 h-3.5"
@@ -1933,10 +1682,11 @@
                                 stroke-width="2"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               ></path>
-                            </svg></button
-                          ><button
+                            </svg>
+                          </button>
+                          <button
                             @click="eliminarRegistro('categoria', cat.id)"
-                            class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition"
+                            class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition shadow-sm bg-white"
                           >
                             <svg
                               class="w-3.5 h-3.5"
@@ -1956,70 +1706,45 @@
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div
-                  v-show="tab === 'ajustes' || editandoEtiq.estado"
-                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border shadow-sm transition-all break-inside-avoid mb-6 w-full inline-block"
-                  :class="editandoEtiq.estado ? 'border-blue-400 ring-4 ring-blue-50' : 'border-slate-100'"
-                >
                   <div
-                    class="flex justify-between items-center mb-2 border-b border-slate-50 pb-3"
+                    class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col max-h-[500px]"
                   >
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                      <span v-if="editandoEtiq.estado">Editar Contacto</span
-                      ><span v-else>Directorio / Etiquetas</span>
-                    </h3>
-                    <button
-                      v-if="editandoEtiq.estado"
-                      @click="cancelarEdicionEtiqueta"
-                      class="text-xs text-slate-500 hover:text-slate-800 font-semibold"
+                    <div
+                      class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3"
                     >
-                      Cancelar
-                    </button>
-                  </div>
-                  <div class="mb-4">
-                    <input
-                      type="text"
-                      v-model="nuevaEtiq.nombre"
-                      placeholder="Nombre (Ej: María, Viaje Cusco)"
-                      class="w-full px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                    />
-                  </div>
-                  <button
-                    @click="guardarEtiqueta"
-                    class="w-full text-white py-3 rounded-xl text-sm font-bold transition active:scale-95 mb-6 shadow-md bg-slate-900 hover:bg-slate-800"
-                  >
-                    Guardar
-                  </button>
-                  <div v-if="!editandoEtiq.estado">
-                    <h4
-                      class="font-bold text-xs text-slate-400 uppercase tracking-widest mb-3"
-                    >
-                      Registrados
-                    </h4>
-                    <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      <h3 class="font-bold text-slate-800 text-sm md:text-base">
+                        Directorio de Contactos
+                      </h3>
+                      <button
+                        @click="abrirModalNuevaEtiqueta()"
+                        class="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition"
+                      >
+                        + Nuevo
+                      </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto pr-1 space-y-2">
                       <div
                         v-if="etiquetas.length === 0"
-                        class="text-xs text-slate-500 py-2"
+                        class="text-xs text-slate-500 py-2 text-center"
                       >
-                        Aún no hay contactos registrados.
+                        No hay contactos registrados.
                       </div>
                       <div
                         v-for="et in etiquetas"
                         :key="et.id"
-                        class="flex justify-between items-center bg-slate-50 p-2.5 rounded-lg group border border-slate-100 hover:border-slate-200 transition"
+                        class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 transition group"
                       >
                         <span
                           class="text-sm font-semibold text-slate-700 truncate mr-2"
-                          >{{ et.nombre }}</span
+                          >@{{ et.nombre }}</span
                         >
                         <div
                           class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
                         >
                           <button
                             @click="abrirModalEtiqueta(et)"
-                            class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition"
+                            class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition shadow-sm bg-white"
                           >
                             <svg
                               class="w-3.5 h-3.5"
@@ -2033,10 +1758,11 @@
                                 stroke-width="2"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               ></path>
-                            </svg></button
-                          ><button
+                            </svg>
+                          </button>
+                          <button
                             @click="eliminarRegistro('etiqueta', et.id)"
-                            class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition"
+                            class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition shadow-sm bg-white"
                           >
                             <svg
                               class="w-3.5 h-3.5"
@@ -2162,8 +1888,8 @@
             ><span class="text-[9px] font-bold">Historial</span>
           </button>
           <button
-            @click="tab = 'mas'"
-            :class="tab === 'mas' ? 'text-slate-900' : 'text-slate-400'"
+            @click="tab = 'ajustes'"
+            :class="tab === 'ajustes' ? 'text-slate-900' : 'text-slate-400'"
             class="flex flex-col items-center justify-center w-full h-full"
           >
             <svg
@@ -2176,11 +1902,317 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              ></path>
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
               ></path></svg
-            ><span class="text-[9px] font-bold">Más</span>
+            ><span class="text-[9px] font-bold">Ajustes</span>
           </button>
         </nav>
+      </div>
+
+      <div
+        v-if="showModalCuenta"
+        class="fixed inset-0 z-50 flex items-end md:items-center justify-center glass p-0 md:p-4 transition-all"
+      >
+        <div
+          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl border border-slate-100 max-h-[85vh] md:max-h-[90vh] overflow-y-auto slide-up relative"
+        >
+          <div class="flex justify-between items-center mb-5">
+            <h2 class="text-xl font-extrabold text-slate-900">
+              <span v-if="editandoCuenta.estado">Editar</span
+              ><span v-else>Nueva</span> Cuenta
+            </h2>
+            <button
+              @click="showModalCuenta = false"
+              class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="space-y-4">
+            <input
+              type="text"
+              v-model="nuevaCuenta.nombre"
+              placeholder="Nombre (Ej: Visa BCP)"
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+            />
+            <div class="grid grid-cols-2 gap-3">
+              <select
+                v-model="nuevaCuenta.tipo_cuenta"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              >
+                <optgroup label="Mis Activos">
+                  <option value="Debito">Débito</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Ahorro">Ahorro</option>
+                  <option value="Cobrar">Por Cobrar</option>
+                </optgroup>
+                <optgroup label="Mis Pasivos">
+                  <option value="Credito">Tarjeta Crédito</option>
+                  <option value="Prestamo">Préstamo Bancario</option>
+                  <option value="Pagar">Por Pagar a Terceros</option>
+                </optgroup>
+              </select>
+              <select
+                v-model="nuevaCuenta.moneda"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              >
+                <option value="PEN">Soles (S/)</option>
+                <option value="USD">Dólares ($)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-400 uppercase ml-1"
+                >Entidad Financiera (Color de Tarjeta)</label
+              >
+              <select
+                v-model="nuevaCuenta.banco"
+                class="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              >
+                <option value="Otro">Ninguno / Otro</option>
+                <option value="BCP">BCP</option>
+                <option value="BBVA">BBVA</option>
+                <option value="Interbank">Interbank</option>
+                <option value="Scotiabank">Scotiabank</option>
+              </select>
+            </div>
+            <template
+              v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
+            >
+              <div>
+                <label
+                  class="text-[10px] font-bold text-slate-400 uppercase ml-1"
+                  >Saldo a favor</label
+                >
+                <input
+                  type="number"
+                  v-model="nuevaCuenta.saldo_inicial"
+                  placeholder="0.00"
+                  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
+                />
+              </div>
+              <div
+                v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
+                class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100"
+              >
+                <input
+                  type="checkbox"
+                  id="es_warda_check"
+                  v-model="nuevaCuenta.es_warda"
+                  class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
+                />
+                <label
+                  for="es_warda_check"
+                  class="text-xs font-bold text-emerald-800 cursor-pointer"
+                  >Es Alcancía Warda (Recibe redondeos)</label
+                >
+              </div>
+            </template>
+            <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
+              <input
+                type="number"
+                v-model="nuevaCuenta.limite"
+                placeholder="Límite Total de Crédito"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              />
+              <div class="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  v-model="nuevaCuenta.saldo_inicial"
+                  placeholder="Deuda Total Actual"
+                  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+                /><input
+                  type="number"
+                  v-model="nuevaCuenta.pago_del_mes"
+                  placeholder="Cuota del Mes"
+                  class="w-full px-4 py-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm font-extrabold focus:outline-none"
+                />
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  v-model="nuevaCuenta.dia_corte"
+                  placeholder="Día Corte (Ej: 25)"
+                  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+                /><input
+                  type="number"
+                  v-model="nuevaCuenta.dia_pago"
+                  placeholder="Día Pago (Ej: 12)"
+                  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+                />
+              </div>
+            </template>
+            <template v-else>
+              <div class="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  v-model="nuevaCuenta.saldo_inicial"
+                  placeholder="Deuda Pendiente"
+                  class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+                /><input
+                  type="number"
+                  v-model="nuevaCuenta.pago_del_mes"
+                  placeholder="Cuota del Mes"
+                  class="w-full px-4 py-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm font-extrabold focus:outline-none"
+                />
+              </div>
+            </template>
+            <button
+              @click="guardarCuenta"
+              class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition shadow-md bg-slate-900 hover:bg-slate-800"
+            >
+              Guardar Cuenta
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="showModalPagoFijo"
+        class="fixed inset-0 z-50 flex items-end md:items-center justify-center glass p-0 md:p-4 transition-all"
+      >
+        <div
+          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl border border-slate-100 max-h-[85vh] md:max-h-[90vh] overflow-y-auto slide-up relative"
+        >
+          <div class="flex justify-between items-center mb-5">
+            <h2 class="text-xl font-extrabold text-slate-900">
+              <span v-if="editandoPagoFijo.estado">Editar</span
+              ><span v-else>Nueva</span> Proyección
+            </h2>
+            <button
+              @click="showModalPagoFijo = false"
+              class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="space-y-4">
+            <input
+              type="text"
+              v-model="nuevoPagoFijo.nombre"
+              placeholder="Nombre (Ej: Netflix, Sueldo)"
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+            />
+            <div class="grid grid-cols-2 gap-3">
+              <select
+                v-model="nuevoPagoFijo.tipo_flujo"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              >
+                <option value="Ingreso">Ingreso Seguro</option>
+                <option value="Egreso">Gasto Fijo</option></select
+              ><select
+                v-model="nuevoPagoFijo.moneda"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              >
+                <option value="PEN">Soles (S/)</option>
+                <option value="USD">Dólares ($)</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <input
+                type="number"
+                v-model="nuevoPagoFijo.monto"
+                placeholder="Monto"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
+              /><input
+                type="number"
+                v-model="nuevoPagoFijo.dia_cobro"
+                placeholder="Día del mes (1-31)"
+                class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+              />
+            </div>
+            <button
+              @click="guardarPagoFijo"
+              class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition shadow-md bg-slate-900 hover:bg-slate-800"
+            >
+              Guardar Proyección
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="showModalCat"
+        class="fixed inset-0 z-50 flex items-end md:items-center justify-center glass p-0 md:p-4 transition-all"
+      >
+        <div
+          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-sm shadow-2xl border border-slate-100 slide-up relative"
+        >
+          <div class="flex justify-between items-center mb-5">
+            <h2 class="text-xl font-extrabold text-slate-900">
+              <span v-if="editandoCat.estado">Editar</span
+              ><span v-else>Nueva</span> Categoría
+            </h2>
+            <button
+              @click="showModalCat = false"
+              class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="space-y-4">
+            <input
+              type="text"
+              v-model="nuevaCat.nombre"
+              placeholder="Nombre"
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+            />
+            <select
+              v-model="nuevaCat.tipo_flujo"
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+            >
+              <option value="Ingreso">Ingreso</option>
+              <option value="Egreso">Egreso</option>
+            </select>
+            <button
+              @click="guardarCategoria"
+              class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition shadow-md bg-slate-900 hover:bg-slate-800"
+            >
+              Guardar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="showModalEtiq"
+        class="fixed inset-0 z-50 flex items-end md:items-center justify-center glass p-0 md:p-4 transition-all"
+      >
+        <div
+          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-sm shadow-2xl border border-slate-100 slide-up relative"
+        >
+          <div class="flex justify-between items-center mb-5">
+            <h2 class="text-xl font-extrabold text-slate-900">
+              <span v-if="editandoEtiq.estado">Editar</span
+              ><span v-else>Nuevo</span> Contacto
+            </h2>
+            <button
+              @click="showModalEtiq = false"
+              class="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-200 transition"
+            >
+              &times;
+            </button>
+          </div>
+          <div class="space-y-4">
+            <input
+              type="text"
+              v-model="nuevaEtiq.nombre"
+              placeholder="Nombre (Ej: María)"
+              class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
+            />
+            <button
+              @click="guardarEtiqueta"
+              class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition shadow-md bg-slate-900 hover:bg-slate-800"
+            >
+              Guardar Contacto
+            </button>
+          </div>
+        </div>
       </div>
 
       <div
