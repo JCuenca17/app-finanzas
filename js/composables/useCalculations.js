@@ -1,5 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
+// ARCHIVO: Composable de Lógica de Negocio y Cálculos Financieros
 
 const { computed } = window.Vue;
 
@@ -226,6 +227,9 @@ export function useCalculations(data, ui) {
       result.mensaje =
         "Excelente. No tienes cuotas programadas para pagar este mes.";
     } else {
+      let cob = (poderAdquisitivoLibre / obligacionesNetasMes) * 100;
+      result.porcentajeCobertura = Math.round(Math.max(0, Math.min(cob, 100)));
+
       if (balanceNetoMes >= 0) {
         result.estado = "Cobertura Segura";
         result.textColor = "text-emerald-600";
@@ -253,7 +257,6 @@ export function useCalculations(data, ui) {
     return result;
   });
 
-  // DATOS PARA GRÁFICOS NUEVOS
   const datosPatrimonio = computed(() => {
     const liquidez = saldosLiquidos.value.PEN || 0;
     const ahorro = saldosAhorro.value.PEN || 0;
@@ -322,36 +325,46 @@ export function useCalculations(data, ui) {
     };
   });
 
-  const datosBurnRate = computed(() => {
+  // LOGICA RECUPERADA PARA LA PESTAÑA "ANALÍTICA"
+  const datosGraficoFlujo = computed(() => {
     const hoy = new Date();
     const mesActual = hoy.getMonth();
     const añoActual = hoy.getFullYear();
-    const diasEnMes = new Date(añoActual, mesActual + 1, 0).getDate();
-    const acumulado = new Array(diasEnMes).fill(0);
-
-    const gastosDelMes = historial.value.filter((h) => {
-      if (h.tipo_flujo !== "Egreso") return false;
-      const fecha = new Date(h.fecha + "T00:00:00");
-      return (
-        fecha.getMonth() === mesActual && fecha.getFullYear() === añoActual
-      );
+    let ingresosMes = 0;
+    let egresosMes = 0;
+    historial.value.forEach((tx) => {
+      const fechaTx = new Date(tx.fecha + "T00:00:00");
+      if (
+        fechaTx.getMonth() === mesActual &&
+        fechaTx.getFullYear() === añoActual
+      ) {
+        if (tx.tipo_flujo === "Ingreso") ingresosMes += tx.monto;
+        else if (tx.tipo_flujo === "Egreso") egresosMes += tx.monto;
+      }
     });
+    return { ingresos: ingresosMes, egresos: egresosMes };
+  });
 
-    gastosDelMes.forEach((g) => {
-      const dia = new Date(g.fecha + "T00:00:00").getDate();
-      if (dia >= 1 && dia <= diasEnMes) acumulado[dia - 1] += g.monto || 0;
+  const datosGraficoCat = computed(() => {
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    const gastosPorCat = {};
+    historial.value.forEach((tx) => {
+      const fechaTx = new Date(tx.fecha + "T00:00:00");
+      if (
+        tx.tipo_flujo === "Egreso" &&
+        fechaTx.getMonth() === mesActual &&
+        fechaTx.getFullYear() === añoActual
+      ) {
+        const catNombre = tx.categoria_nombre || "Otros";
+        if (!gastosPorCat[catNombre]) gastosPorCat[catNombre] = 0;
+        gastosPorCat[catNombre] += tx.monto;
+      }
     });
-
-    let sum = 0;
-    const seriesAcumulada = acumulado.map((val) => {
-      sum += val;
-      return Number(sum.toFixed(2));
-    });
-    const diaHoy = hoy.getDate();
-    const seriesHastaHoy = seriesAcumulada.slice(0, diaHoy);
-    const categorias = Array.from({ length: diasEnMes }, (_, i) => i + 1);
-
-    return { categorias, series: seriesHastaHoy };
+    const labels = Object.keys(gastosPorCat);
+    const series = Object.values(gastosPorCat).map((v) => Number(v.toFixed(2)));
+    return { labels, series };
   });
 
   return {
@@ -377,6 +390,7 @@ export function useCalculations(data, ui) {
     datosPatrimonio,
     datosDiversificacion,
     datosCalendario,
-    datosBurnRate,
+    datosGraficoFlujo,
+    datosGraficoCat,
   };
 }

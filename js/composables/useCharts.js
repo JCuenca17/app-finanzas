@@ -5,24 +5,29 @@
 const { ref } = window.Vue;
 
 export function useCharts(data, calcs) {
+  // Referencias obligatorias al HTML (Para que Vue no se cuelgue)
   const chartPatrimonioRef = ref(null);
   const chartDiversificacionRef = ref(null);
   const chartCalendarioRef = ref(null);
-  const chartBurnRef = ref(null);
   const chartDeudaRef = ref(null);
+  const chartFlujoRef = ref(null);
+  const chartCatRef = ref(null);
 
+  // Instancias internas
   let chartPatrimonio,
     chartDiversificacion,
     chartCalendario,
-    chartBurn,
-    chartDeuda;
+    chartDeuda,
+    chartFlujo,
+    chartCat;
 
   const destruirGraficos = () => {
     if (chartPatrimonio) chartPatrimonio.destroy();
     if (chartDiversificacion) chartDiversificacion.destroy();
     if (chartCalendario) chartCalendario.destroy();
-    if (chartBurn) chartBurn.destroy();
     if (chartDeuda) chartDeuda.destroy();
+    if (chartFlujo) chartFlujo.destroy();
+    if (chartCat) chartCat.destroy();
   };
 
   const renderizarGraficosInicio = () => {
@@ -74,48 +79,84 @@ export function useCharts(data, calcs) {
   };
 
   const renderizarGraficosAnalitica = () => {
-    if (!chartBurnRef.value) return;
-    if (chartBurn) chartBurn.destroy();
-    const datos = calcs.datosBurnRate.value;
-    const options = {
-      series: [{ name: "Gasto Acumulado", data: datos.series }],
-      chart: {
-        type: "area",
-        height: 350,
-        toolbar: { show: false },
-        fontFamily: "inherit",
-      },
-      colors: ["#f43f5e"],
-      fill: {
-        type: "gradient",
-        gradient: {
-          shadeIntensity: 1,
-          opacityFrom: 0.5,
-          opacityTo: 0.01,
-          stops: [0, 100],
+    // 1. Gráfico de Ingresos vs Egresos
+    if (chartFlujoRef.value) {
+      if (chartFlujo) chartFlujo.destroy();
+      const datos = calcs.datosGraficoFlujo.value;
+      const options = {
+        series: [{ name: "Monto (S/)", data: [datos.ingresos, datos.egresos] }],
+        chart: {
+          type: "bar",
+          height: 280,
+          toolbar: { show: false },
+          fontFamily: "inherit",
         },
-      },
-      dataLabels: { enabled: false },
-      stroke: { curve: "smooth", width: 3 },
-      xaxis: {
-        categories: datos.categorias,
-        title: { text: "Día del Mes", style: { color: "#94a3b8" } },
-        labels: { style: { colors: "#64748b" } },
-      },
-      yaxis: {
-        labels: {
-          formatter: (v) => "S/ " + v.toFixed(0),
-          style: { colors: "#64748b", fontWeight: 600 },
+        colors: ["#10b981", "#f43f5e"],
+        plotOptions: {
+          bar: { borderRadius: 6, distributed: true, columnWidth: "50%" },
         },
-      },
-      grid: { borderColor: "#f1f5f9", strokeDashArray: 4 },
-      tooltip: {
-        theme: "light",
-        y: { formatter: (v) => "S/ " + v.toFixed(2) },
-      },
-    };
-    chartBurn = new ApexCharts(chartBurnRef.value, options);
-    chartBurn.render();
+        dataLabels: { enabled: false },
+        xaxis: {
+          categories: ["Ingresos", "Gastos"],
+          labels: { style: { colors: "#64748b", fontWeight: 600 } },
+        },
+        yaxis: {
+          labels: {
+            formatter: (v) => "S/ " + v.toFixed(0),
+            style: { colors: "#64748b" },
+          },
+        },
+        grid: { borderColor: "#f1f5f9", strokeDashArray: 4 },
+        tooltip: {
+          theme: "light",
+          y: { formatter: (v) => "S/ " + v.toFixed(2) },
+        },
+      };
+      chartFlujo = new ApexCharts(chartFlujoRef.value, options);
+      chartFlujo.render();
+    }
+
+    // 2. Gráfico de Categorías (Donut)
+    if (chartCatRef.value) {
+      if (chartCat) chartCat.destroy();
+      const datos = calcs.datosGraficoCat.value;
+      if (datos.series.length > 0) {
+        const options = {
+          series: datos.series,
+          labels: datos.labels,
+          chart: { type: "donut", height: 300, fontFamily: "inherit" },
+          dataLabels: { enabled: false },
+          stroke: { width: 0 },
+          plotOptions: {
+            pie: {
+              donut: {
+                size: "75%",
+                labels: {
+                  show: true,
+                  name: { show: true },
+                  value: {
+                    show: true,
+                    formatter: (v) => "S/ " + parseFloat(v).toFixed(2),
+                    fontSize: "20px",
+                    fontWeight: 800,
+                  },
+                },
+              },
+            },
+          },
+          legend: { position: "bottom" },
+          tooltip: {
+            theme: "light",
+            y: { formatter: (v) => "S/ " + v.toFixed(2) },
+          },
+        };
+        chartCat = new ApexCharts(chartCatRef.value, options);
+        chartCat.render();
+      } else {
+        chartCatRef.value.innerHTML =
+          '<div class="flex items-center justify-center h-full text-slate-400 text-sm">No hay gastos este mes</div>';
+      }
+    }
   };
 
   const renderizarGraficosCuentas = () => {
@@ -180,7 +221,7 @@ export function useCharts(data, calcs) {
         plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
         dataLabels: { enabled: false },
         xaxis: {
-          categories: datosCal.categories,
+          categories: datosCal.categorias,
           title: { text: "Día del Mes", style: { color: "#94a3b8" } },
           labels: { style: { colors: "#64748b" } },
         },
@@ -221,7 +262,7 @@ export function useCharts(data, calcs) {
             },
           },
         },
-        colors: [diag.colorGrafico],
+        colors: [diag.colorGrafico || "#10b981"],
         stroke: { lineCap: "round" },
       };
       chartDeuda = new ApexCharts(chartDeudaRef.value, opDeuda);
@@ -229,12 +270,14 @@ export function useCharts(data, calcs) {
     }
   };
 
+  // EXPORTAMOS TODAS LAS REFERENCIAS CORRECTAMENTE
   return {
     chartPatrimonioRef,
     chartDiversificacionRef,
     chartCalendarioRef,
-    chartBurnRef,
     chartDeudaRef,
+    chartFlujoRef,
+    chartCatRef,
     renderizarGraficosInicio,
     renderizarGraficosAnalitica,
     renderizarGraficosCuentas,
