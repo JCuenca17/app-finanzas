@@ -12,6 +12,7 @@ export const api = {
       resPagosFijos,
       resEtiquetas,
       resCashback,
+      resWarda,
     ] = await Promise.all([
       fetch(`${API_URL}/cuentas/${userId}`),
       fetch(`${API_URL}/historial/${userId}`),
@@ -19,6 +20,7 @@ export const api = {
       fetch(`${API_URL}/pagos_fijos/${userId}`),
       fetch(`${API_URL}/etiquetas/${userId}`),
       fetch(`${API_URL}/bolsa_cashback/${userId}`),
+      fetch(`${API_URL}/configuracion_warda/${userId}`),
     ]);
 
     return {
@@ -36,6 +38,9 @@ export const api = {
       bolsaCashback: resCashback.ok
         ? await resCashback.json()
         : { saldo_inicial: 0, generado: 0, usado: 0, disponible: 0 },
+      wardaConfig: resWarda.ok
+        ? await resWarda.json()
+        : { activa: false, cuenta_destino_id: "", tipo_redondeo: 1 },
     };
   },
 
@@ -46,8 +51,14 @@ export const api = {
       body: JSON.stringify(datos),
     });
   },
+  async actualizarConfiguracionWarda(userId, datos) {
+    return await fetch(`${API_URL}/configuracion_warda/${userId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
 
-  // ... (El resto de tus llamadas POST, PUT y DELETE para transacciones, cuentas, etc. se mantiene igual, no las borraré aquí, tú ya las tienes en tu api.js)
   async guardarTransaccion(datos) {
     return await fetch(`${API_URL}/transacciones/`, {
       method: "POST",
