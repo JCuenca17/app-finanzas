@@ -48,27 +48,7 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
-      .chart-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-      }
-      .toast-enter-active,
-      .toast-leave-active {
-        transition: all 0.3s ease;
-      }
-      .toast-enter-from {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
-      .toast-leave-to {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
 
-      /* Estilos para las tarjetas de crédito (Premium Cards) */
       .card-premium {
         position: relative;
         overflow: hidden;
@@ -83,8 +63,6 @@
           0 10px 15px -3px rgba(0, 0, 0, 0.3),
           0 4px 6px -2px rgba(0, 0, 0, 0.15);
       }
-
-      /* Watermark de texto de fondo sutil */
       .card-premium::after {
         content: attr(data-banco);
         position: absolute;
@@ -100,8 +78,6 @@
         color: white;
         z-index: 0;
       }
-
-      /* Chip de tarjeta integrado */
       .card-chip {
         width: 36px;
         height: 24px;
@@ -131,7 +107,6 @@
         width: 100%;
       }
 
-      /* Colores Específicos de Bancos */
       .bg-bank-bcp {
         background: linear-gradient(135deg, #002a8d 0%, #001546 100%);
         color: white;
@@ -148,8 +123,6 @@
         background: linear-gradient(135deg, #ec111a 0%, #8f0810 100%);
         color: white;
       }
-
-      /* Tarjetas Genéricas */
       .bg-card-receivable {
         background: linear-gradient(135deg, #059669 0%, #065f46 100%);
         color: white;
@@ -305,7 +278,7 @@
               :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              Ajustes Mestro
+              Ajustes Maestro
             </button>
           </nav>
 
@@ -488,7 +461,19 @@
               </div>
 
               <div
-                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 mt-3 md:mt-2"
+                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm mt-3 md:mt-5 p-5 md:p-6 overflow-hidden"
+              >
+                <h3 class="font-bold text-slate-800 text-sm md:text-base mb-2">
+                  Evolución del Patrimonio (30 días)
+                </h3>
+                <div
+                  class="w-full flex-1 min-h-[250px]"
+                  ref="chartPatrimonioRef"
+                ></div>
+              </div>
+
+              <div
+                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 mt-3 md:mt-5"
               >
                 <div
                   class="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-white border border-slate-100 shadow-sm relative overflow-hidden flex items-center justify-between"
@@ -556,9 +541,8 @@
                         stroke-linejoin="round"
                         stroke-width="2"
                         d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                      ></path>
-                    </svg>
-                    <svg
+                      ></path></svg
+                    ><svg
                       v-else
                       class="w-5 h-5"
                       fill="none"
@@ -575,109 +559,30 @@
                   </div>
                 </div>
               </div>
+            </div>
+
+            <div
+              v-show="tab === 'analitica'"
+              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-40 md:pb-6"
+            >
+              <div
+                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 mb-4 md:mb-6"
+              >
+                <h3 class="font-bold text-slate-800 text-sm md:text-base mb-1">
+                  Velocidad de Gasto (Mes Actual)
+                </h3>
+                <p class="text-xs text-slate-500 mb-4">
+                  Acumulado diario de tus salidas de dinero.
+                </p>
+                <div
+                  class="w-full flex-1 min-h-[300px]"
+                  ref="chartBurnRef"
+                ></div>
+              </div>
 
               <div
-                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm mt-3 md:mt-5 mb-8"
-              >
-                <div
-                  class="px-4 md:px-6 py-3 border-b border-slate-50 flex justify-between items-center"
-                >
-                  <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                    Movimientos Recientes
-                  </h3>
-                </div>
-                <div class="divide-y divide-slate-100">
-                  <div
-                    v-if="historial.length === 0"
-                    class="p-6 text-center text-slate-500 text-xs md:text-sm"
-                  >
-                    No hay operaciones.
-                  </div>
-                  <div
-                    v-for="item in historial.slice(0, 10)"
-                    :key="item.id"
-                    class="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition group"
-                  >
-                    <div
-                      class="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-2"
-                    >
-                      <div
-                        class="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0"
-                        :class="item.tipo_flujo === 'Ingreso' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'"
-                      >
-                        {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }}
-                      </div>
-                      <div class="min-w-0 flex-1">
-                        <p
-                          class="font-bold text-slate-900 text-xs md:text-sm truncate"
-                        >
-                          {{ item.descripcion }}
-                        </p>
-                        <p
-                          class="text-[10px] md:text-xs font-medium mt-0.5 truncate"
-                          :class="item.categoria_nombre && String(item.categoria_nombre).includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
-                        >
-                          {{ item.fecha }} • {{ item.cuenta }}
-                          <span
-                            v-if="item.etiqueta_nombre"
-                            class="font-bold text-slate-600 bg-slate-100 px-1 rounded"
-                            >@{{ item.etiqueta_nombre }}</span
-                          >
-                        </p>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
-                      <div
-                        :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
-                        class="font-extrabold text-sm md:text-base whitespace-nowrap text-right"
-                      >
-                        {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
-                        formatoMoneda(item.monto, item.moneda) }}
-                      </div>
-                      <div
-                        class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-1 md:pl-2"
-                      >
-                        <button
-                          @click="abrirModalTransaccion(item)"
-                          class="text-slate-300 hover:text-blue-500 transition"
-                        >
-                          <svg
-                            class="w-4 h-4 md:w-5 md:h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                            ></path>
-                          </svg>
-                        </button>
-                        <button
-                          @click="eliminarRegistro('transaccion', item.id)"
-                          class="text-slate-300 hover:text-rose-500 transition"
-                        >
-                          <svg
-                            class="w-4 h-4 md:w-5 md:h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            ></path>
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-6xl mx-auto mt-2 mb-8"
+              ></div>
             </div>
 
             <div
@@ -685,6 +590,24 @@
               class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-40 md:pb-6"
             >
               <div class="max-w-5xl mx-auto mt-2 mb-8 space-y-8">
+                <div
+                  v-if="cuentasActivas.length > 0"
+                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-6"
+                >
+                  <div
+                    class="w-full md:w-1/2 min-h-[300px]"
+                    ref="chartDiversificacionRef"
+                  ></div>
+                  <div class="w-full md:w-1/2">
+                    <h3 class="font-extrabold text-xl text-slate-800 mb-2">
+                      Diversificación de Capital
+                    </h3>
+                    <p class="text-sm text-slate-500 mb-4">
+                      Así está distribuido tu dinero líquido en este momento.
+                    </p>
+                  </div>
+                </div>
+
                 <div>
                   <div
                     class="flex justify-between items-end border-b border-slate-200 pb-2 mb-4 mt-2"
@@ -798,7 +721,7 @@
                     <div
                       v-for="c in cuentasPorCobrar"
                       :key="c.id_cuenta"
-                      class="bg-card-receivable h-48 md:h-52 p-5 p-5 rounded-3xl flex flex-col justify-between shadow-xl group card-premium"
+                      class="bg-card-receivable h-48 md:h-52 p-5 rounded-3xl flex flex-col justify-between shadow-xl group card-premium"
                       data-banco="Cobrar"
                     >
                       <div
@@ -812,8 +735,8 @@
                         <div class="flex gap-1.5 items-center">
                           <span
                             class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"
-                          ></span>
-                          <span
+                          ></span
+                          ><span
                             class="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-md bg-white/10 text-emerald-50"
                             >A mi favor</span
                           >
@@ -864,6 +787,23 @@
               class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-40 md:pb-6"
             >
               <div class="max-w-5xl mx-auto space-y-6 mt-2 mb-8">
+                <div
+                  class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 mb-4 md:mb-6"
+                >
+                  <h3
+                    class="font-bold text-slate-800 text-sm md:text-base mb-1"
+                  >
+                    Calendario de Pagos
+                  </h3>
+                  <p class="text-xs text-slate-500 mb-4">
+                    Identifica los días de mayor exigencia de pago.
+                  </p>
+                  <div
+                    class="w-full flex-1 min-h-[250px]"
+                    ref="chartCalendarioRef"
+                  ></div>
+                </div>
+
                 <div
                   class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden"
                 >
@@ -1022,15 +962,14 @@
                       <div class="flex gap-1.5 items-center">
                         <span
                           class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"
-                        ></span>
-                        <span
+                        ></span
+                        ><span
                           class="text-[9px] font-extrabold uppercase tracking-widest px-2.5 py-1 rounded-md bg-white/10 text-white"
                           >{{ c.tipo_cuenta === 'Pagar' ? 'A Terceros' :
                           c.tipo_cuenta }}</span
                         >
                       </div>
                     </div>
-
                     <div
                       class="bg-white/10 rounded-xl p-3 my-2 text-xs border border-white/10 space-y-1 text-white relative z-10"
                     >
@@ -1054,7 +993,6 @@
                         </p>
                       </div>
                     </div>
-
                     <div
                       class="mt-auto flex justify-between items-end text-xs font-medium text-white/80 relative z-10"
                     >
@@ -1214,9 +1152,8 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg>
-                            </button>
-                            <button
+                              </svg></button
+                            ><button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1303,9 +1240,8 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg>
-                            </button>
-                            <button
+                              </svg></button
+                            ><button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1325,108 +1261,6 @@
                             </button>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div
-              v-show="tab === 'analitica'"
-              class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-40 md:pb-6"
-            >
-              <div
-                class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 max-w-6xl mx-auto mt-2 mb-8"
-              >
-                <div
-                  class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 flex flex-col h-[300px] md:h-[400px]"
-                >
-                  <h3
-                    class="font-bold text-slate-800 text-sm md:text-base mb-4"
-                  >
-                    Ingresos vs Egresos (Mes Actual)
-                  </h3>
-                  <div class="flex-1 w-full" ref="chartFlujoRef"></div>
-                </div>
-                <div
-                  class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 flex flex-col h-[300px] md:h-[400px]"
-                >
-                  <h3
-                    class="font-bold text-slate-800 text-sm md:text-base mb-4"
-                  >
-                    Distribución de Egresos
-                  </h3>
-                  <div class="flex-1 w-full" ref="chartCatRef"></div>
-                </div>
-                <div
-                  class="col-span-1 lg:col-span-2 bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm p-5 md:p-6 flex flex-col mt-2"
-                >
-                  <h3
-                    class="font-bold text-slate-800 text-sm md:text-base mb-1"
-                  >
-                    Análisis Relacional por Contacto / Etiqueta
-                  </h3>
-                  <select
-                    v-model="tagSearch"
-                    class="w-full mb-4 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-slate-100 bg-slate-50 font-semibold"
-                  >
-                    <option value="">
-                      -- Selecciona un Contacto o Etiqueta --
-                    </option>
-                    <option v-for="et in etiquetas" :value="et.id">
-                      {{ et.nombre }}
-                    </option>
-                  </select>
-                  <div
-                    v-if="tagSearch && analisisTag.operaciones.length > 0"
-                    class="space-y-4"
-                  >
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div
-                        class="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex flex-col justify-center"
-                      >
-                        <p
-                          class="text-[10px] md:text-xs font-bold text-emerald-500 uppercase tracking-wider mb-1"
-                        >
-                          Ingresos
-                        </p>
-                        <p
-                          class="text-xl md:text-2xl font-extrabold text-emerald-600"
-                        >
-                          S/ {{ analisisTag.ingresos.toFixed(2) }}
-                        </p>
-                      </div>
-                      <div
-                        class="bg-rose-50 p-4 rounded-xl border border-rose-100 flex flex-col justify-center"
-                      >
-                        <p
-                          class="text-[10px] md:text-xs font-bold text-rose-400 uppercase tracking-wider mb-1"
-                        >
-                          Gastos
-                        </p>
-                        <p
-                          class="text-xl md:text-2xl font-extrabold text-rose-600"
-                        >
-                          S/ {{ analisisTag.egresos.toFixed(2) }}
-                        </p>
-                      </div>
-                      <div
-                        class="p-4 rounded-xl border flex flex-col justify-center"
-                        :class="analisisTag.balance >= 0 ? 'bg-blue-50 border-blue-100' : 'bg-amber-50 border-amber-100'"
-                      >
-                        <p
-                          class="text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1"
-                          :class="analisisTag.balance >= 0 ? 'text-blue-500' : 'text-amber-500'"
-                        >
-                          Balance Neto
-                        </p>
-                        <p
-                          class="text-xl md:text-2xl font-extrabold"
-                          :class="analisisTag.balance >= 0 ? 'text-blue-600' : 'text-amber-600'"
-                        >
-                          S/ {{ analisisTag.balance.toFixed(2) }}
-                        </p>
                       </div>
                     </div>
                   </div>
@@ -1572,7 +1406,6 @@
                   >
                     {{ userEmail }}
                   </p>
-
                   <div
                     class="w-full max-w-sm mb-8 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3 text-left"
                   >
@@ -1597,7 +1430,6 @@
                       avanzadas de notificaciones en el futuro.
                     </p>
                   </div>
-
                   <button
                     @click="cerrarSesion"
                     class="w-full max-w-sm bg-rose-50 text-rose-600 py-3.5 rounded-xl text-sm font-extrabold transition active:scale-95 hover:bg-rose-100 border border-rose-100 flex items-center justify-center gap-2"
@@ -1682,9 +1514,8 @@
                                 stroke-width="2"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               ></path>
-                            </svg>
-                          </button>
-                          <button
+                            </svg></button
+                          ><button
                             @click="eliminarRegistro('categoria', cat.id)"
                             class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition shadow-sm bg-white"
                           >
@@ -1758,9 +1589,8 @@
                                 stroke-width="2"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               ></path>
-                            </svg>
-                          </button>
-                          <button
+                            </svg></button
+                          ><button
                             @click="eliminarRegistro('etiqueta', et.id)"
                             class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition shadow-sm bg-white"
                           >
@@ -1787,132 +1617,6 @@
             </div>
           </div>
         </main>
-
-        <nav
-          class="md:hidden fixed bottom-0 w-full glass border-t border-slate-200 flex justify-around items-center h-16 z-40 px-1 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
-        >
-          <button
-            @click="tab = 'inicio'"
-            :class="tab === 'inicio' ? 'text-slate-900' : 'text-slate-400'"
-            class="flex flex-col items-center justify-center w-full h-full"
-          >
-            <svg
-              class="w-6 h-6 mb-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-              ></path></svg
-            ><span class="text-[9px] font-bold">Inicio</span>
-          </button>
-          <button
-            @click="tab = 'cuentas'"
-            :class="tab === 'cuentas' ? 'text-slate-900' : 'text-slate-400'"
-            class="flex flex-col items-center justify-center w-full h-full"
-          >
-            <svg
-              class="w-6 h-6 mb-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              ></path></svg
-            ><span class="text-[9px] font-bold">Activos</span>
-          </button>
-          <button
-            @click="tab = 'deudas'"
-            :class="tab === 'deudas' ? 'text-slate-900' : 'text-slate-400'"
-            class="flex flex-col items-center justify-center w-full h-full"
-          >
-            <svg
-              class="w-6 h-6 mb-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              ></path></svg
-            ><span class="text-[9px] font-bold">Pasivos</span>
-          </button>
-          <div class="relative -top-5">
-            <button
-              @click="abrirModalTransaccion()"
-              class="w-14 h-14 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-slate-900/40 active:scale-90 transition-transform border-[3px] border-slate-50"
-            >
-              <svg
-                class="w-7 h-7"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2.5"
-                  d="M12 4v16m8-8H4"
-                ></path>
-              </svg>
-            </button>
-          </div>
-          <button
-            @click="tab = 'historial'"
-            :class="tab === 'historial' ? 'text-slate-900' : 'text-slate-400'"
-            class="flex flex-col items-center justify-center w-full h-full"
-          >
-            <svg
-              class="w-6 h-6 mb-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              ></path></svg
-            ><span class="text-[9px] font-bold">Historial</span>
-          </button>
-          <button
-            @click="tab = 'ajustes'"
-            :class="tab === 'ajustes' ? 'text-slate-900' : 'text-slate-400'"
-            class="flex flex-col items-center justify-center w-full h-full"
-          >
-            <svg
-              class="w-6 h-6 mb-0.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-              ></path>
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              ></path></svg
-            ><span class="text-[9px] font-bold">Ajustes</span>
-          </button>
-        </nav>
       </div>
 
       <div
@@ -1956,9 +1660,8 @@
                   <option value="Credito">Tarjeta Crédito</option>
                   <option value="Prestamo">Préstamo Bancario</option>
                   <option value="Pagar">Por Pagar a Terceros</option>
-                </optgroup>
-              </select>
-              <select
+                </optgroup></select
+              ><select
                 v-model="nuevaCuenta.moneda"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
               >
@@ -1969,8 +1672,7 @@
             <div>
               <label class="text-[10px] font-bold text-slate-400 uppercase ml-1"
                 >Entidad Financiera (Color de Tarjeta)</label
-              >
-              <select
+              ><select
                 v-model="nuevaCuenta.banco"
                 class="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none"
               >
@@ -1987,9 +1689,8 @@
               <div>
                 <label
                   class="text-[10px] font-bold text-slate-400 uppercase ml-1"
-                  >Saldo a favor</label
-                >
-                <input
+                  >Saldo a favor / Por cobrar</label
+                ><input
                   type="number"
                   v-model="nuevaCuenta.saldo_inicial"
                   placeholder="0.00"
@@ -2005,8 +1706,7 @@
                   id="es_warda_check"
                   v-model="nuevaCuenta.es_warda"
                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                />
-                <label
+                /><label
                   for="es_warda_check"
                   class="text-xs font-bold text-emerald-800 cursor-pointer"
                   >Es Alcancía Warda (Recibe redondeos)</label
@@ -2047,8 +1747,8 @@
                 />
               </div>
             </template>
-            <template v-else>
-              <div class="grid grid-cols-2 gap-3">
+            <template v-else
+              ><div class="grid grid-cols-2 gap-3">
                 <input
                   type="number"
                   v-model="nuevaCuenta.saldo_inicial"
@@ -2059,9 +1759,8 @@
                   v-model="nuevaCuenta.pago_del_mes"
                   placeholder="Cuota del Mes"
                   class="w-full px-4 py-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm font-extrabold focus:outline-none"
-                />
-              </div>
-            </template>
+                /></div
+            ></template>
             <button
               @click="guardarCuenta"
               class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition shadow-md bg-slate-900 hover:bg-slate-800"
@@ -2077,7 +1776,7 @@
         class="fixed inset-0 z-50 flex items-end md:items-center justify-center glass p-0 md:p-4 transition-all"
       >
         <div
-          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl border border-slate-100 max-h-[85vh] md:max-h-[90vh] overflow-y-auto slide-up relative"
+          class="bg-white rounded-t-3xl md:rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl border border-slate-100 slide-up relative"
         >
           <div class="flex justify-between items-center mb-5">
             <h2 class="text-xl font-extrabold text-slate-900">
@@ -2274,12 +1973,6 @@
             Estás usando tu Cashback. Asegúrate de elegir la Tarjeta de Crédito
             correcta. (Disponible: S/ {{ bolsaCashback.disponible.toFixed(2) }})
           </div>
-          <div
-            v-else-if="editandoTx.estado"
-            class="mb-5 bg-blue-50 text-blue-800 p-3 rounded-xl text-xs font-semibold text-center border border-blue-100"
-          >
-            Modificando registro de tipo: {{ tipoOperacion }}
-          </div>
 
           <div
             v-if="tipoOperacion !== 'Transferencia'"
@@ -2303,7 +1996,6 @@
                 </option></template
               >
             </select>
-
             <div class="grid grid-cols-2 gap-3 md:gap-4">
               <select
                 v-model="tx.categoria_id"
@@ -2314,9 +2006,8 @@
                 <option value="" disabled>Categoría...</option>
                 <option v-for="cat in categoriasFiltradas" :value="cat.id">
                   {{ cat.nombre }}
-                </option>
-              </select>
-              <select
+                </option></select
+              ><select
                 v-model="tx.etiqueta_id"
                 :disabled="isRescateCashback"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none text-blue-600"
@@ -2328,7 +2019,6 @@
                 </option>
               </select>
             </div>
-
             <div class="grid grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label
@@ -2336,13 +2026,11 @@
                   class="text-[10px] font-bold text-slate-400 uppercase ml-1"
                   >Monto {{ tipoOperacion === 'Egreso' ? 'Gastado' : 'Ingresado'
                   }}</label
-                >
-                <label
+                ><label
                   v-else
                   class="text-[10px] font-bold text-fuchsia-500 uppercase ml-1"
                   >Cashback a Usar</label
-                >
-                <input
+                ><input
                   type="number"
                   v-model="tx.monto"
                   placeholder="0.00"
@@ -2353,8 +2041,7 @@
                 <label
                   class="text-[10px] font-bold text-emerald-500 uppercase ml-1"
                   >Cashback Generado (+)</label
-                >
-                <input
+                ><input
                   type="number"
                   v-model="tx.cashback"
                   placeholder="Opcional"
@@ -2365,15 +2052,13 @@
                 <label
                   class="text-[10px] font-bold text-slate-400 uppercase ml-1"
                   >Fecha</label
-                >
-                <input
+                ><input
                   type="date"
                   v-model="tx.fecha"
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
                 />
               </div>
             </div>
-
             <div
               v-if="tipoOperacion === 'Egreso' && !editandoTx.estado && tx.cuenta_id && cuentas.find(c => c.id_cuenta === tx.cuenta_id)?.tipo_cuenta === 'Debito' && cuentas.filter(c => c.es_warda).length > 0"
               class="p-3 bg-emerald-50 rounded-xl border border-emerald-100"
@@ -2393,9 +2078,8 @@
                     :value="w.id_cuenta"
                   >
                     {{ w.nombre }}
-                  </option>
-                </select>
-                <input
+                  </option></select
+                ><input
                   type="number"
                   v-model="tx.monto_warda"
                   placeholder="S/ Redondeo"
@@ -2405,16 +2089,13 @@
               <p
                 class="text-[9px] text-emerald-600 mt-1 font-medium leading-tight"
               >
-                Si pones un monto aquí, se transferirá automáticamente de tu
-                Débito a la alcancía Warda elegida.
+                Se transferirá automáticamente de tu Débito a la alcancía Warda.
               </p>
             </div>
-
             <div v-if="tipoOperacion === 'Egreso'" class="mt-1">
               <label class="text-[10px] font-bold text-slate-400 uppercase ml-1"
                 >Fecha de la transacción</label
-              >
-              <input
+              ><input
                 type="date"
                 v-model="tx.fecha"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs md:text-sm font-bold focus:outline-none"
@@ -2466,8 +2147,7 @@
                 :disabled="editandoTx.estado"
                 placeholder="Monto"
                 class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base md:text-lg font-extrabold focus:outline-none"
-              />
-              <input
+              /><input
                 type="date"
                 v-model="txTransf.fecha"
                 :disabled="editandoTx.estado"
@@ -2478,7 +2158,6 @@
 
           <div class="mt-6 md:mt-8 flex gap-3 pb-8 md:pb-0">
             <button
-              v-if="!editandoTx.estado || tipoOperacion !== 'Transferencia'"
               @click="ejecutarOperacion"
               class="w-full py-3.5 text-sm font-extrabold text-white rounded-xl transition active:scale-95 shadow-lg"
               :class="editandoTx.estado ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-900 hover:bg-slate-800'"

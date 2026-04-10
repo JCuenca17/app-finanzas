@@ -16,10 +16,13 @@ createApp({
     const ui = useUI();
 
     const onDatosActualizados = () => {
-      if (ui.tab.value === "analitica")
-        nextTick(() => charts.renderizarGraficosAnalitica());
-      if (ui.tab.value === "deudas")
-        nextTick(() => charts.renderizarGraficoDeuda());
+      // Retraso minimo para asegurar que el DOM de la pestaña actual existe antes de dibujar
+      setTimeout(() => {
+        if (ui.tab.value === "inicio") charts.renderizarGraficosInicio();
+        if (ui.tab.value === "analitica") charts.renderizarGraficosAnalitica();
+        if (ui.tab.value === "cuentas") charts.renderizarGraficosCuentas();
+        if (ui.tab.value === "deudas") charts.renderizarGraficosDeudas();
+      }, 50);
     };
 
     const data = useFinanceData(
@@ -71,10 +74,14 @@ createApp({
       });
     });
 
+    // Observador de Pestañas para Renderizado Perezoso
     watch(ui.tab, (newTab) => {
-      if (newTab === "analitica")
-        nextTick(() => charts.renderizarGraficosAnalitica());
-      if (newTab === "deudas") nextTick(() => charts.renderizarGraficoDeuda());
+      setTimeout(() => {
+        if (newTab === "inicio") charts.renderizarGraficosInicio();
+        if (newTab === "analitica") charts.renderizarGraficosAnalitica();
+        if (newTab === "cuentas") charts.renderizarGraficosCuentas();
+        if (newTab === "deudas") charts.renderizarGraficosDeudas();
+      }, 50);
     });
 
     return {
