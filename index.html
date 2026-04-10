@@ -20,9 +20,12 @@
         background: #cbd5e1;
         border-radius: 4px;
       }
+
+      /* AQUI ESTÁ LA MAGIA: El !important evita que Tailwind sobreescriba esta regla y muestre las llaves {{ }} */
       [v-cloak] {
-        display: none;
+        display: none !important;
       }
+
       body {
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior-y: none;
@@ -357,7 +360,7 @@
               </div>
 
               <div
-                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 mt-3 md:mt-2"
+                class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 mt-3 md:mt-5"
               >
                 <div
                   class="p-4 md:p-6 rounded-2xl md:rounded-3xl bg-white border border-slate-100 shadow-sm relative overflow-hidden flex items-center justify-between"
