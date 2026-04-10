@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos y CRUD (Con soporte estricto para Cashback y Cuotas)
+// ARCHIVO: Composable de Gestión de Datos (Con Warda Automático y Cashback)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -24,6 +24,11 @@ export function useFinanceData(
     generado: 0,
     usado: 0,
     disponible: 0,
+  });
+  const wardaConfig = ref({
+    activa: false,
+    cuenta_destino_id: "",
+    tipo_redondeo: 1,
   });
 
   const editandoTx = ref({ estado: false, id: null });
@@ -81,6 +86,11 @@ export function useFinanceData(
       usado: 0,
       disponible: 0,
     };
+    wardaConfig.value = {
+      activa: false,
+      cuenta_destino_id: "",
+      tipo_redondeo: 1,
+    };
   };
 
   const cargarDatos = async () => {
@@ -91,7 +101,9 @@ export function useFinanceData(
       pagosFijos.value = datos.pagosFijos;
       etiquetas.value = datos.etiquetas;
       bolsaCashback.value = datos.bolsaCashback;
-      // Protección String() añadida aquí
+      wardaConfig.value = datos.wardaConfig;
+
+      // Protección de String() aplicada para evitar bugs de ".includes"
       historial.value = datos.historialRaw.map((h) => ({
         ...h,
         categoria_nombre: String(
@@ -100,6 +112,7 @@ export function useFinanceData(
             "Sin Categoría",
         ),
       }));
+
       if (onDatosActualizados) onDatosActualizados();
     } catch (error) {
       mostrarToast("Error de conexión con el servidor", "error");
@@ -132,10 +145,7 @@ export function useFinanceData(
   const prepararRescateCashback = async () => {
     const tarjetas = cuentas.value.filter((c) => c.tipo_cuenta === "Credito");
     if (tarjetas.length === 0) {
-      mostrarToast(
-        "Debes registrar una Tarjeta de Crédito en tus Ajustes",
-        "warning",
-      );
+      mostrarToast("Debes registrar una Tarjeta de Crédito", "warning");
       return;
     }
     if (bolsaCashback.value.disponible <= 0) {
@@ -172,6 +182,27 @@ export function useFinanceData(
       etiqueta_id: "",
     };
     showModal.value = true;
+  };
+
+  const guardarConfiguracionWarda = async () => {
+    if (wardaConfig.value.activa && !wardaConfig.value.cuenta_destino_id) {
+      mostrarToast("Selecciona tu cuenta destino Warda", "warning");
+      return;
+    }
+    cargando.value = true;
+    try {
+      await api.actualizarConfiguracionWarda(currentUserId.value, {
+        cuenta_destino_id: wardaConfig.value.cuenta_destino_id
+          ? parseInt(wardaConfig.value.cuenta_destino_id)
+          : null,
+        tipo_redondeo: parseInt(wardaConfig.value.tipo_redondeo),
+        activa: wardaConfig.value.activa,
+      });
+      mostrarToast("Regla Warda actualizada", "success");
+    } catch (e) {
+      mostrarToast("Error al guardar Warda", "error");
+    }
+    cargando.value = false;
   };
 
   const abrirModalTransaccion = (itemAEditar = null) => {
@@ -297,14 +328,12 @@ export function useFinanceData(
         cargando.value = false;
         return;
       }
+
+      const montoOriginal = parseFloat(tx.value.monto);
       if (isRescateCashback.value) {
-        const montoAbonar = parseFloat(tx.value.monto);
-        const cuentaSeleccionada = cuentas.value.find(
-          (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
-        );
         if (
           !editandoTx.value.estado &&
-          montoAbonar > bolsaCashback.value.disponible
+          montoOriginal > bolsaCashback.value.disponible
         ) {
           mostrarToast(
             `Solo S/ ${bolsaCashback.value.disponible.toFixed(2)} disponibles`,
@@ -313,15 +342,8 @@ export function useFinanceData(
           cargando.value = false;
           return;
         }
-        if (
-          !cuentaSeleccionada ||
-          cuentaSeleccionada.tipo_cuenta !== "Credito"
-        ) {
-          mostrarToast(`Solo para Tarjetas de Crédito`, "warning");
-          cargando.value = false;
-          return;
-        }
       }
+
       try {
         const datosParaBD = {
           ...tx.value,
@@ -330,15 +352,84 @@ export function useFinanceData(
           etiqueta_id: tx.value.etiqueta_id
             ? parseInt(tx.value.etiqueta_id)
             : null,
-          monto: parseFloat(tx.value.monto),
+          monto: montoOriginal,
           cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
         };
+
         if (editandoTx.value.estado) {
           await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
-          mostrarToast("Actualizada", "success");
+          mostrarToast("Operación actualizada", "success");
         } else {
           await api.guardarTransaccion(datosParaBD);
-          mostrarToast("Registrada", "success");
+          mostrarToast("Operación registrada", "success");
+
+          // LÓGICA AUTOMÁTICA DE WARDA
+          if (
+            tipoOperacion.value === "Egreso" &&
+            wardaConfig.value.activa &&
+            wardaConfig.value.cuenta_destino_id
+          ) {
+            const cuentaOrigen = cuentas.value.find(
+              (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
+            );
+            if (cuentaOrigen && cuentaOrigen.tipo_cuenta === "Debito") {
+              const r = parseInt(wardaConfig.value.tipo_redondeo);
+              const montoRedondeado = Math.ceil(montoOriginal / r) * r;
+              const vuelto = parseFloat(
+                (montoRedondeado - montoOriginal).toFixed(2),
+              );
+
+              if (vuelto > 0) {
+                let catSalida = categorias.value.find(
+                  (c) => c.nombre === "Transferencia Saliente",
+                );
+                let catEntrada = categorias.value.find(
+                  (c) => c.nombre === "Transferencia Entrante",
+                );
+                if (!catSalida) {
+                  await api.guardarCategoria({
+                    nombre: "Transferencia Saliente",
+                    tipo_flujo: "Egreso",
+                  });
+                  await cargarDatos();
+                  catSalida = categorias.value.find(
+                    (c) => c.nombre === "Transferencia Saliente",
+                  );
+                }
+                if (!catEntrada) {
+                  await api.guardarCategoria({
+                    nombre: "Transferencia Entrante",
+                    tipo_flujo: "Ingreso",
+                  });
+                  await cargarDatos();
+                  catEntrada = categorias.value.find(
+                    (c) => c.nombre === "Transferencia Entrante",
+                  );
+                }
+
+                await Promise.all([
+                  api.guardarTransaccion({
+                    cuenta_id: cuentaOrigen.id_cuenta,
+                    categoria_id: catSalida.id,
+                    etiqueta_id: null,
+                    monto: vuelto,
+                    cashback: 0,
+                    fecha: tx.value.fecha,
+                    descripcion: `Warda Vuelto (${tx.value.descripcion})`,
+                  }),
+                  api.guardarTransaccion({
+                    cuenta_id: parseInt(wardaConfig.value.cuenta_destino_id),
+                    categoria_id: catEntrada.id,
+                    etiqueta_id: null,
+                    monto: vuelto,
+                    cashback: 0,
+                    fecha: tx.value.fecha,
+                    descripcion: `Warda Vuelto (${tx.value.descripcion})`,
+                  }),
+                ]);
+              }
+            }
+          }
         }
         tx.value.monto = "";
         tx.value.descripcion = "";
@@ -373,10 +464,8 @@ export function useFinanceData(
       !nuevoPagoFijo.value.nombre ||
       !nuevoPagoFijo.value.monto ||
       !nuevoPagoFijo.value.dia_cobro
-    ) {
-      mostrarToast("Faltan datos", "warning");
+    )
       return;
-    }
     cargando.value = true;
     try {
       const payload = {
@@ -387,18 +476,12 @@ export function useFinanceData(
         dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
         moneda: nuevoPagoFijo.value.moneda,
       };
-      if (editandoPagoFijo.value.estado) {
+      if (editandoPagoFijo.value.estado)
         await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
-        mostrarToast("Actualizada", "success");
-      } else {
-        await api.guardarPagoFijo(payload);
-        mostrarToast("Guardada", "success");
-      }
+      else await api.guardarPagoFijo(payload);
       cancelarEdicionPago();
       await cargarDatos();
-    } catch (error) {
-      mostrarToast("Error", "error");
-    }
+    } catch (error) {}
     cargando.value = false;
   };
 
@@ -429,12 +512,8 @@ export function useFinanceData(
       pago_del_mes: "",
     };
   };
-
   const guardarCuenta = async () => {
-    if (!nuevaCuenta.value.nombre) {
-      mostrarToast("Nombre obligatorio", "warning");
-      return;
-    }
+    if (!nuevaCuenta.value.nombre) return;
     cargando.value = true;
     try {
       let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
@@ -462,18 +541,12 @@ export function useFinanceData(
             : null,
         pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
       };
-      if (editandoCuenta.value.estado) {
+      if (editandoCuenta.value.estado)
         await api.actualizarCuenta(editandoCuenta.value.id, payload);
-        mostrarToast("Actualizada", "success");
-      } else {
-        await api.guardarCuenta(payload);
-        mostrarToast("Registrada", "success");
-      }
+      else await api.guardarCuenta(payload);
       cancelarEdicionCuenta();
       await cargarDatos();
-    } catch (error) {
-      mostrarToast("Error", "error");
-    }
+    } catch (error) {}
     cargando.value = false;
   };
 
@@ -497,9 +570,7 @@ export function useFinanceData(
       else await api.guardarCategoria(nuevaCat.value);
       cancelarEdicionCategoria();
       await cargarDatos();
-    } catch (e) {
-      mostrarToast("Error", "error");
-    }
+    } catch (e) {}
     cargando.value = false;
   };
 
@@ -524,9 +595,7 @@ export function useFinanceData(
       else await api.guardarEtiqueta(payload);
       cancelarEdicionEtiqueta();
       await cargarDatos();
-    } catch (e) {
-      mostrarToast("Error", "error");
-    }
+    } catch (e) {}
     cargando.value = false;
   };
 
@@ -554,6 +623,7 @@ export function useFinanceData(
     historial,
     pagosFijos,
     bolsaCashback,
+    wardaConfig,
     isRescateCashback,
     editandoTx,
     editandoPagoFijo,
@@ -585,5 +655,6 @@ export function useFinanceData(
     eliminarRegistro,
     editarCashbackInicial,
     prepararRescateCashback,
+    guardarConfiguracionWarda,
   };
 }
