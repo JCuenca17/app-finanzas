@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Lógica de Negocio y Cálculos Financieros
 
 const { computed } = window.Vue;
 
@@ -257,116 +256,6 @@ export function useCalculations(data, ui) {
     return result;
   });
 
-  const datosPatrimonio = computed(() => {
-    const liquidez = saldosLiquidos.value.PEN || 0;
-    const ahorro = saldosAhorro.value.PEN || 0;
-    const deudas = deudasActivas.value
-      .filter((c) => c.moneda === "PEN")
-      .reduce((a, b) => a + Math.abs(b.saldo_actual), 0);
-    let currentNW = liquidez + ahorro - deudas;
-
-    const labels = [];
-    const series = [];
-    const hoy = new Date();
-    let nwTracker = currentNW;
-
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(hoy);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      labels.unshift(`${d.getDate()}/${d.getMonth() + 1}`);
-      series.unshift(Number(nwTracker.toFixed(2)));
-
-      const txsOfDay = historial.value.filter((h) => h.fecha === dateStr);
-      txsOfDay.forEach((tx) => {
-        if (tx.tipo_flujo === "Egreso") nwTracker += tx.monto;
-        if (tx.tipo_flujo === "Ingreso") nwTracker -= tx.monto;
-      });
-    }
-    return { labels, series };
-  });
-
-  const datosDiversificacion = computed(() => {
-    const labels = [];
-    const series = [];
-    cuentasActivas.value.forEach((c) => {
-      if (c.saldo_actual > 0 && c.moneda === "PEN") {
-        labels.push(c.nombre);
-        series.push(Number(c.saldo_actual.toFixed(2)));
-      }
-    });
-    return { labels, series };
-  });
-
-  const datosCalendario = computed(() => {
-    const dias = Array.from({ length: 31 }, (_, i) => i + 1);
-    const montos = new Array(31).fill(0);
-    deudasActivas.value.forEach((d) => {
-      if (
-        d.dia_pago &&
-        d.dia_pago >= 1 &&
-        d.dia_pago <= 31 &&
-        d.moneda === "PEN"
-      )
-        montos[d.dia_pago - 1] += parseFloat(d.pago_del_mes) || 0;
-    });
-    pagosFijosEgresos.value.forEach((p) => {
-      if (
-        p.dia_cobro &&
-        p.dia_cobro >= 1 &&
-        p.dia_cobro <= 31 &&
-        p.moneda === "PEN"
-      )
-        montos[p.dia_cobro - 1] += parseFloat(p.monto) || 0;
-    });
-    return {
-      categorias: dias.map((d) => `${d}`),
-      series: montos.map((m) => Number(m.toFixed(2))),
-    };
-  });
-
-  // LOGICA RECUPERADA PARA LA PESTAÑA "ANALÍTICA"
-  const datosGraficoFlujo = computed(() => {
-    const hoy = new Date();
-    const mesActual = hoy.getMonth();
-    const añoActual = hoy.getFullYear();
-    let ingresosMes = 0;
-    let egresosMes = 0;
-    historial.value.forEach((tx) => {
-      const fechaTx = new Date(tx.fecha + "T00:00:00");
-      if (
-        fechaTx.getMonth() === mesActual &&
-        fechaTx.getFullYear() === añoActual
-      ) {
-        if (tx.tipo_flujo === "Ingreso") ingresosMes += tx.monto;
-        else if (tx.tipo_flujo === "Egreso") egresosMes += tx.monto;
-      }
-    });
-    return { ingresos: ingresosMes, egresos: egresosMes };
-  });
-
-  const datosGraficoCat = computed(() => {
-    const hoy = new Date();
-    const mesActual = hoy.getMonth();
-    const añoActual = hoy.getFullYear();
-    const gastosPorCat = {};
-    historial.value.forEach((tx) => {
-      const fechaTx = new Date(tx.fecha + "T00:00:00");
-      if (
-        tx.tipo_flujo === "Egreso" &&
-        fechaTx.getMonth() === mesActual &&
-        fechaTx.getFullYear() === añoActual
-      ) {
-        const catNombre = tx.categoria_nombre || "Otros";
-        if (!gastosPorCat[catNombre]) gastosPorCat[catNombre] = 0;
-        gastosPorCat[catNombre] += tx.monto;
-      }
-    });
-    const labels = Object.keys(gastosPorCat);
-    const series = Object.values(gastosPorCat).map((v) => Number(v.toFixed(2)));
-    return { labels, series };
-  });
-
   return {
     formatoMoneda,
     categoriasFiltradas,
@@ -387,10 +276,5 @@ export function useCalculations(data, ui) {
     getClaseColorBanco,
     getClaseColorPasivo,
     getClasePuntoEstado,
-    datosPatrimonio,
-    datosDiversificacion,
-    datosCalendario,
-    datosGraficoFlujo,
-    datosGraficoCat,
   };
 }

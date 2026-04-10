@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Orquestador Principal de la Aplicación (Vue 3)
 
 import { useAuth } from "./composables/useAuth.js";
 import { useUI } from "./composables/useUI.js";
@@ -16,12 +15,9 @@ createApp({
     const ui = useUI();
 
     const onDatosActualizados = () => {
-      // Retraso minimo para asegurar que el DOM de la pestaña actual existe antes de dibujar
       setTimeout(() => {
-        if (ui.tab.value === "inicio") charts.renderizarGraficosInicio();
         if (ui.tab.value === "analitica") charts.renderizarGraficosAnalitica();
-        if (ui.tab.value === "cuentas") charts.renderizarGraficosCuentas();
-        if (ui.tab.value === "deudas") charts.renderizarGraficosDeudas();
+        if (ui.tab.value === "deudas") charts.renderizarGraficoDeuda();
       }, 50);
     };
 
@@ -74,13 +70,10 @@ createApp({
       });
     });
 
-    // Observador de Pestañas para Renderizado Perezoso
     watch(ui.tab, (newTab) => {
       setTimeout(() => {
-        if (newTab === "inicio") charts.renderizarGraficosInicio();
         if (newTab === "analitica") charts.renderizarGraficosAnalitica();
-        if (newTab === "cuentas") charts.renderizarGraficosCuentas();
-        if (newTab === "deudas") charts.renderizarGraficosDeudas();
+        if (newTab === "deudas") charts.renderizarGraficoDeuda();
       }, 50);
     });
 

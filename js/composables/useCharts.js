@@ -1,90 +1,59 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Motor de Renderizado Visual (ApexCharts)
 
 const { ref } = window.Vue;
 
 export function useCharts(data, calcs) {
-  // Referencias obligatorias al HTML (Para que Vue no se cuelgue)
-  const chartPatrimonioRef = ref(null);
-  const chartDiversificacionRef = ref(null);
-  const chartCalendarioRef = ref(null);
-  const chartDeudaRef = ref(null);
   const chartFlujoRef = ref(null);
   const chartCatRef = ref(null);
+  const chartDeudaRef = ref(null);
 
-  // Instancias internas
-  let chartPatrimonio,
-    chartDiversificacion,
-    chartCalendario,
-    chartDeuda,
-    chartFlujo,
-    chartCat;
+  let chartFlujo, chartCat, chartDeuda;
 
   const destruirGraficos = () => {
-    if (chartPatrimonio) chartPatrimonio.destroy();
-    if (chartDiversificacion) chartDiversificacion.destroy();
-    if (chartCalendario) chartCalendario.destroy();
-    if (chartDeuda) chartDeuda.destroy();
     if (chartFlujo) chartFlujo.destroy();
     if (chartCat) chartCat.destroy();
-  };
-
-  const renderizarGraficosInicio = () => {
-    if (!chartPatrimonioRef.value) return;
-    if (chartPatrimonio) chartPatrimonio.destroy();
-    const datos = calcs.datosPatrimonio.value;
-    const options = {
-      series: [{ name: "Patrimonio Neto (S/)", data: datos.series }],
-      chart: {
-        type: "area",
-        height: 300,
-        toolbar: { show: false },
-        fontFamily: "inherit",
-        parentHeightOffset: 0,
-      },
-      colors: ["#10b981"],
-      fill: {
-        type: "gradient",
-        gradient: {
-          shadeIntensity: 1,
-          opacityFrom: 0.4,
-          opacityTo: 0.05,
-          stops: [0, 100],
-        },
-      },
-      dataLabels: { enabled: false },
-      stroke: { curve: "smooth", width: 3 },
-      xaxis: {
-        categories: datos.labels,
-        tooltip: { enabled: false },
-        labels: { show: false },
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-      },
-      yaxis: {
-        labels: {
-          formatter: (v) => "S/ " + v.toFixed(0),
-          style: { colors: "#64748b", fontWeight: 600 },
-        },
-      },
-      grid: { borderColor: "#f1f5f9", strokeDashArray: 4 },
-      tooltip: {
-        theme: "light",
-        y: { formatter: (v) => "S/ " + v.toFixed(2) },
-      },
-    };
-    chartPatrimonio = new ApexCharts(chartPatrimonioRef.value, options);
-    chartPatrimonio.render();
+    if (chartDeuda) chartDeuda.destroy();
   };
 
   const renderizarGraficosAnalitica = () => {
-    // 1. Gráfico de Ingresos vs Egresos
+    // 1. Calcular Datos de Flujo Mensual
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    let ingresosMes = 0;
+    let egresosMes = 0;
+    const gastosPorCat = {};
+
+    data.historial.value.forEach((tx) => {
+      const fechaTx = new Date(tx.fecha + "T00:00:00");
+      if (
+        fechaTx.getMonth() === mesActual &&
+        fechaTx.getFullYear() === añoActual
+      ) {
+        if (tx.tipo_flujo === "Ingreso") ingresosMes += tx.monto || 0;
+        else if (tx.tipo_flujo === "Egreso") {
+          egresosMes += tx.monto || 0;
+          const catNombre = tx.categoria_nombre || "Otros";
+          if (!gastosPorCat[catNombre]) gastosPorCat[catNombre] = 0;
+          gastosPorCat[catNombre] += tx.monto || 0;
+        }
+      }
+    });
+
+    // 2. Renderizar Flujo
     if (chartFlujoRef.value) {
       if (chartFlujo) chartFlujo.destroy();
-      const datos = calcs.datosGraficoFlujo.value;
-      const options = {
-        series: [{ name: "Monto (S/)", data: [datos.ingresos, datos.egresos] }],
+      const optionsFlujo = {
+        series: [
+          {
+            name: "Monto (S/)",
+            data: [
+              Number(ingresosMes.toFixed(2)),
+              Number(egresosMes.toFixed(2)),
+            ],
+          },
+        ],
         chart: {
           type: "bar",
           height: 280,
@@ -112,18 +81,22 @@ export function useCharts(data, calcs) {
           y: { formatter: (v) => "S/ " + v.toFixed(2) },
         },
       };
-      chartFlujo = new ApexCharts(chartFlujoRef.value, options);
+      chartFlujo = new ApexCharts(chartFlujoRef.value, optionsFlujo);
       chartFlujo.render();
     }
 
-    // 2. Gráfico de Categorías (Donut)
+    // 3. Renderizar Categorías
     if (chartCatRef.value) {
       if (chartCat) chartCat.destroy();
-      const datos = calcs.datosGraficoCat.value;
-      if (datos.series.length > 0) {
-        const options = {
-          series: datos.series,
-          labels: datos.labels,
+      const labels = Object.keys(gastosPorCat);
+      const series = Object.values(gastosPorCat).map((v) =>
+        Number(v.toFixed(2)),
+      );
+
+      if (series.length > 0) {
+        const optionsCat = {
+          series: series,
+          labels: labels,
           chart: { type: "donut", height: 300, fontFamily: "inherit" },
           dataLabels: { enabled: false },
           stroke: { width: 0 },
@@ -150,7 +123,7 @@ export function useCharts(data, calcs) {
             y: { formatter: (v) => "S/ " + v.toFixed(2) },
           },
         };
-        chartCat = new ApexCharts(chartCatRef.value, options);
+        chartCat = new ApexCharts(chartCatRef.value, optionsCat);
         chartCat.render();
       } else {
         chartCatRef.value.innerHTML =
@@ -159,92 +132,11 @@ export function useCharts(data, calcs) {
     }
   };
 
-  const renderizarGraficosCuentas = () => {
-    if (!chartDiversificacionRef.value) return;
-    if (chartDiversificacion) chartDiversificacion.destroy();
-    const datos = calcs.datosDiversificacion.value;
-    const options = {
-      series: datos.series,
-      labels: datos.labels,
-      chart: { type: "donut", height: 320, fontFamily: "inherit" },
-      colors: [
-        "#002a8d",
-        "#00A453",
-        "#043263",
-        "#EC111A",
-        "#10b981",
-        "#f59e0b",
-        "#6366f1",
-      ],
-      dataLabels: { enabled: false },
-      stroke: { width: 0 },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: "75%",
-            labels: {
-              show: true,
-              name: { show: true },
-              value: {
-                show: true,
-                formatter: (v) => "S/ " + parseFloat(v).toFixed(2),
-                fontSize: "20px",
-                fontWeight: 800,
-              },
-            },
-          },
-        },
-      },
-      legend: { position: "bottom" },
-      tooltip: { theme: "light", y: { formatter: (v) => "S/ " + v } },
-    };
-    chartDiversificacion = new ApexCharts(
-      chartDiversificacionRef.value,
-      options,
-    );
-    chartDiversificacion.render();
-  };
-
-  const renderizarGraficosDeudas = () => {
-    if (chartCalendarioRef.value) {
-      if (chartCalendario) chartCalendario.destroy();
-      const datosCal = calcs.datosCalendario.value;
-      const optionsCal = {
-        series: [{ name: "A Pagar", data: datosCal.series }],
-        chart: {
-          type: "bar",
-          height: 250,
-          toolbar: { show: false },
-          fontFamily: "inherit",
-        },
-        colors: ["#e11d48"],
-        plotOptions: { bar: { borderRadius: 4, columnWidth: "60%" } },
-        dataLabels: { enabled: false },
-        xaxis: {
-          categories: datosCal.categorias,
-          title: { text: "Día del Mes", style: { color: "#94a3b8" } },
-          labels: { style: { colors: "#64748b" } },
-        },
-        yaxis: {
-          labels: {
-            formatter: (v) => "S/ " + v.toFixed(0),
-            style: { colors: "#64748b", fontWeight: 600 },
-          },
-        },
-        grid: { borderColor: "#f1f5f9", strokeDashArray: 4 },
-        tooltip: {
-          theme: "light",
-          y: { formatter: (v) => "S/ " + v.toFixed(2) },
-        },
-      };
-      chartCalendario = new ApexCharts(chartCalendarioRef.value, optionsCal);
-      chartCalendario.render();
-    }
-
+  const renderizarGraficoDeuda = () => {
     if (chartDeudaRef.value) {
       if (chartDeuda) chartDeuda.destroy();
       const diag = calcs.diagnosticoDeuda.value;
-      const opDeuda = {
+      const optionsDeuda = {
         series: [diag.porcentajeCobertura || 0],
         chart: { type: "radialBar", height: 250, fontFamily: "inherit" },
         plotOptions: {
@@ -265,23 +157,17 @@ export function useCharts(data, calcs) {
         colors: [diag.colorGrafico || "#10b981"],
         stroke: { lineCap: "round" },
       };
-      chartDeuda = new ApexCharts(chartDeudaRef.value, opDeuda);
+      chartDeuda = new ApexCharts(chartDeudaRef.value, optionsDeuda);
       chartDeuda.render();
     }
   };
 
-  // EXPORTAMOS TODAS LAS REFERENCIAS CORRECTAMENTE
   return {
-    chartPatrimonioRef,
-    chartDiversificacionRef,
-    chartCalendarioRef,
-    chartDeudaRef,
     chartFlujoRef,
     chartCatRef,
-    renderizarGraficosInicio,
+    chartDeudaRef,
     renderizarGraficosAnalitica,
-    renderizarGraficosCuentas,
-    renderizarGraficosDeudas,
+    renderizarGraficoDeuda,
     destruirGraficos,
   };
 }
