@@ -15,15 +15,13 @@ export function useCalculations(data, ui) {
   } = data;
   const { tagSearch, tipoOperacion } = ui;
 
-  // Utilidades
+  // Utilidades seguras para monedas
   const formatoMoneda = (monto, moneda) => {
     const simbolo = moneda === "USD" ? "$" : "S/";
-    // Usamos Math.abs para mostrar deudas en positivo visualmente si es necesario,
-    // pero aquí lo mantenemos tal cual viene de BD (deudas en negativo)
-    return `${simbolo} ${monto.toFixed(2)}`;
+    return `${simbolo} ${Number(Math.abs(monto || 0)).toFixed(2)}`;
   };
 
-  // LOGICA VISUAL PARA PREMIUM CARDS (NUEVO)
+  // LOGICA VISUAL PARA PREMIUM CARDS
   const getClaseColorBanco = (banco) => {
     const clases = {
       BCP: "bg-bank-bcp",
@@ -38,26 +36,22 @@ export function useCalculations(data, ui) {
   const getClaseColorPasivo = (cuenta) => {
     if (cuenta.tipo_cuenta === "Credito")
       return getClaseColorBanco(cuenta.banco);
-    if (cuenta.tipo_cuenta === "Prestamo") return "bg-bank-bbva"; // Por defecto BBVA para prestamos por color
-    return "bg-card-debt"; // Rojo profundo para pagar a terceros
+    if (cuenta.tipo_cuenta === "Prestamo") return "bg-bank-bbva";
+    return "bg-card-debt";
   };
 
   const getClasePuntoEstado = (cuenta) => {
-    // Si la cuota del mes es alta respecto a ingresos, podría ser ámbar, etc.
-    // Por ahora, verde=activo, rojo=vencido (futuro)
     return "bg-emerald-400";
   };
 
-  // Filtrado de categorías para el modal según operación actual
   const categoriasFiltradas = computed(() => {
     return categorias.value.filter(
       (c) =>
         c.tipo_flujo === tipoOperacion.value &&
-        !c.nombre.includes("Transferencia"),
+        !String(c.nombre || "").includes("Transferencia"),
     );
   });
 
-  // Análisis relacional por Etiqueta (Contacto)
   const analisisTag = computed(() => {
     if (!tagSearch.value)
       return {
@@ -78,8 +72,8 @@ export function useCalculations(data, ui) {
     let ingresos = 0;
     let egresos = 0;
     operaciones.forEach((op) => {
-      if (op.tipo_flujo === "Ingreso") ingresos += op.monto;
-      if (op.tipo_flujo === "Egreso") egresos += op.monto;
+      if (op.tipo_flujo === "Ingreso") ingresos += op.monto || 0;
+      if (op.tipo_flujo === "Egreso") egresos += op.monto || 0;
     });
 
     return {
@@ -91,25 +85,20 @@ export function useCalculations(data, ui) {
     };
   });
 
-  // Segregación de Cuentas (NUEVA LÓGICA DE UNIFICACIÓN VISUAL)
-  // Activos líquidos y ahorros
   const cuentasActivas = computed(() =>
     cuentas.value.filter((c) =>
       ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
     ),
   );
-  // Cuentas por cobrar (Me deben)
   const cuentasPorCobrar = computed(() =>
     cuentas.value.filter((c) => c.tipo_cuenta === "Cobrar"),
   );
-  // Deudas (Pasivos)
   const deudasActivas = computed(() =>
     cuentas.value.filter((c) =>
       ["Credito", "Prestamo", "Pagar"].includes(c.tipo_cuenta),
     ),
   );
 
-  // Proyecciones (Pagos Fijos)
   const pagosFijosIngresos = computed(() =>
     pagosFijos.value.filter((p) => p.tipo_flujo === "Ingreso"),
   );
@@ -118,23 +107,21 @@ export function useCalculations(data, ui) {
   );
 
   const totalIngresosFijos = computed(() =>
-    pagosFijosIngresos.value.reduce((a, b) => a + b.monto, 0),
+    pagosFijosIngresos.value.reduce((a, b) => a + (b.monto || 0), 0),
   );
   const totalGastosFijos = computed(() =>
-    pagosFijosEgresos.value.reduce((a, b) => a + b.monto, 0),
+    pagosFijosEgresos.value.reduce((a, b) => a + (b.monto || 0), 0),
   );
   const flujoNetoMensual = computed(
     () => totalIngresosFijos.value - totalGastosFijos.value,
   );
 
-  // Saldos Consolidados por Moneda (Solo Soles para simplificar dashboards principales)
   const saldosLiquidos = computed(() => {
     const saldos = { PEN: 0, USD: 0 };
-    // No incluimos ahorros ni cuentas por cobrar en liquidez inmediata
     cuentasActivas.value
       .filter((c) => c.tipo_cuenta !== "Ahorro")
       .forEach((c) => {
-        saldos[c.moneda] += c.saldo_actual;
+        if (c.moneda) saldos[c.moneda] += c.saldo_actual || 0;
       });
     return saldos;
   });
@@ -144,97 +131,149 @@ export function useCalculations(data, ui) {
     cuentasActivas.value
       .filter((c) => c.tipo_cuenta === "Ahorro")
       .forEach((c) => {
-        saldos[c.moneda] += c.saldo_actual;
+        if (c.moneda) saldos[c.moneda] += c.saldo_actual || 0;
       });
     return saldos;
   });
 
-  // Crédito Disponible (PEN)
   const creditoDisponible = computed(() => {
     let disponible = 0;
     deudasActivas.value
       .filter((c) => c.tipo_cuenta === "Credito" && c.moneda === "PEN")
       .forEach((c) => {
-        disponible += c.limite - Math.abs(c.saldo_actual);
+        disponible += (c.limite || 0) - Math.abs(c.saldo_actual || 0);
       });
     return { PEN: disponible };
   });
 
-  // Proyección para el próximo mes (Soles)
   const proyeccionProximoMes = computed(() => {
-    const liquidez = saldosLiquidos.value.PEN;
-    const ahorro = saldosAhorro.value.PEN;
-    const ingresosProyectados = totalIngresosFijos.value; // Asumimos Soles para simplificar
-    const gastosProyectados = totalGastosFijos.value;
+    const liquidez = saldosLiquidos.value.PEN || 0;
+    const ahorro = saldosAhorro.value.PEN || 0;
 
-    // Suma de cuotas de deudas (ya vienen en positivo pago_del_mes)
-    const cuotasDeudas = deudasActivas.value
+    // Sumamos ingresos fijos en soles
+    const ingresosProyectados = pagosFijosIngresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+    // Sumamos gastos fijos en soles
+    const gastosProyectados = pagosFijosEgresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+
+    // Lógica Cascada de Deudas
+    let cuotasTarjetas = 0;
+    let cuotasOtros = 0;
+    deudasActivas.value
       .filter((c) => c.moneda === "PEN")
-      .reduce((a, b) => a + b.pago_del_mes, 0);
+      .forEach((c) => {
+        const pagoMes = parseFloat(c.pago_del_mes) || 0;
+        if (c.tipo_cuenta === "Credito") cuotasTarjetas += pagoMes;
+        else cuotasOtros += pagoMes;
+      });
+
+    const cashbackDisponible = bolsaCashback.value?.disponible || 0;
+    const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
+    const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
 
     return (
       liquidez +
       ahorro +
       ingresosProyectados -
-      (gastosProyectados + cuotasDeudas)
+      (gastosProyectados + obligacionesNetasMes)
     );
   });
 
-  // Diagnóstico de Salud de Deuda
   const diagnosticoDeuda = computed(() => {
-    const ingresosProyectados = totalIngresosFijos.value;
-    const gastosProyectados = totalGastosFijos.value;
-    const poderAdquisitivoLibre = ingresosProyectados - gastosProyectados;
+    const liquidez = saldosLiquidos.value.PEN || 0;
+    const ahorro = saldosAhorro.value.PEN || 0;
+    const ingresosProyectados = pagosFijosIngresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+    const gastosProyectados = pagosFijosEgresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
 
-    // Cuotas del mes (Asumimos PEN para termómetro)
-    const obligacionesMes = deudasActivas.value
+    const poderAdquisitivoLibre =
+      liquidez + ingresosProyectados - gastosProyectados;
+
+    let cuotasTarjetas = 0;
+    let cuotasOtros = 0;
+    let deudaTotalAbsoluta = 0;
+
+    deudasActivas.value
       .filter((c) => c.moneda === "PEN")
-      .reduce((a, b) => a + b.pago_del_mes, 0);
-    const deudaTotalPEN = deudasActivas.value
-      .filter((c) => c.moneda === "PEN")
-      .reduce((a, b) => a + Math.abs(b.saldo_actual), 0);
+      .forEach((c) => {
+        deudaTotalAbsoluta += Math.abs(c.saldo_actual || 0);
+        const pagoMes = parseFloat(c.pago_del_mes) || 0;
+        if (c.tipo_cuenta === "Credito") cuotasTarjetas += pagoMes;
+        else cuotasOtros += pagoMes;
+      });
+
+    const cashbackDisponible = bolsaCashback.value?.disponible || 0;
+    const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
+    const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
+
+    const balanceNetoMes = poderAdquisitivoLibre - obligacionesNetasMes;
 
     let result = {
+      liquidez,
+      ingresosProyectados,
       poderAdquisitivoLibre,
-      obligacionesMes,
-      deudaTotalPEN,
-      estado: "Saludable",
+      obligacionesNetasMes,
+      cuotasOriginales: cuotasTarjetas + cuotasOtros,
+      deudaTotalAbsoluta,
+      cashbackAplicado: Math.min(cuotasTarjetas, cashbackDisponible),
+      estado: "",
       mensaje: "",
-      textColor: "text-emerald-600",
-      iconBg: "bg-emerald-500",
-      borderColor: "border-emerald-200",
-      alertBoxClasses: "bg-emerald-50 border-emerald-200 text-emerald-800",
-      colorGrafico: "#10b981",
+      textColor: "",
+      iconBg: "",
+      borderColor: "",
+      alertBoxClasses: "",
+      porcentajeCobertura: 0,
+      colorGrafico: "",
     };
 
-    if (obligacionesMes === 0) {
+    if (obligacionesNetasMes === 0) {
+      result.porcentajeCobertura = 100;
+      result.estado = "Mes Despejado";
+      result.textColor = "text-emerald-600";
+      result.iconBg = "bg-emerald-500";
+      result.borderColor = "border-emerald-200";
+      result.alertBoxClasses =
+        "bg-emerald-50 border-emerald-200 text-emerald-800";
+      result.colorGrafico = "#10b981";
       result.mensaje =
-        "No tienes cuotas programadas para este mes. ¡Excelente!";
-      return result;
-    }
-
-    const ratio = poderAdquisitivoLibre / obligacionesMes;
-
-    if (ratio >= 1.5) {
-      result.mensaje = `Tus ingresos libres cubren holgadamente las cuotas del mes (Ratio: ${ratio.toFixed(1)}x).`;
-    } else if (ratio >= 1) {
-      result.estado = "Ajustado";
-      result.mensaje =
-        "Cubres las cuotas, pero te queda poco margen para imprevistos.";
-      result.textColor = "text-amber-600";
-      result.iconBg = "bg-amber-500";
-      result.colorGrafico = "#f59e0b";
-      result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
+        "Excelente. No tienes cuotas programadas para pagar este mes.";
     } else {
-      result.estado = "Riesgo";
-      result.mensaje =
-        "Tus gastos fijos y cuotas superan tus ingresos proyectados. Necesitas usar ahorros o refinanciar.";
-      result.textColor = "text-rose-600";
-      result.iconBg = "bg-rose-500";
-      result.colorGrafico = "#f43f5e";
-      result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
-    }
+      let cob = (poderAdquisitivoLibre / obligacionesNetasMes) * 100;
+      result.porcentajeCobertura = Math.round(Math.max(0, Math.min(cob, 100)));
 
+      if (balanceNetoMes >= 0) {
+        result.estado = "Cobertura Segura";
+        result.textColor = "text-emerald-600";
+        result.iconBg = "bg-emerald-500";
+        result.borderColor = "border-emerald-200";
+        result.alertBoxClasses =
+          "bg-emerald-50 border-emerald-200 text-emerald-800";
+        result.colorGrafico = "#10b981";
+        result.mensaje = `Tras pagar las cuotas de este mes, te sobrarán S/ ${balanceNetoMes.toFixed(2)} libres.`;
+      } else if (balanceNetoMes + ahorro >= 0) {
+        result.estado = "Alerta Amarilla";
+        result.textColor = "text-amber-600";
+        result.iconBg = "bg-amber-500";
+        result.borderColor = "border-amber-200";
+        result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
+        result.colorGrafico = "#f59e0b";
+        result.mensaje = `Déficit de S/ ${Math.abs(balanceNetoMes).toFixed(2)} para cubrir tus cuotas. Tendrás que retirar dinero de tus Ahorros.`;
+      } else {
+        result.estado = "Riesgo de Mora";
+        result.textColor = "text-rose-600";
+        result.iconBg = "bg-rose-500";
+        result.borderColor = "border-rose-200";
+        result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
+        result.colorGrafico = "#f43f5e";
+        result.mensaje = `Tus ahorros no alcanzan. Te faltan S/ ${Math.abs(balanceNetoMes + ahorro).toFixed(2)} para cubrir las cuotas de este mes.`;
+      }
+    }
     return result;
   });
 
@@ -255,7 +294,6 @@ export function useCalculations(data, ui) {
     creditoDisponible,
     proyeccionProximoMes,
     diagnosticoDeuda,
-    // Nuevas utilidades visuales
     getClaseColorBanco,
     getClaseColorPasivo,
     getClasePuntoEstado,
