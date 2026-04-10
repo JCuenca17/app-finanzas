@@ -1372,6 +1372,68 @@
                 class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto mt-2 mb-8"
               >
                 <div
+                  v-show="tab === 'ajustes'"
+                  class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm self-start flex flex-col items-center text-center"
+                >
+                  <div class="relative mb-4">
+                    <img
+                      v-if="userAvatar"
+                      :src="userAvatar"
+                      class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
+                    />
+                    <div
+                      v-else
+                      class="w-24 h-24 rounded-full bg-slate-900 flex items-center justify-center text-white text-3xl font-bold border-4 border-white shadow-lg"
+                    >
+                      {{ userName.charAt(0).toUpperCase() }}
+                    </div>
+                    <div
+                      class="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 border-2 border-white rounded-full flex items-center justify-center"
+                      title="Cuenta vinculada"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="3"
+                          d="M5 13l4 4L19 7"
+                        ></path>
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 class="font-extrabold text-slate-900 text-lg md:text-xl">
+                    {{ userName }}
+                  </h3>
+                  <p class="text-xs text-slate-500 font-medium mb-6">
+                    {{ userEmail }}
+                  </p>
+                  <button
+                    @click="cerrarSesion"
+                    class="w-full bg-rose-50 text-rose-600 py-3 rounded-xl text-sm font-bold transition active:scale-95 hover:bg-rose-100 border border-rose-100 flex items-center justify-center gap-2"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      ></path>
+                    </svg>
+                    Cerrar Sesión
+                  </button>
+                </div>
+
+                <div
                   v-if="tab === 'mas'"
                   class="md:hidden col-span-1 space-y-3 mb-2"
                 >
