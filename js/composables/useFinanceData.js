@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos (Con Warda "A Demanda")
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -39,7 +38,6 @@ export function useFinanceData(
 
   const isRescateCashback = ref(false);
 
-  // SE AÑADEN CAMPOS WARDA AL FOMULARIO TX
   const tx = ref({
     monto: "",
     cashback: "",
@@ -60,7 +58,6 @@ export function useFinanceData(
   });
   const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
   const nuevaEtiq = ref({ nombre: "" });
-  // SE AÑADE es_warda A NUEVACUENTA
   const nuevaCuenta = ref({
     nombre: "",
     tipo_cuenta: "Debito",
@@ -71,6 +68,7 @@ export function useFinanceData(
     dia_pago: "",
     pago_del_mes: "",
     es_warda: false,
+    banco: "Otro",
   });
   const nuevoPagoFijo = ref({
     nombre: "",
@@ -129,7 +127,7 @@ export function useFinanceData(
             saldo_inicial: monto,
           });
           await cargarDatos();
-          mostrarToast("Cashback histórico actualizado", "success");
+          mostrarToast("Cashback actualizado", "success");
         } catch (e) {
           mostrarToast("Error al guardar", "error");
         }
@@ -233,7 +231,7 @@ export function useFinanceData(
         !txTransf.value.destino_id ||
         !txTransf.value.monto
       ) {
-        mostrarToast("Falta completar datos", "warning");
+        mostrarToast("Faltan datos", "warning");
         cargando.value = false;
         return;
       }
@@ -344,7 +342,6 @@ export function useFinanceData(
           await api.guardarTransaccion(datosParaBD);
           mostrarToast("Operación registrada", "success");
 
-          // LÓGICA WARDA A DEMANDA
           const montoWarda = parseFloat(tx.value.monto_warda);
           if (
             tipoOperacion.value === "Egreso" &&
@@ -478,6 +475,7 @@ export function useFinanceData(
       dia_pago: cuentaAEditar.dia_pago || "",
       pago_del_mes: cuentaAEditar.pago_del_mes || "",
       es_warda: cuentaAEditar.es_warda || false,
+      banco: cuentaAEditar.banco || "Otro",
     };
     tab.value = "ajustes";
   };
@@ -499,6 +497,7 @@ export function useFinanceData(
       dia_pago: "",
       pago_del_mes: "",
       es_warda: false,
+      banco: "Otro",
     };
   };
 
@@ -539,6 +538,7 @@ export function useFinanceData(
             : null,
         pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
         es_warda: nuevaCuenta.value.es_warda || false,
+        banco: nuevaCuenta.value.banco || "Otro",
       };
 
       if (editandoCuenta.value.estado) {

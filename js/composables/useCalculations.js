@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Cálculos Matemáticos (EFECTO CASCADA Y PROYECCIONES)
 
 const { computed } = window.Vue;
 
@@ -20,7 +19,25 @@ export function useCalculations(data, ui) {
     return `${simbolo} ${Math.abs(monto).toFixed(2)}`;
   };
 
-  // Se añade String() protector para evitar bugs de .includes() en JS
+  // ESTILOS DE BANCOS PARA LAS TARJETAS FÍSICAS
+  const obtenerEstiloBanco = (banco) => {
+    const estilos = {
+      BCP: "bg-gradient-to-br from-[#002A8D] to-[#001546] text-white",
+      Interbank: "bg-gradient-to-br from-[#00A453] to-[#006332] text-white",
+      BBVA: "bg-gradient-to-br from-[#043263] to-[#021A36] text-white",
+      Scotiabank: "bg-gradient-to-br from-[#EC111A] to-[#8F0810] text-white",
+      BanBif: "bg-gradient-to-br from-[#00A1DF] to-[#00609C] text-white",
+      "Banco de la Nación":
+        "bg-gradient-to-br from-[#C8102E] to-[#8B0B20] text-white",
+      Falabella: "bg-gradient-to-br from-[#B3D235] to-[#7B9123] text-slate-900",
+      Ripley: "bg-gradient-to-br from-[#4A148C] to-[#311B92] text-white",
+      Warda: "bg-gradient-to-br from-[#00D4B2] to-[#008F78] text-white",
+      Efectivo: "bg-gradient-to-br from-emerald-500 to-emerald-700 text-white",
+      Otro: "bg-gradient-to-br from-slate-700 to-slate-900 text-white",
+    };
+    return estilos[banco] || estilos["Otro"];
+  };
+
   const categoriasFiltradas = computed(() =>
     categorias.value.filter(
       (c) =>
@@ -268,5 +285,6 @@ export function useCalculations(data, ui) {
     diagnosticoDeuda,
     creditoDisponible,
     proyeccionProximoMes,
+    obtenerEstiloBanco,
   };
 }
