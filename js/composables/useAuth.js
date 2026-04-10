@@ -11,6 +11,8 @@ export function useAuth() {
 
   const isLoggedIn = ref(false);
   const currentUserId = ref("");
+  const userName = ref("");
+  const userAvatar = ref("");
 
   const iniciarSesionGoogle = async () => {
     await supabase.auth.signInWithOAuth({
@@ -23,13 +25,29 @@ export function useAuth() {
     await supabase.auth.signOut();
     isLoggedIn.value = false;
     currentUserId.value = "";
+    userName.value = "";
+    userAvatar.value = "";
+  };
+
+  const actualizarDatosUsuario = (session) => {
+    if (session && session.user) {
+      isLoggedIn.value = true;
+      currentUserId.value = session.user.id;
+      userName.value =
+        session.user.user_metadata?.full_name ||
+        session.user.email.split("@")[0];
+      userAvatar.value = session.user.user_metadata?.avatar_url || "";
+    }
   };
 
   return {
     supabase,
     isLoggedIn,
     currentUserId,
+    userName,
+    userAvatar,
     iniciarSesionGoogle,
     cerrarSesionAuth,
+    actualizarDatosUsuario,
   };
 }

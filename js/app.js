@@ -12,11 +12,9 @@ const { createApp, onMounted, nextTick, watch } = window.Vue;
 
 createApp({
   setup() {
-    // 1. Instanciar módulos base
     const auth = useAuth();
     const ui = useUI();
 
-    // 2. Instanciar gestor de datos
     const onDatosActualizados = () => {
       if (ui.tab.value === "analitica")
         nextTick(() => charts.renderizarGraficosAnalitica());
@@ -34,11 +32,9 @@ createApp({
       onDatosActualizados,
     );
 
-    // 3. Instanciar módulos dependientes
     const calcs = useCalculations(data, ui);
     const charts = useCharts(data, calcs);
 
-    // 4. Lógica Orquestada
     const cerrarSesion = async () => {
       ui.cargando.value = true;
       await auth.cerrarSesionAuth();
@@ -47,12 +43,10 @@ createApp({
       ui.cargando.value = false;
     };
 
-    // 5. Ciclo de vida y Observadores
     onMounted(() => {
       auth.supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
-          auth.isLoggedIn.value = true;
-          auth.currentUserId.value = session.user.id;
+          auth.actualizarDatosUsuario(session);
           data.cargarDatos().then(() => {
             ui.cargando.value = false;
           });
@@ -65,8 +59,7 @@ createApp({
 
       auth.supabase.auth.onAuthStateChange((event, session) => {
         if (session && session.user) {
-          auth.isLoggedIn.value = true;
-          auth.currentUserId.value = session.user.id;
+          auth.actualizarDatosUsuario(session);
           data.cargarDatos().then(() => {
             ui.cargando.value = false;
           });
@@ -84,7 +77,6 @@ createApp({
       if (newTab === "deudas") nextTick(() => charts.renderizarGraficoDeuda());
     });
 
-    // 6. Exponer todo al HTML
     return {
       ...auth,
       ...ui,
