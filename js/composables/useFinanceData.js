@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos (Con Warda Automático y Cashback)
+// ARCHIVO: Composable de Gestión de Datos (Con Ajuste Matemático de Saldos)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -33,7 +33,15 @@ export function useFinanceData(
 
   const editandoTx = ref({ estado: false, id: null });
   const editandoPagoFijo = ref({ estado: false, id: null });
-  const editandoCuenta = ref({ estado: false, id: null });
+
+  // Modificado: Agregamos memoria de los saldos originales para hacer la matemática inversa
+  const editandoCuenta = ref({
+    estado: false,
+    id: null,
+    saldo_inicial_orig: 0,
+    saldo_actual_orig: 0,
+  });
+
   const editandoCat = ref({ estado: false, id: null });
   const editandoEtiq = ref({ estado: false, id: null });
 
@@ -102,8 +110,6 @@ export function useFinanceData(
       etiquetas.value = datos.etiquetas;
       bolsaCashback.value = datos.bolsaCashback;
       wardaConfig.value = datos.wardaConfig;
-
-      // Protección de String() aplicada para evitar bugs de ".includes"
       historial.value = datos.historialRaw.map((h) => ({
         ...h,
         categoria_nombre: String(
@@ -112,7 +118,6 @@ export function useFinanceData(
             "Sin Categoría",
         ),
       }));
-
       if (onDatosActualizados) onDatosActualizados();
     } catch (error) {
       mostrarToast("Error de conexión con el servidor", "error");
@@ -313,7 +318,7 @@ export function useFinanceData(
         ]);
         txTransf.value.monto = "";
         txTransf.value.descripcion = "";
-        mostrarToast("Transferencia registrada", "success");
+        mostrarToast("Transferencia completada", "success");
       } catch (error) {
         mostrarToast("Error servidor", "error");
       }
@@ -363,7 +368,6 @@ export function useFinanceData(
           await api.guardarTransaccion(datosParaBD);
           mostrarToast("Operación registrada", "success");
 
-          // LÓGICA AUTOMÁTICA DE WARDA
           if (
             tipoOperacion.value === "Egreso" &&
             wardaConfig.value.activa &&
@@ -485,13 +489,19 @@ export function useFinanceData(
     cargando.value = false;
   };
 
+  // --- LÓGICA DE CUENTAS MODIFICADA PARA AJUSTAR EL SALDO DESEADO ---
   const abrirModalCuenta = (cuentaAEditar) => {
-    editandoCuenta.value = { estado: true, id: cuentaAEditar.id_cuenta };
+    editandoCuenta.value = {
+      estado: true,
+      id: cuentaAEditar.id_cuenta,
+      saldo_inicial_orig: cuentaAEditar.saldo_inicial,
+      saldo_actual_orig: cuentaAEditar.saldo_actual,
+    };
     nuevaCuenta.value = {
       nombre: cuentaAEditar.nombre,
       tipo_cuenta: cuentaAEditar.tipo_cuenta,
       moneda: cuentaAEditar.moneda,
-      saldo_inicial: Math.abs(cuentaAEditar.saldo_actual),
+      saldo_inicial: Math.abs(cuentaAEditar.saldo_actual), // Se muestra el saldo ACTUAL al editar
       limite: cuentaAEditar.limite || "",
       dia_corte: cuentaAEditar.dia_corte || "",
       dia_pago: cuentaAEditar.dia_pago || "",
@@ -499,8 +509,14 @@ export function useFinanceData(
     };
     tab.value = "ajustes";
   };
+
   const cancelarEdicionCuenta = () => {
-    editandoCuenta.value = { estado: false, id: null };
+    editandoCuenta.value = {
+      estado: false,
+      id: null,
+      saldo_inicial_orig: 0,
+      saldo_actual_orig: 0,
+    };
     nuevaCuenta.value = {
       nombre: "",
       tipo_cuenta: "Debito",
@@ -512,21 +528,36 @@ export function useFinanceData(
       pago_del_mes: "",
     };
   };
+
   const guardarCuenta = async () => {
     if (!nuevaCuenta.value.nombre) return;
     cargando.value = true;
     try {
-      let saldo = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
+      let saldoDeseado = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
       if (
         ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.value.tipo_cuenta)
-      )
-        saldo = -Math.abs(saldo);
+      ) {
+        saldoDeseado = -Math.abs(saldoDeseado);
+      }
+
+      let saldoAEnviar = saldoDeseado;
+
+      // Matemática Inversa: Si el usuario edita su cuenta y le pone que tiene "12.82",
+      // la aplicación resta el historial completo para enviar el "Saldo Inicial" perfecto
+      // de modo que cuando el backend sume la historia, el resultado sea exactamente "12.82".
+      if (editandoCuenta.value.estado) {
+        const sumaTransacciones =
+          editandoCuenta.value.saldo_actual_orig -
+          editandoCuenta.value.saldo_inicial_orig;
+        saldoAEnviar = saldoDeseado - sumaTransacciones;
+      }
+
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaCuenta.value.nombre,
         tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
         moneda: nuevaCuenta.value.moneda,
-        saldo_inicial: saldo,
+        saldo_inicial: saldoAEnviar, // Se envía el inicial ajustado
         limite:
           nuevaCuenta.value.tipo_cuenta === "Credito"
             ? parseFloat(nuevaCuenta.value.limite || 0)
@@ -541,12 +572,19 @@ export function useFinanceData(
             : null,
         pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
       };
-      if (editandoCuenta.value.estado)
+
+      if (editandoCuenta.value.estado) {
         await api.actualizarCuenta(editandoCuenta.value.id, payload);
-      else await api.guardarCuenta(payload);
+        mostrarToast("Cuenta actualizada con éxito", "success");
+      } else {
+        await api.guardarCuenta(payload);
+        mostrarToast("Cuenta registrada con éxito", "success");
+      }
       cancelarEdicionCuenta();
       await cargarDatos();
-    } catch (error) {}
+    } catch (error) {
+      mostrarToast("Error al guardar cuenta", "error");
+    }
     cargando.value = false;
   };
 
