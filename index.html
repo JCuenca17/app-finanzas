@@ -483,7 +483,8 @@
                           {{ item.descripcion }}
                         </p>
                         <p
-                          class="text-[10px] md:text-xs font-medium mt-0.5 truncate text-slate-500"
+                          class="text-[10px] md:text-xs font-medium mt-0.5 truncate"
+                          :class="item.categoria_nombre && String(item.categoria_nombre).includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
                         >
                           {{ item.fecha }} • {{ item.cuenta }}
                           <span
@@ -577,13 +578,20 @@
                   <div class="flex justify-between items-start">
                     <h4 class="font-bold text-slate-900 text-base md:text-lg">
                       {{ c.nombre }}
+                      <span
+                        v-if="c.es_warda"
+                        class="ml-1 text-emerald-500 text-xs"
+                        title="Alcancía Warda"
+                        >🐷</span
+                      >
                     </h4>
                     <div class="flex items-center gap-2">
                       <span
                         class="text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md"
                         :class="c.tipo_cuenta === 'Ahorro' ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-600'"
                         >{{ c.tipo_cuenta }}</span
-                      ><button
+                      >
+                      <button
                         @click="abrirModalCuenta(c)"
                         class="text-slate-300 hover:text-blue-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       >
@@ -637,7 +645,8 @@
                       <span
                         class="text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md bg-emerald-50 text-emerald-700"
                         >Por Cobrar</span
-                      ><button
+                      >
+                      <button
                         @click="abrirModalCuenta(c)"
                         class="text-slate-300 hover:text-blue-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
                       >
@@ -821,7 +830,8 @@
                           class="text-[9px] md:text-[10px] font-extrabold uppercase tracking-widest px-2 py-1 rounded-md bg-rose-50 text-rose-600"
                           >{{ c.tipo_cuenta === 'Pagar' ? 'A Terceros' :
                           c.tipo_cuenta }}</span
-                        ><button
+                        >
+                        <button
                           @click="abrirModalCuenta(c)"
                           class="text-slate-300 hover:text-blue-500 transition opacity-100 md:opacity-0 md:group-hover:opacity-100"
                         >
@@ -1014,8 +1024,9 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg></button
-                            ><button
+                              </svg>
+                            </button>
+                            <button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1102,8 +1113,9 @@
                                   stroke-width="2"
                                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                                 ></path>
-                              </svg></button
-                            ><button
+                              </svg>
+                            </button>
+                            <button
                               @click="eliminarRegistro('proyeccion', pago.id)"
                               class="text-slate-300 hover:text-rose-500 transition"
                             >
@@ -1412,14 +1424,34 @@
                       <option value="USD">Dólares ($)</option>
                     </select>
                   </div>
+
                   <template
                     v-if="['Debito', 'Efectivo', 'Ahorro', 'Cobrar'].includes(nuevaCuenta.tipo_cuenta)"
-                    ><input
+                  >
+                    <input
                       type="number"
                       v-model="nuevaCuenta.saldo_inicial"
                       placeholder="Saldo a favor"
-                      class="w-full mb-5 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
-                  /></template>
+                      class="w-full mb-3 px-4 py-3 border border-slate-200 rounded-xl text-xs md:text-sm focus:outline-none"
+                    />
+                    <div
+                      v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
+                      class="flex items-center gap-2 mb-5 px-1"
+                    >
+                      <input
+                        type="checkbox"
+                        id="es_warda"
+                        v-model="nuevaCuenta.es_warda"
+                        class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
+                      />
+                      <label
+                        for="es_warda"
+                        class="text-[11px] md:text-xs font-bold text-slate-700 cursor-pointer"
+                        >Usar como Alcancía Warda</label
+                      >
+                    </div>
+                  </template>
+
                   <template v-else-if="nuevaCuenta.tipo_cuenta === 'Credito'">
                     <input
                       type="number"
@@ -1744,82 +1776,6 @@
                     </div>
                   </div>
                 </div>
-
-                <div
-                  v-show="tab === 'ajustes'"
-                  class="bg-gradient-to-br from-emerald-500 to-teal-600 p-5 md:p-6 rounded-2xl md:rounded-3xl border border-emerald-400 shadow-lg self-start"
-                >
-                  <div
-                    class="flex justify-between items-center mb-4 border-b border-emerald-400/50 pb-3"
-                  >
-                    <h3 class="font-extrabold text-white text-sm md:text-base">
-                      Regla Ahorro Auto (Warda)
-                    </h3>
-                    <label
-                      class="relative inline-flex items-center cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        v-model="wardaConfig.activa"
-                        class="sr-only peer"
-                      />
-                      <div
-                        class="w-9 h-5 bg-emerald-700/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-white/30"
-                      ></div>
-                    </label>
-                  </div>
-                  <p
-                    class="text-[10px] md:text-xs text-emerald-100 mb-4 leading-relaxed font-medium"
-                  >
-                    Al registrar un gasto con Débito, redondeamos el monto y
-                    enviamos la diferencia a tu cuenta Warda como transferencia
-                    automática.
-                  </p>
-
-                  <div
-                    :class="wardaConfig.activa ? 'opacity-100' : 'opacity-50 pointer-events-none'"
-                  >
-                    <label
-                      class="block text-[10px] font-bold text-emerald-200 uppercase mb-1"
-                      >Destino del Ahorro</label
-                    ><select
-                      v-model="wardaConfig.cuenta_destino_id"
-                      class="w-full mb-3 px-4 py-3 bg-white/10 border border-emerald-400/50 rounded-xl text-xs md:text-sm focus:outline-none text-white placeholder-emerald-200"
-                    >
-                      <option value="" class="text-slate-800">
-                        -- Selecciona tu Alcancía --
-                      </option>
-                      <template v-for="c in cuentas" :key="c.id_cuenta"
-                        ><option :value="c.id_cuenta" class="text-slate-800">
-                          {{ c.nombre }}
-                        </option></template
-                      >
-                    </select>
-
-                    <label
-                      class="block text-[10px] font-bold text-emerald-200 uppercase mb-1"
-                      >Redondear al próximo:</label
-                    >
-                    <select
-                      v-model="wardaConfig.tipo_redondeo"
-                      class="w-full mb-5 px-4 py-3 bg-white/10 border border-emerald-400/50 rounded-xl text-xs md:text-sm focus:outline-none text-white font-bold"
-                    >
-                      <option value="1" class="text-slate-800">
-                        S/ 1.00 (Recomendado)
-                      </option>
-                      <option value="5" class="text-slate-800">S/ 5.00</option>
-                      <option value="10" class="text-slate-800">
-                        S/ 10.00
-                      </option>
-                    </select>
-                  </div>
-                  <button
-                    @click="guardarConfiguracionWarda"
-                    class="w-full bg-white text-emerald-700 py-3.5 rounded-xl text-sm font-extrabold transition shadow-md active:scale-95 hover:bg-emerald-50"
-                  >
-                    Guardar Regla
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -2105,7 +2061,43 @@
               </div>
             </div>
 
-            <div v-if="tipoOperacion === 'Egreso'" class="mt-3">
+            <div
+              v-if="tipoOperacion === 'Egreso' && !editandoTx.estado && tx.cuenta_id && cuentas.find(c => c.id_cuenta === tx.cuenta_id)?.tipo_cuenta === 'Debito' && cuentas.filter(c => c.es_warda).length > 0"
+              class="p-3 bg-emerald-50 rounded-xl border border-emerald-100"
+            >
+              <label
+                class="text-[10px] font-bold text-emerald-600 uppercase ml-1"
+                >Warda Ahorro (Opcional)</label
+              >
+              <div class="flex gap-2 mt-1">
+                <select
+                  v-model="tx.warda_cuenta_id"
+                  class="w-1/2 px-3 py-2 bg-white border border-emerald-200 rounded-lg text-xs font-bold focus:outline-none"
+                >
+                  <option value="" disabled>Elegir Alcancía...</option>
+                  <option
+                    v-for="w in cuentas.filter(c => c.es_warda)"
+                    :value="w.id_cuenta"
+                  >
+                    {{ w.nombre }}
+                  </option>
+                </select>
+                <input
+                  type="number"
+                  v-model="tx.monto_warda"
+                  placeholder="S/ Redondeo"
+                  class="w-1/2 px-3 py-2 bg-white border border-emerald-200 rounded-lg text-xs font-bold focus:outline-none text-emerald-700"
+                />
+              </div>
+              <p
+                class="text-[9px] text-emerald-600 mt-1 font-medium leading-tight"
+              >
+                Si pones un monto aquí, se transferirá automáticamente de tu
+                Débito a la alcancía Warda elegida.
+              </p>
+            </div>
+
+            <div v-if="tipoOperacion === 'Egreso'" class="mt-1">
               <label class="text-[10px] font-bold text-slate-400 uppercase ml-1"
                 >Fecha de la transacción</label
               >
