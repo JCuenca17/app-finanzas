@@ -48,25 +48,6 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
-      .chart-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-      }
-      .toast-enter-active,
-      .toast-leave-active {
-        transition: all 0.3s ease;
-      }
-      .toast-enter-from {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
-      .toast-leave-to {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
 
       .card-premium {
         position: relative;
@@ -153,6 +134,14 @@
       .bg-card-neutral {
         background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
         color: white;
+      }
+
+      .chart-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
@@ -297,7 +286,7 @@
               :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              Ajustes
+              Ajustes Maestro
             </button>
           </nav>
 
@@ -350,26 +339,72 @@
           class="flex-1 flex flex-col h-full w-full min-w-0 bg-slate-50 relative"
         >
           <header
-            class="flex-shrink-0 px-4 md:px-8 py-5 md:py-6 flex justify-between items-center bg-slate-50 z-10 border-b border-slate-100 md:border-none"
+            class="flex-shrink-0 px-4 md:px-8 py-4 md:py-6 flex justify-between items-center bg-slate-50 z-10 border-b border-slate-100 md:border-none"
           >
-            <div>
+            <div class="min-w-0 pr-2">
               <h1
-                class="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight"
+                class="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight truncate"
               >
                 {{ tituloCabecera }}
               </h1>
               <p
-                class="text-xs md:text-sm text-slate-500 font-medium mt-0.5 md:mt-1"
+                class="text-xs md:text-sm text-slate-500 font-medium mt-0.5 md:mt-1 truncate"
               >
                 Control en tiempo real
               </p>
             </div>
-            <button
-              @click="abrirModalTransaccion()"
-              class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
-            >
-              + Registrar Operación
-            </button>
+
+            <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+              <button
+                @click="abrirModalTransaccion()"
+                class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
+              >
+                + Registrar Operación
+              </button>
+
+              <button
+                @click="tab = 'perfil'"
+                class="md:hidden w-9 h-9 rounded-full overflow-hidden border border-slate-200 focus:border-blue-500 transition shadow-sm active:scale-95"
+              >
+                <img
+                  v-if="userAvatar"
+                  :src="userAvatar"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  v-else
+                  class="w-full h-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm"
+                >
+                  {{ userName.charAt(0).toUpperCase() }}
+                </div>
+              </button>
+
+              <button
+                @click="tab = 'ajustes'"
+                class="md:hidden w-9 h-9 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-full hover:bg-slate-100 transition shadow-sm active:scale-95"
+                title="Ajustes Maestro"
+              >
+                <svg
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  ></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  ></path>
+                </svg>
+              </button>
+            </div>
           </header>
 
           <div class="flex-1 overflow-hidden relative">
@@ -787,7 +822,7 @@
                     <div
                       v-for="c in cuentasPorCobrar"
                       :key="c.id_cuenta"
-                      class="bg-card-receivable h-48 md:h-52 p-5 rounded-3xl flex flex-col justify-between shadow-xl group card-premium"
+                      class="bg-card-receivable h-48 md:h-52 p-5 p-5 rounded-3xl flex flex-col justify-between shadow-xl group card-premium"
                       data-banco="Cobrar"
                     >
                       <div
@@ -1769,7 +1804,7 @@
         </main>
 
         <nav
-          class="md:hidden fixed bottom-0 w-full glass border-t border-slate-200 flex justify-around items-center h-16 z-40 px-1 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
+          class="md:hidden fixed bottom-0 w-full glass border-t border-slate-200 flex justify-evenly items-center h-16 z-40 px-1 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
         >
           <button
             @click="tab = 'inicio'"
@@ -1790,6 +1825,7 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Inicio</span>
           </button>
+
           <button
             @click="tab = 'cuentas'"
             :class="tab === 'cuentas' ? 'text-slate-900' : 'text-slate-400'"
@@ -1809,6 +1845,7 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Activos</span>
           </button>
+
           <button
             @click="tab = 'deudas'"
             :class="tab === 'deudas' ? 'text-slate-900' : 'text-slate-400'"
@@ -1828,7 +1865,8 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Pasivos</span>
           </button>
-          <div class="relative -top-5">
+
+          <div class="relative -top-5 flex-shrink-0 px-2">
             <button
               @click="abrirModalTransaccion()"
               class="w-14 h-14 bg-slate-900 rounded-full flex items-center justify-center text-white shadow-xl shadow-slate-900/40 active:scale-90 transition-transform border-[3px] border-slate-50"
@@ -1848,6 +1886,27 @@
               </svg>
             </button>
           </div>
+
+          <button
+            @click="tab = 'pagos'"
+            :class="tab === 'pagos' ? 'text-slate-900' : 'text-slate-400'"
+            class="flex flex-col items-center justify-center w-full h-full"
+          >
+            <svg
+              class="w-6 h-6 mb-0.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+              ></path></svg
+            ><span class="text-[9px] font-bold">Pagos</span>
+          </button>
+
           <button
             @click="tab = 'historial'"
             :class="tab === 'historial' ? 'text-slate-900' : 'text-slate-400'"
@@ -1867,6 +1926,7 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Historial</span>
           </button>
+
           <button
             @click="tab = 'contactos'"
             :class="tab === 'contactos' ? 'text-slate-900' : 'text-slate-400'"
@@ -1967,6 +2027,7 @@
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
                 />
               </div>
+
               <div
                 v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
                 class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100 relative z-10"
@@ -1976,7 +2037,8 @@
                   id="es_warda_check"
                   v-model="nuevaCuenta.es_warda"
                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                /><label
+                />
+                <label
                   for="es_warda_check"
                   class="text-[11px] font-bold text-emerald-800 cursor-pointer leading-tight"
                   >Configurar como cuenta 'Warda' (Recibe redondeos
@@ -2339,6 +2401,7 @@
                 class="text-[10px] font-bold text-emerald-600 uppercase ml-1"
                 >Warda Ahorro (Opcional)</label
               >
+
               <div
                 v-if="cuentas.find(c => c.id_cuenta == tx.cuenta_id)?.tipo_cuenta === 'Debito'"
               >
@@ -2353,8 +2416,9 @@
                       :value="w.id_cuenta"
                     >
                       {{ w.nombre }}
-                    </option></select
-                  ><input
+                    </option>
+                  </select>
+                  <input
                     type="number"
                     v-model="tx.monto_warda"
                     placeholder="S/ Redondeo"
