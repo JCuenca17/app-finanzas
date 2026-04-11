@@ -20,6 +20,27 @@ export function useCalculations(data, ui) {
     return `${simbolo} ${Number(Math.abs(monto || 0)).toFixed(2)}`;
   };
 
+  // NUEVA FUNCIÓN PARA ACORTAR LA FECHA (Ej: "ABR 2026")
+  const formatoMes = (yyyyMM) => {
+    if (!yyyyMM) return "";
+    const [y, m] = yyyyMM.split("-");
+    const meses = [
+      "ENE",
+      "FEB",
+      "MAR",
+      "ABR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AGO",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DIC",
+    ];
+    return `${meses[parseInt(m) - 1]} ${y}`;
+  };
+
   const getClaseColorBanco = (banco) => {
     const clases = {
       BCP: "bg-bank-bcp",
@@ -40,13 +61,11 @@ export function useCalculations(data, ui) {
 
   const getClasePuntoEstado = (cuenta) => "bg-emerald-400";
 
-  // --- LÓGICA DE VIAJE EN EL TIEMPO ---
   const anioGlobal = computed(() => parseInt(fechaGlobal.value.split("-")[0]));
   const mesGlobal = computed(
     () => parseInt(fechaGlobal.value.split("-")[1]) - 1,
   );
 
-  // Filtramos el historial SOLO para el mes seleccionado
   const historialFiltrado = computed(() => {
     return historial.value.filter((tx) => {
       const f = new Date(tx.fecha + "T00:00:00");
@@ -56,7 +75,6 @@ export function useCalculations(data, ui) {
     });
   });
 
-  // Calculamos los saldos de las cuentas COMO ESTABAN en el mes seleccionado
   const cuentasConSaldoHistorico = computed(() => {
     const hoy = new Date();
     const esMesActual =
@@ -69,7 +87,6 @@ export function useCalculations(data, ui) {
       let saldoRevertido = c.saldo_actual;
       historial.value.forEach((tx) => {
         const f = new Date(tx.fecha + "T00:00:00");
-        // Si la Tx ocurrió DESPUÉS del mes seleccionado, deshacemos su efecto matemático
         if (
           f.getFullYear() > anioGlobal.value ||
           (f.getFullYear() === anioGlobal.value &&
@@ -272,7 +289,6 @@ export function useCalculations(data, ui) {
 
   const datosGraficoCat = computed(() => {
     const gastosPorCat = {};
-    // Ahora leemos SOLO del mes seleccionado (historialFiltrado)
     historialFiltrado.value.forEach((tx) => {
       const esTransferencia = String(tx.categoria_nombre || "")
         .toLowerCase()
@@ -296,7 +312,6 @@ export function useCalculations(data, ui) {
     const etiquetaObj = etiquetas.value.find((e) => e.id === idContacto);
     const nombreContacto = etiquetaObj ? etiquetaObj.nombre : "Seleccione";
 
-    // Leemos del mes seleccionado
     historialFiltrado.value.forEach((tx) => {
       const esTransferencia = String(tx.categoria_nombre || "")
         .toLowerCase()
@@ -320,6 +335,7 @@ export function useCalculations(data, ui) {
 
   return {
     formatoMoneda,
+    formatoMes,
     categoriasFiltradas,
     historialFiltrado,
     cuentasActivas,

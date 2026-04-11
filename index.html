@@ -292,6 +292,13 @@
             >
               Contactos
             </button>
+            <button
+              @click="tab = 'ajustes'"
+              :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
+              class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
+            >
+              Ajustes Maestro
+            </button>
           </nav>
 
           <div class="p-4 border-t border-slate-100 flex flex-col gap-2">
@@ -343,27 +350,27 @@
           class="flex-1 flex flex-col h-full w-full min-w-0 bg-slate-50 relative"
         >
           <header
-            class="flex-shrink-0 px-4 md:px-8 py-3 md:py-6 flex flex-row justify-between items-center bg-slate-50 z-10 border-b border-slate-100 md:border-none gap-2"
+            class="flex-shrink-0 px-4 md:px-8 py-3 md:py-5 flex flex-row justify-between items-center bg-slate-50 z-10 border-b border-slate-100 md:border-none gap-2"
           >
             <div class="min-w-0 flex-1">
               <h1
-                class="text-xl md:text-3xl font-extrabold text-slate-900 tracking-tight truncate"
+                class="text-lg md:text-3xl font-extrabold text-slate-900 tracking-tight truncate"
               >
                 {{ tituloCabecera }}
               </h1>
               <p
-                class="text-[10px] md:text-sm text-slate-500 font-medium mt-0.5 md:mt-1 truncate"
+                class="text-[10px] md:text-sm text-slate-500 font-medium mt-0.5 md:mt-1 truncate hidden md:block"
               >
                 Control en tiempo real
               </p>
             </div>
 
-            <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+            <div class="flex items-center gap-1.5 md:gap-4 flex-shrink-0">
               <div
-                class="flex items-center bg-white border border-slate-200 rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2.5 shadow-sm hover:border-blue-400 transition cursor-pointer"
+                class="relative flex items-center bg-white border border-slate-200 rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2.5 shadow-sm hover:border-blue-400 transition cursor-pointer overflow-hidden"
               >
                 <svg
-                  class="w-4 h-4 text-slate-500 mr-1.5 hidden md:block"
+                  class="w-3.5 h-3.5 text-slate-500 mr-1.5 hidden sm:block"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -375,10 +382,14 @@
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   ></path>
                 </svg>
+                <span
+                  class="text-[11px] md:text-sm font-bold text-slate-700 uppercase whitespace-nowrap"
+                  >{{ formatoMes(fechaGlobal) }}</span
+                >
                 <input
                   type="month"
                   v-model="fechaGlobal"
-                  class="text-[11px] md:text-sm font-bold text-slate-700 outline-none bg-transparent cursor-pointer uppercase w-[110px] md:w-auto p-0 border-none m-0"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
               </div>
 
@@ -386,12 +397,29 @@
                 @click="abrirModalTransaccion()"
                 class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
               >
-                + Registrar Operación
+                + Registrar
+              </button>
+
+              <button
+                @click="tab = 'perfil'"
+                class="md:hidden w-8 h-8 rounded-full overflow-hidden border border-slate-200 focus:border-blue-500 transition shadow-sm active:scale-95 flex-shrink-0"
+              >
+                <img
+                  v-if="userAvatar"
+                  :src="userAvatar"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  v-else
+                  class="w-full h-full bg-slate-900 flex items-center justify-center text-white font-bold text-xs"
+                >
+                  {{ userName.charAt(0).toUpperCase() }}
+                </div>
               </button>
 
               <button
                 @click="tab = 'ajustes'"
-                class="md:hidden w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-full hover:bg-slate-100 transition shadow-sm active:scale-95"
+                class="md:hidden w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-full hover:bg-slate-100 transition shadow-sm active:scale-95 flex-shrink-0"
                 title="Ajustes Maestro"
               >
                 <svg
@@ -1483,23 +1511,6 @@
                                 stroke-width="2"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               ></path>
-                            </svg></button
-                          ><button
-                            @click="eliminarRegistro('transaccion', item.id)"
-                            class="text-slate-300 hover:text-rose-500 transition"
-                          >
-                            <svg
-                              class="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                              ></path>
                             </svg>
                           </button>
                         </div>
@@ -2066,7 +2077,6 @@
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
                 />
               </div>
-
               <div
                 v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
                 class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100 relative z-10"
@@ -2076,8 +2086,7 @@
                   id="es_warda_check"
                   v-model="nuevaCuenta.es_warda"
                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                />
-                <label
+                /><label
                   for="es_warda_check"
                   class="text-[11px] font-bold text-emerald-800 cursor-pointer leading-tight"
                   >Configurar como cuenta 'Warda' (Recibe redondeos
