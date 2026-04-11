@@ -20,7 +20,6 @@ export function useCalculations(data, ui) {
     return `${simbolo} ${Number(Math.abs(monto || 0)).toFixed(2)}`;
   };
 
-  // NUEVA FUNCIÓN PARA ACORTAR LA FECHA (Ej: "ABR 2026")
   const formatoMes = (yyyyMM) => {
     if (!yyyyMM) return "";
     const [y, m] = yyyyMM.split("-");
@@ -305,6 +304,22 @@ export function useCalculations(data, ui) {
     };
   });
 
+  // NUEVO: DATOS PARA EL GRÁFICO DE FLUJO (Ingresos vs Egresos del mes)
+  const datosGraficoFlujo = computed(() => {
+    let ingresos = 0;
+    let egresos = 0;
+    historialFiltrado.value.forEach((tx) => {
+      const esTransferencia = String(tx.categoria_nombre || "")
+        .toLowerCase()
+        .includes("transferencia");
+      if (!esTransferencia) {
+        if (tx.tipo_flujo === "Ingreso") ingresos += tx.monto || 0;
+        if (tx.tipo_flujo === "Egreso") egresos += tx.monto || 0;
+      }
+    });
+    return { ingresos, egresos };
+  });
+
   const datosGraficoContacto = computed(() => {
     let totalEgresos = 0;
     let egresosContacto = 0;
@@ -355,6 +370,7 @@ export function useCalculations(data, ui) {
     getClaseColorPasivo,
     getClasePuntoEstado,
     datosGraficoCat,
+    datosGraficoFlujo,
     datosGraficoContacto,
   };
 }
