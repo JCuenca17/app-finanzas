@@ -55,19 +55,8 @@
         width: 100%;
         height: 100%;
       }
-      .toast-enter-active,
-      .toast-leave-active {
-        transition: all 0.3s ease;
-      }
-      .toast-enter-from {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
-      .toast-leave-to {
-        opacity: 0;
-        transform: translate(-50%, -20px);
-      }
 
+      /* ESTILOS DE TARJETAS PREMIUM */
       .card-premium {
         position: relative;
         overflow: hidden;
@@ -153,6 +142,19 @@
       .bg-card-neutral {
         background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
         color: white;
+      }
+
+      /* TRUCO CSS PARA HACER QUE TODO EL INPUT DATE SEA CLICKABLE */
+      input[type="month"]::-webkit-calendar-picker-indicator {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
       }
     </style>
   </head>
@@ -420,7 +422,7 @@
               <button
                 @click="tab = 'ajustes'"
                 class="md:hidden w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 rounded-full hover:bg-slate-100 transition shadow-sm active:scale-95 flex-shrink-0"
-                title="Ajustes Maestro"
+                title="Ajustes"
               >
                 <svg
                   class="w-4 h-4"
@@ -1511,6 +1513,23 @@
                                 stroke-width="2"
                                 d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                               ></path>
+                            </svg></button
+                          ><button
+                            @click="eliminarRegistro('transaccion', item.id)"
+                            class="text-slate-300 hover:text-rose-500 transition"
+                          >
+                            <svg
+                              class="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              ></path>
                             </svg>
                           </button>
                         </div>
@@ -1759,7 +1778,7 @@
                   >
                     <div>
                       <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                        Categorías Maestro
+                        Categorías
                       </h3>
                       <p class="text-[10px] text-slate-500 mt-0.5">
                         Organiza en qué gastas tu dinero
