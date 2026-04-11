@@ -566,6 +566,108 @@
                   </div>
                 </div>
               </div>
+
+              <div
+                class="bg-white rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm mt-3 md:mt-5 mb-8"
+              >
+                <div
+                  class="px-4 md:px-6 py-3 border-b border-slate-50 flex justify-between items-center"
+                >
+                  <h3 class="font-bold text-slate-800 text-sm md:text-base">
+                    Movimientos Recientes
+                  </h3>
+                </div>
+                <div class="divide-y divide-slate-100">
+                  <div
+                    v-if="historial.length === 0"
+                    class="p-6 text-center text-slate-500 text-xs md:text-sm"
+                  >
+                    No hay operaciones.
+                  </div>
+                  <div
+                    v-for="item in historial.slice(0, 10)"
+                    :key="item.id"
+                    class="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition group"
+                  >
+                    <div
+                      class="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-2"
+                    >
+                      <div
+                        class="w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-bold text-sm md:text-base flex-shrink-0"
+                        :class="item.tipo_flujo === 'Ingreso' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'"
+                      >
+                        {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <p
+                          class="font-bold text-slate-900 text-xs md:text-sm truncate"
+                        >
+                          {{ item.descripcion }}
+                        </p>
+                        <p
+                          class="text-[10px] md:text-xs font-medium mt-0.5 truncate"
+                          :class="item.categoria_nombre && String(item.categoria_nombre).includes('Transferencia') ? 'text-blue-500' : 'text-slate-500'"
+                        >
+                          {{ item.fecha }} • {{ item.cuenta }}
+                          <span
+                            v-if="item.etiqueta_nombre"
+                            class="font-bold text-slate-600 bg-slate-100 px-1 rounded"
+                            >@{{ item.etiqueta_nombre }}</span
+                          >
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+                      <div
+                        :class="item.tipo_flujo === 'Ingreso' ? 'text-emerald-600' : 'text-slate-900'"
+                        class="font-extrabold text-sm md:text-base whitespace-nowrap text-right"
+                      >
+                        {{ item.tipo_flujo === 'Ingreso' ? '+' : '-' }} {{
+                        formatoMoneda(item.monto, item.moneda) }}
+                      </div>
+                      <div
+                        class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition pl-1 md:pl-2"
+                      >
+                        <button
+                          @click="abrirModalTransaccion(item)"
+                          class="text-slate-300 hover:text-blue-500 transition"
+                        >
+                          <svg
+                            class="w-4 h-4 md:w-5 md:h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            ></path>
+                          </svg></button
+                        ><button
+                          @click="eliminarRegistro('transaccion', item.id)"
+                          class="text-slate-300 hover:text-rose-500 transition"
+                        >
+                          <svg
+                            class="w-4 h-4 md:w-5 md:h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div
@@ -685,7 +787,7 @@
                     <div
                       v-for="c in cuentasPorCobrar"
                       :key="c.id_cuenta"
-                      class="bg-card-receivable h-48 md:h-52 p-5 p-5 rounded-3xl flex flex-col justify-between shadow-xl group card-premium"
+                      class="bg-card-receivable h-48 md:h-52 p-5 rounded-3xl flex flex-col justify-between shadow-xl group card-premium"
                       data-banco="Cobrar"
                     >
                       <div
@@ -1524,7 +1626,6 @@
                   >
                     {{ userEmail }}
                   </p>
-
                   <div
                     class="w-full max-w-sm mb-8 p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3 text-left"
                   >
@@ -1866,7 +1967,6 @@
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
                 />
               </div>
-
               <div
                 v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
                 class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100 relative z-10"
@@ -1876,8 +1976,7 @@
                   id="es_warda_check"
                   v-model="nuevaCuenta.es_warda"
                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                />
-                <label
+                /><label
                   for="es_warda_check"
                   class="text-[11px] font-bold text-emerald-800 cursor-pointer leading-tight"
                   >Configurar como cuenta 'Warda' (Recibe redondeos
@@ -2240,7 +2339,6 @@
                 class="text-[10px] font-bold text-emerald-600 uppercase ml-1"
                 >Warda Ahorro (Opcional)</label
               >
-
               <div
                 v-if="cuentas.find(c => c.id_cuenta == tx.cuenta_id)?.tipo_cuenta === 'Debito'"
               >
@@ -2255,9 +2353,8 @@
                       :value="w.id_cuenta"
                     >
                       {{ w.nombre }}
-                    </option>
-                  </select>
-                  <input
+                    </option></select
+                  ><input
                     type="number"
                     v-model="tx.monto_warda"
                     placeholder="S/ Redondeo"

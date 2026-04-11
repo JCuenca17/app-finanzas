@@ -225,10 +225,10 @@ export function useCalculations(data, ui) {
   });
 
   // ==========================================
-  // DATOS PARA GRÁFICOS (ACTUALIZADO)
+  // DATOS PARA GRÁFICOS (CORREGIDOS)
   // ==========================================
 
-  // 1. Gráfico de Categorías (Va en Historial)
+  // 1. Gráfico de Categorías (Ignora Transferencias)
   const datosGraficoCat = computed(() => {
     const hoy = new Date();
     const mesActual = hoy.getMonth();
@@ -236,8 +236,14 @@ export function useCalculations(data, ui) {
     const gastosPorCat = {};
     historial.value.forEach((tx) => {
       const fechaTx = new Date(tx.fecha + "T00:00:00");
+      const esTransferencia = String(tx.categoria_nombre || "")
+        .toLowerCase()
+        .includes("transferencia");
+
+      // Filtramos para asegurar que sea Egreso, del mes actual, y NO sea transferencia
       if (
         tx.tipo_flujo === "Egreso" &&
+        !esTransferencia &&
         fechaTx.getMonth() === mesActual &&
         fechaTx.getFullYear() === añoActual
       ) {
@@ -252,7 +258,7 @@ export function useCalculations(data, ui) {
     };
   });
 
-  // 2. Gráfico Contacto vs Total (Va en Nueva Pestaña "Contactos")
+  // 2. Gráfico Contacto vs Total (Ignora Transferencias)
   const datosGraficoContacto = computed(() => {
     const hoy = new Date();
     const mesActual = hoy.getMonth();
@@ -266,8 +272,14 @@ export function useCalculations(data, ui) {
 
     historial.value.forEach((tx) => {
       const fechaTx = new Date(tx.fecha + "T00:00:00");
+      const esTransferencia = String(tx.categoria_nombre || "")
+        .toLowerCase()
+        .includes("transferencia");
+
+      // Solo sumamos gastos reales
       if (
         tx.tipo_flujo === "Egreso" &&
+        !esTransferencia &&
         fechaTx.getMonth() === mesActual &&
         fechaTx.getFullYear() === añoActual
       ) {

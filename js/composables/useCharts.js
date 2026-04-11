@@ -19,6 +19,8 @@ export function useCharts(data, calcs) {
   const renderizarGraficosHistorial = () => {
     if (chartCatRef.value) {
       if (chartCat) chartCat.destroy();
+      chartCatRef.value.innerHTML = ""; // Barrer el contenedor para evitar saltos
+
       const datos = calcs.datosGraficoCat.value;
       if (datos.series.length > 0) {
         const optionsCat = {
@@ -54,7 +56,7 @@ export function useCharts(data, calcs) {
         chartCat.render();
       } else {
         chartCatRef.value.innerHTML =
-          '<div class="flex items-center justify-center h-full text-slate-400 text-sm font-medium">No hay gastos registrados este mes</div>';
+          '<div class="flex items-center justify-center h-[300px] text-slate-400 text-sm font-medium text-center">No hay gastos registrados este mes</div>';
       }
     }
   };
@@ -62,13 +64,15 @@ export function useCharts(data, calcs) {
   const renderizarGraficosContactos = () => {
     if (chartContactoRef.value) {
       if (chartContacto) chartContacto.destroy();
+      chartContactoRef.value.innerHTML = ""; // Barrer el contenedor para evitar saltos
+
       const datos = calcs.datosGraficoContacto.value;
       if (datos.hasData && datos.series.length > 0) {
         const options = {
           series: datos.series,
           labels: datos.labels,
           chart: { type: "donut", height: 300, fontFamily: "inherit" },
-          colors: ["#3b82f6", "#cbd5e1"], // Azul brillante para el contacto, gris suave para el resto
+          colors: ["#3b82f6", "#cbd5e1"], // Azul brillante para contacto, gris suave para otros
           dataLabels: { enabled: false },
           stroke: { width: 0 },
           plotOptions: {
@@ -98,7 +102,7 @@ export function useCharts(data, calcs) {
         chartContacto.render();
       } else {
         chartContactoRef.value.innerHTML =
-          '<div class="flex items-center justify-center h-full text-slate-400 text-sm font-medium text-center px-4">Selecciona un contacto arriba para analizar los gastos compartidos del mes</div>';
+          '<div class="flex items-center justify-center h-[300px] text-slate-400 text-sm font-medium text-center px-4">Selecciona un contacto arriba para analizar los gastos compartidos del mes</div>';
       }
     }
   };
@@ -106,6 +110,8 @@ export function useCharts(data, calcs) {
   const renderizarGraficoDeuda = () => {
     if (chartDeudaRef.value) {
       if (chartDeuda) chartDeuda.destroy();
+      chartDeudaRef.value.innerHTML = "";
+
       const diag = calcs.diagnosticoDeuda.value;
       const optionsDeuda = {
         series: [diag.porcentajeCobertura || 0],
