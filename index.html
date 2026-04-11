@@ -297,7 +297,7 @@
               :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
               class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
             >
-              Ajustes Maestro
+              Ajustes
             </button>
           </nav>
 
@@ -370,7 +370,7 @@
                 class="relative flex items-center bg-white border border-slate-200 rounded-lg md:rounded-xl px-2 py-1.5 md:px-3 md:py-2.5 shadow-sm hover:border-blue-400 transition cursor-pointer overflow-hidden"
               >
                 <svg
-                  class="w-3.5 h-3.5 text-slate-500 mr-1.5 hidden sm:block"
+                  class="w-3.5 h-3.5 text-slate-500 mr-1.5 hidden sm:block pointer-events-none"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -383,13 +383,13 @@
                   ></path>
                 </svg>
                 <span
-                  class="text-[11px] md:text-sm font-bold text-slate-700 uppercase whitespace-nowrap"
+                  class="text-[11px] md:text-sm font-bold text-slate-700 uppercase whitespace-nowrap pointer-events-none"
                   >{{ formatoMes(fechaGlobal) }}</span
                 >
                 <input
                   type="month"
                   v-model="fechaGlobal"
-                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                 />
               </div>
 
@@ -397,7 +397,7 @@
                 @click="abrirModalTransaccion()"
                 class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
               >
-                + Registrar
+                + Registrar Operación
               </button>
 
               <button
@@ -723,7 +723,7 @@
                           class="text-slate-300 hover:text-rose-500 transition"
                         >
                           <svg
-                            class="w-4 h-4 md:w-5 md:h-5"
+                            class="w-4 h-4"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -2077,6 +2077,7 @@
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
                 />
               </div>
+
               <div
                 v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
                 class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100 relative z-10"
@@ -2086,7 +2087,8 @@
                   id="es_warda_check"
                   v-model="nuevaCuenta.es_warda"
                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                /><label
+                />
+                <label
                   for="es_warda_check"
                   class="text-[11px] font-bold text-emerald-800 cursor-pointer leading-tight"
                   >Configurar como cuenta 'Warda' (Recibe redondeos
