@@ -1,6 +1,5 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos (Corregido - Referencias de Modales)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -26,6 +25,9 @@ export function useFinanceData(
     disponible: 0,
   });
 
+  // VARIABLE MAESTRA DE VIAJE EN EL TIEMPO (Formato YYYY-MM)
+  const fechaGlobal = ref(new Date().toISOString().slice(0, 7));
+
   // ESTADOS DE EDICIÓN
   const editandoTx = ref({ estado: false, id: null });
   const editandoPagoFijo = ref({ estado: false, id: null });
@@ -38,7 +40,7 @@ export function useFinanceData(
   const editandoCat = ref({ estado: false, id: null });
   const editandoEtiq = ref({ estado: false, id: null });
 
-  // ESTADOS DE MODALES (Aquí estaba el error, ya están de vuelta)
+  // ESTADOS DE MODALES
   const showModalCuenta = ref(false);
   const showModalPagoFijo = ref(false);
   const showModalCat = ref(false);
@@ -233,10 +235,6 @@ export function useFinanceData(
 
   const ejecutarOperacion = async () => {
     cargando.value = true;
-
-    // ==========================================
-    // LÓGICA DE TRANSFERENCIA
-    // ==========================================
     if (tipoOperacion.value === "Transferencia") {
       if (
         !txTransf.value.origen_id ||
@@ -258,7 +256,6 @@ export function useFinanceData(
       );
       const montoTransf = parseFloat(txTransf.value.monto);
 
-      // --- ESCUDO DE SEGURIDAD: Validación de Fondos ---
       if (cuentaOrigen) {
         if (
           ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
@@ -338,10 +335,6 @@ export function useFinanceData(
       } catch (error) {
         mostrarToast("Error servidor", "error");
       }
-
-      // ==========================================
-      // LÓGICA DE INGRESO / GASTO
-      // ==========================================
     } else {
       if (
         !tx.value.cuenta_id ||
@@ -371,7 +364,6 @@ export function useFinanceData(
         return;
       }
 
-      // --- ESCUDO DE SEGURIDAD: Validación de Fondos (Gastos Nuevos) ---
       if (tipoOperacion.value === "Egreso" && !editandoTx.value.estado) {
         const cuentaOrigen = cuentas.value.find(
           (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
@@ -414,14 +406,12 @@ export function useFinanceData(
           monto: montoOriginal,
           cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
         };
-
         if (editandoTx.value.estado) {
           await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
           mostrarToast("Operación actualizada", "success");
         } else {
           await api.guardarTransaccion(datosParaBD);
           mostrarToast("Operación registrada", "success");
-
           if (
             tipoOperacion.value === "Egreso" &&
             montoWarda > 0 &&
@@ -457,7 +447,6 @@ export function useFinanceData(
                   (c) => c.nombre === "Transferencia Entrante",
                 );
               }
-
               await Promise.all([
                 api.guardarTransaccion({
                   cuenta_id: cuentaOrigen.id_cuenta,
@@ -517,7 +506,6 @@ export function useFinanceData(
     };
     showModalPagoFijo.value = false;
   };
-
   const guardarPagoFijo = async () => {
     if (
       !nuevoPagoFijo.value.nombre ||
@@ -608,7 +596,6 @@ export function useFinanceData(
     };
     showModalCuenta.value = false;
   };
-
   const guardarCuenta = async () => {
     if (!nuevaCuenta.value.nombre) return;
     cargando.value = true;
@@ -625,7 +612,6 @@ export function useFinanceData(
           editandoCuenta.value.saldo_inicial_orig;
         saldoAEnviar = saldoDeseado - sumaTransacciones;
       }
-
       const payload = {
         usuario_id: currentUserId.value,
         nombre: nuevaCuenta.value.nombre,
@@ -648,7 +634,6 @@ export function useFinanceData(
         es_warda: nuevaCuenta.value.es_warda || false,
         banco: nuevaCuenta.value.banco || "Otro",
       };
-
       if (editandoCuenta.value.estado)
         await api.actualizarCuenta(editandoCuenta.value.id, payload);
       else await api.guardarCuenta(payload);
@@ -744,6 +729,7 @@ export function useFinanceData(
   };
 
   return {
+    fechaGlobal,
     cuentas,
     categorias,
     etiquetas,

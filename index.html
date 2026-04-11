@@ -48,6 +48,25 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
+      .chart-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+      }
+      .toast-enter-active,
+      .toast-leave-active {
+        transition: all 0.3s ease;
+      }
+      .toast-enter-from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+      }
+      .toast-leave-to {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+      }
 
       .card-premium {
         position: relative;
@@ -134,14 +153,6 @@
       .bg-card-neutral {
         background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
         color: white;
-      }
-
-      .chart-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
       }
     </style>
   </head>
@@ -281,13 +292,6 @@
             >
               Contactos
             </button>
-            <button
-              @click="tab = 'ajustes'"
-              :class="tab === 'ajustes' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'"
-              class="w-full text-left px-4 py-3 text-sm font-semibold rounded-xl transition flex items-center gap-3"
-            >
-              Ajustes Maestro
-            </button>
           </nav>
 
           <div class="p-4 border-t border-slate-100 flex flex-col gap-2">
@@ -355,28 +359,34 @@
             </div>
 
             <div class="flex items-center gap-2 md:gap-4 flex-shrink-0">
+              <div
+                class="flex items-center bg-white border border-slate-200 rounded-xl px-3 py-2 md:py-2.5 shadow-sm hover:border-blue-400 transition cursor-pointer"
+              >
+                <svg
+                  class="w-4 h-4 text-slate-500 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  ></path>
+                </svg>
+                <input
+                  type="month"
+                  v-model="fechaGlobal"
+                  class="text-xs md:text-sm font-bold text-slate-700 outline-none bg-transparent cursor-pointer uppercase w-24 md:w-auto"
+                />
+              </div>
+
               <button
                 @click="abrirModalTransaccion()"
                 class="hidden md:flex bg-slate-900 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-slate-900/20 active:scale-95"
               >
                 + Registrar Operación
-              </button>
-
-              <button
-                @click="tab = 'perfil'"
-                class="md:hidden w-9 h-9 rounded-full overflow-hidden border border-slate-200 focus:border-blue-500 transition shadow-sm active:scale-95"
-              >
-                <img
-                  v-if="userAvatar"
-                  :src="userAvatar"
-                  class="w-full h-full object-cover"
-                />
-                <div
-                  v-else
-                  class="w-full h-full bg-slate-900 flex items-center justify-center text-white font-bold text-sm"
-                >
-                  {{ userName.charAt(0).toUpperCase() }}
-                </div>
               </button>
 
               <button
@@ -419,7 +429,7 @@
                   <p
                     class="text-[10px] md:text-xs font-semibold text-slate-300 uppercase tracking-widest mb-1 relative z-10"
                   >
-                    Liquidez Actual
+                    Liquidez Acumulada
                   </p>
                   <div class="relative z-10">
                     <h2
@@ -559,7 +569,7 @@
                       class="text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1"
                       :class="proyeccionProximoMes < 0 ? 'text-rose-200' : 'text-slate-400'"
                     >
-                      Proyección para el próximo mes (PEN)
+                      Proyección (Flujo + Saldo Actual)
                     </p>
                     <h2
                       class="text-xl md:text-2xl font-extrabold truncate text-white"
@@ -609,18 +619,18 @@
                   class="px-4 md:px-6 py-3 border-b border-slate-50 flex justify-between items-center"
                 >
                   <h3 class="font-bold text-slate-800 text-sm md:text-base">
-                    Movimientos Recientes
+                    Movimientos del Mes
                   </h3>
                 </div>
                 <div class="divide-y divide-slate-100">
                   <div
-                    v-if="historial.length === 0"
+                    v-if="historialFiltrado.length === 0"
                     class="p-6 text-center text-slate-500 text-xs md:text-sm"
                   >
-                    No hay operaciones.
+                    No hay operaciones registradas en este mes.
                   </div>
                   <div
-                    v-for="item in historial.slice(0, 10)"
+                    v-for="item in historialFiltrado.slice(0, 10)"
                     :key="item.id"
                     class="px-4 md:px-6 py-3 flex items-center justify-between hover:bg-slate-50 transition group"
                   >
@@ -912,7 +922,7 @@
                     </div>
                     <div>
                       <h3 class="font-extrabold text-lg text-slate-900">
-                        Termómetro de Deuda del Mes (PEN)
+                        Termómetro de Deuda del Mes
                       </h3>
                       <p
                         class="text-xs font-bold uppercase tracking-widest"
@@ -1365,7 +1375,7 @@
                       Distribución de Gastos
                     </h3>
                     <p class="text-sm text-slate-500 mb-4">
-                      ¿En qué se te fue el dinero este mes?
+                      ¿En qué se te fue el dinero el mes seleccionado?
                     </p>
                     <div class="w-full min-h-[300px]" ref="chartCatRef"></div>
                   </div>
@@ -1386,11 +1396,11 @@
                       ></path>
                     </svg>
                     <h4 class="font-bold text-slate-700 mb-2">
-                      Historial Completo
+                      Historial Mensual
                     </h4>
                     <p class="text-xs text-slate-500">
                       Aquí abajo encontrarás el registro detallado de cada sol
-                      que ha entrado o salido de tus cuentas.
+                      en este mes.
                     </p>
                   </div>
                 </div>
@@ -1400,13 +1410,13 @@
                 >
                   <div class="divide-y divide-slate-100">
                     <div
-                      v-if="historial.length === 0"
+                      v-if="historialFiltrado.length === 0"
                       class="p-10 text-center text-slate-500 text-sm"
                     >
-                      No hay operaciones registradas.
+                      No hay operaciones en este mes.
                     </div>
                     <div
-                      v-for="item in historial"
+                      v-for="item in historialFiltrado"
                       :key="item.id"
                       class="p-4 flex items-center justify-between hover:bg-slate-50 transition group"
                     >
@@ -1495,7 +1505,7 @@
                     <h3
                       class="font-bold text-slate-800 text-sm md:text-base mb-1"
                     >
-                      Análisis por Contacto (Mes Actual)
+                      Análisis por Contacto (Mes Seleccionado)
                     </h3>
                     <p class="text-xs text-slate-500 mb-6">
                       Compara lo que gastas con una persona frente a tu total.
@@ -1825,7 +1835,6 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Inicio</span>
           </button>
-
           <button
             @click="tab = 'cuentas'"
             :class="tab === 'cuentas' ? 'text-slate-900' : 'text-slate-400'"
@@ -1845,7 +1854,6 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Activos</span>
           </button>
-
           <button
             @click="tab = 'deudas'"
             :class="tab === 'deudas' ? 'text-slate-900' : 'text-slate-400'"
@@ -1906,7 +1914,6 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Pagos</span>
           </button>
-
           <button
             @click="tab = 'historial'"
             :class="tab === 'historial' ? 'text-slate-900' : 'text-slate-400'"
@@ -1926,7 +1933,6 @@
               ></path></svg
             ><span class="text-[9px] font-bold">Historial</span>
           </button>
-
           <button
             @click="tab = 'contactos'"
             :class="tab === 'contactos' ? 'text-slate-900' : 'text-slate-400'"
@@ -2027,7 +2033,6 @@
                   class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-lg font-extrabold focus:outline-none"
                 />
               </div>
-
               <div
                 v-if="nuevaCuenta.tipo_cuenta === 'Ahorro'"
                 class="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100 relative z-10"
@@ -2037,8 +2042,7 @@
                   id="es_warda_check"
                   v-model="nuevaCuenta.es_warda"
                   class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer border-slate-300"
-                />
-                <label
+                /><label
                   for="es_warda_check"
                   class="text-[11px] font-bold text-emerald-800 cursor-pointer leading-tight"
                   >Configurar como cuenta 'Warda' (Recibe redondeos

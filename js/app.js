@@ -71,7 +71,6 @@ createApp({
       });
     });
 
-    // Observa el cambio de pestañas para renderizar gráficos
     watch(ui.tab, (newTab) => {
       setTimeout(() => {
         if (newTab === "historial") charts.renderizarGraficosHistorial();
@@ -80,13 +79,26 @@ createApp({
       }, 50);
     });
 
-    // MAGIA: Observa cuando cambias de persona en el select para repintar el Donut
     watch(
       () => ui.tagSearch.value,
       () => {
         if (ui.tab.value === "contactos") {
           setTimeout(() => charts.renderizarGraficosContactos(), 50);
         }
+      },
+    );
+
+    // MAGIA: Repintar gráficos cuando viajas en el tiempo
+    watch(
+      () => data.fechaGlobal.value,
+      () => {
+        setTimeout(() => {
+          if (ui.tab.value === "historial")
+            charts.renderizarGraficosHistorial();
+          if (ui.tab.value === "contactos")
+            charts.renderizarGraficosContactos();
+          if (ui.tab.value === "deudas") charts.renderizarGraficoDeuda();
+        }, 50);
       },
     );
 

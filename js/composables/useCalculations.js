@@ -11,6 +11,7 @@ export function useCalculations(data, ui) {
     etiquetas,
     categorias,
     bolsaCashback,
+    fechaGlobal,
   } = data;
   const { tagSearch, tipoOperacion } = ui;
 
@@ -39,6 +40,51 @@ export function useCalculations(data, ui) {
 
   const getClasePuntoEstado = (cuenta) => "bg-emerald-400";
 
+  // --- LÓGICA DE VIAJE EN EL TIEMPO ---
+  const anioGlobal = computed(() => parseInt(fechaGlobal.value.split("-")[0]));
+  const mesGlobal = computed(
+    () => parseInt(fechaGlobal.value.split("-")[1]) - 1,
+  );
+
+  // Filtramos el historial SOLO para el mes seleccionado
+  const historialFiltrado = computed(() => {
+    return historial.value.filter((tx) => {
+      const f = new Date(tx.fecha + "T00:00:00");
+      return (
+        f.getFullYear() === anioGlobal.value && f.getMonth() === mesGlobal.value
+      );
+    });
+  });
+
+  // Calculamos los saldos de las cuentas COMO ESTABAN en el mes seleccionado
+  const cuentasConSaldoHistorico = computed(() => {
+    const hoy = new Date();
+    const esMesActual =
+      anioGlobal.value === hoy.getFullYear() &&
+      mesGlobal.value === hoy.getMonth();
+
+    return cuentas.value.map((c) => {
+      if (esMesActual) return { ...c };
+
+      let saldoRevertido = c.saldo_actual;
+      historial.value.forEach((tx) => {
+        const f = new Date(tx.fecha + "T00:00:00");
+        // Si la Tx ocurrió DESPUÉS del mes seleccionado, deshacemos su efecto matemático
+        if (
+          f.getFullYear() > anioGlobal.value ||
+          (f.getFullYear() === anioGlobal.value &&
+            f.getMonth() > mesGlobal.value)
+        ) {
+          if (tx.cuenta_id === c.id_cuenta) {
+            if (tx.tipo_flujo === "Ingreso") saldoRevertido -= tx.monto || 0;
+            if (tx.tipo_flujo === "Egreso") saldoRevertido += tx.monto || 0;
+          }
+        }
+      });
+      return { ...c, saldo_actual: saldoRevertido };
+    });
+  });
+
   const categoriasFiltradas = computed(() =>
     categorias.value.filter(
       (c) =>
@@ -48,15 +94,15 @@ export function useCalculations(data, ui) {
   );
 
   const cuentasActivas = computed(() =>
-    cuentas.value.filter((c) =>
+    cuentasConSaldoHistorico.value.filter((c) =>
       ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
     ),
   );
   const cuentasPorCobrar = computed(() =>
-    cuentas.value.filter((c) => c.tipo_cuenta === "Cobrar"),
+    cuentasConSaldoHistorico.value.filter((c) => c.tipo_cuenta === "Cobrar"),
   );
   const deudasActivas = computed(() =>
-    cuentas.value.filter((c) =>
+    cuentasConSaldoHistorico.value.filter((c) =>
       ["Credito", "Prestamo", "Pagar"].includes(c.tipo_cuenta),
     ),
   );
@@ -224,29 +270,14 @@ export function useCalculations(data, ui) {
     return result;
   });
 
-  // ==========================================
-  // DATOS PARA GRÁFICOS (CORREGIDOS)
-  // ==========================================
-
-  // 1. Gráfico de Categorías (Ignora Transferencias)
   const datosGraficoCat = computed(() => {
-    const hoy = new Date();
-    const mesActual = hoy.getMonth();
-    const añoActual = hoy.getFullYear();
     const gastosPorCat = {};
-    historial.value.forEach((tx) => {
-      const fechaTx = new Date(tx.fecha + "T00:00:00");
+    // Ahora leemos SOLO del mes seleccionado (historialFiltrado)
+    historialFiltrado.value.forEach((tx) => {
       const esTransferencia = String(tx.categoria_nombre || "")
         .toLowerCase()
         .includes("transferencia");
-
-      // Filtramos para asegurar que sea Egreso, del mes actual, y NO sea transferencia
-      if (
-        tx.tipo_flujo === "Egreso" &&
-        !esTransferencia &&
-        fechaTx.getMonth() === mesActual &&
-        fechaTx.getFullYear() === añoActual
-      ) {
+      if (tx.tipo_flujo === "Egreso" && !esTransferencia) {
         const catNombre = tx.categoria_nombre || "Otros";
         if (!gastosPorCat[catNombre]) gastosPorCat[catNombre] = 0;
         gastosPorCat[catNombre] += tx.monto || 0;
@@ -258,40 +289,26 @@ export function useCalculations(data, ui) {
     };
   });
 
-  // 2. Gráfico Contacto vs Total (Ignora Transferencias)
   const datosGraficoContacto = computed(() => {
-    const hoy = new Date();
-    const mesActual = hoy.getMonth();
-    const añoActual = hoy.getFullYear();
     let totalEgresos = 0;
     let egresosContacto = 0;
-
     const idContacto = tagSearch.value ? parseInt(tagSearch.value) : null;
     const etiquetaObj = etiquetas.value.find((e) => e.id === idContacto);
     const nombreContacto = etiquetaObj ? etiquetaObj.nombre : "Seleccione";
 
-    historial.value.forEach((tx) => {
-      const fechaTx = new Date(tx.fecha + "T00:00:00");
+    // Leemos del mes seleccionado
+    historialFiltrado.value.forEach((tx) => {
       const esTransferencia = String(tx.categoria_nombre || "")
         .toLowerCase()
         .includes("transferencia");
-
-      // Solo sumamos gastos reales
-      if (
-        tx.tipo_flujo === "Egreso" &&
-        !esTransferencia &&
-        fechaTx.getMonth() === mesActual &&
-        fechaTx.getFullYear() === añoActual
-      ) {
+      if (tx.tipo_flujo === "Egreso" && !esTransferencia) {
         totalEgresos += tx.monto || 0;
-        if (idContacto && tx.etiqueta_id === idContacto) {
+        if (idContacto && tx.etiqueta_id === idContacto)
           egresosContacto += tx.monto || 0;
-        }
       }
     });
 
     const otrosGastos = Math.max(0, totalEgresos - egresosContacto);
-
     return {
       hasData: totalEgresos > 0,
       labels: idContacto ? [`Con @${nombreContacto}`, "Otros Gastos"] : [],
@@ -304,6 +321,7 @@ export function useCalculations(data, ui) {
   return {
     formatoMoneda,
     categoriasFiltradas,
+    historialFiltrado,
     cuentasActivas,
     cuentasPorCobrar,
     deudasActivas,
