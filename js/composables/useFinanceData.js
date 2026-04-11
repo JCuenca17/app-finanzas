@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos (Con Validación Estricta de Fondos)
+// ARCHIVO: Composable de Gestión de Datos (Corregido - Referencias de Modales)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -26,6 +26,7 @@ export function useFinanceData(
     disponible: 0,
   });
 
+  // ESTADOS DE EDICIÓN
   const editandoTx = ref({ estado: false, id: null });
   const editandoPagoFijo = ref({ estado: false, id: null });
   const editandoCuenta = ref({
@@ -37,8 +38,14 @@ export function useFinanceData(
   const editandoCat = ref({ estado: false, id: null });
   const editandoEtiq = ref({ estado: false, id: null });
 
+  // ESTADOS DE MODALES (Aquí estaba el error, ya están de vuelta)
+  const showModalCuenta = ref(false);
+  const showModalPagoFijo = ref(false);
+  const showModalCat = ref(false);
+  const showModalEtiq = ref(false);
   const isRescateCashback = ref(false);
 
+  // FORMULARIOS
   const tx = ref({
     monto: "",
     cashback: "",
