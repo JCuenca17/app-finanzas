@@ -47,38 +47,6 @@ export function useCalculations(data, ui) {
     ),
   );
 
-  const analisisTag = computed(() => {
-    if (!tagSearch.value)
-      return {
-        ingresos: 0,
-        egresos: 0,
-        balance: 0,
-        nombre: "",
-        operaciones: [],
-      };
-    const etiquetaIdSeleccionada = parseInt(tagSearch.value);
-    const etiquetaObj = etiquetas.value.find(
-      (e) => e.id === etiquetaIdSeleccionada,
-    );
-    const operaciones = historial.value.filter(
-      (h) => h.etiqueta_id === etiquetaIdSeleccionada,
-    );
-
-    let ingresos = 0;
-    let egresos = 0;
-    operaciones.forEach((op) => {
-      if (op.tipo_flujo === "Ingreso") ingresos += op.monto || 0;
-      if (op.tipo_flujo === "Egreso") egresos += op.monto || 0;
-    });
-    return {
-      ingresos,
-      egresos,
-      balance: ingresos - egresos,
-      nombre: etiquetaObj ? etiquetaObj.nombre : "",
-      operaciones,
-    };
-  });
-
   const cuentasActivas = computed(() =>
     cuentas.value.filter((c) =>
       ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
@@ -256,10 +224,74 @@ export function useCalculations(data, ui) {
     return result;
   });
 
+  // ==========================================
+  // DATOS PARA GRÁFICOS (ACTUALIZADO)
+  // ==========================================
+
+  // 1. Gráfico de Categorías (Va en Historial)
+  const datosGraficoCat = computed(() => {
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    const gastosPorCat = {};
+    historial.value.forEach((tx) => {
+      const fechaTx = new Date(tx.fecha + "T00:00:00");
+      if (
+        tx.tipo_flujo === "Egreso" &&
+        fechaTx.getMonth() === mesActual &&
+        fechaTx.getFullYear() === añoActual
+      ) {
+        const catNombre = tx.categoria_nombre || "Otros";
+        if (!gastosPorCat[catNombre]) gastosPorCat[catNombre] = 0;
+        gastosPorCat[catNombre] += tx.monto || 0;
+      }
+    });
+    return {
+      labels: Object.keys(gastosPorCat),
+      series: Object.values(gastosPorCat).map((v) => Number(v.toFixed(2))),
+    };
+  });
+
+  // 2. Gráfico Contacto vs Total (Va en Nueva Pestaña "Contactos")
+  const datosGraficoContacto = computed(() => {
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const añoActual = hoy.getFullYear();
+    let totalEgresos = 0;
+    let egresosContacto = 0;
+
+    const idContacto = tagSearch.value ? parseInt(tagSearch.value) : null;
+    const etiquetaObj = etiquetas.value.find((e) => e.id === idContacto);
+    const nombreContacto = etiquetaObj ? etiquetaObj.nombre : "Seleccione";
+
+    historial.value.forEach((tx) => {
+      const fechaTx = new Date(tx.fecha + "T00:00:00");
+      if (
+        tx.tipo_flujo === "Egreso" &&
+        fechaTx.getMonth() === mesActual &&
+        fechaTx.getFullYear() === añoActual
+      ) {
+        totalEgresos += tx.monto || 0;
+        if (idContacto && tx.etiqueta_id === idContacto) {
+          egresosContacto += tx.monto || 0;
+        }
+      }
+    });
+
+    const otrosGastos = Math.max(0, totalEgresos - egresosContacto);
+
+    return {
+      hasData: totalEgresos > 0,
+      labels: idContacto ? [`Con @${nombreContacto}`, "Otros Gastos"] : [],
+      series: idContacto
+        ? [Number(egresosContacto.toFixed(2)), Number(otrosGastos.toFixed(2))]
+        : [],
+    };
+  });
+
   return {
     formatoMoneda,
     categoriasFiltradas,
-    analisisTag,
     cuentasActivas,
     cuentasPorCobrar,
     deudasActivas,
@@ -276,5 +308,7 @@ export function useCalculations(data, ui) {
     getClaseColorBanco,
     getClaseColorPasivo,
     getClasePuntoEstado,
+    datosGraficoCat,
+    datosGraficoContacto,
   };
 }

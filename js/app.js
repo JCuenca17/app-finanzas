@@ -16,7 +16,8 @@ createApp({
 
     const onDatosActualizados = () => {
       setTimeout(() => {
-        if (ui.tab.value === "analitica") charts.renderizarGraficosAnalitica();
+        if (ui.tab.value === "historial") charts.renderizarGraficosHistorial();
+        if (ui.tab.value === "contactos") charts.renderizarGraficosContactos();
         if (ui.tab.value === "deudas") charts.renderizarGraficoDeuda();
       }, 50);
     };
@@ -70,12 +71,24 @@ createApp({
       });
     });
 
+    // Observa el cambio de pestañas para renderizar gráficos
     watch(ui.tab, (newTab) => {
       setTimeout(() => {
-        if (newTab === "analitica") charts.renderizarGraficosAnalitica();
+        if (newTab === "historial") charts.renderizarGraficosHistorial();
+        if (newTab === "contactos") charts.renderizarGraficosContactos();
         if (newTab === "deudas") charts.renderizarGraficoDeuda();
       }, 50);
     });
+
+    // MAGIA: Observa cuando cambias de persona en el select para repintar el Donut
+    watch(
+      () => ui.tagSearch.value,
+      () => {
+        if (ui.tab.value === "contactos") {
+          setTimeout(() => charts.renderizarGraficosContactos(), 50);
+        }
+      },
+    );
 
     return {
       ...auth,
