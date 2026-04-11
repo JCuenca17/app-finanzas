@@ -1,6 +1,6 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
-// ARCHIVO: Composable de Gestión de Datos (Con Sistema de Modales Independientes)
+// ARCHIVO: Composable de Gestión de Datos (Con Validación Estricta de Fondos)
 
 import { api } from "../api.js";
 const { ref } = window.Vue;
@@ -26,7 +26,6 @@ export function useFinanceData(
     disponible: 0,
   });
 
-  // ESTADOS DE EDICIÓN
   const editandoTx = ref({ estado: false, id: null });
   const editandoPagoFijo = ref({ estado: false, id: null });
   const editandoCuenta = ref({
@@ -38,14 +37,8 @@ export function useFinanceData(
   const editandoCat = ref({ estado: false, id: null });
   const editandoEtiq = ref({ estado: false, id: null });
 
-  // ESTADOS DE MODALES
-  const showModalCuenta = ref(false);
-  const showModalPagoFijo = ref(false);
-  const showModalCat = ref(false);
-  const showModalEtiq = ref(false);
   const isRescateCashback = ref(false);
 
-  // FORMULARIOS
   const tx = ref({
     monto: "",
     cashback: "",
@@ -233,6 +226,10 @@ export function useFinanceData(
 
   const ejecutarOperacion = async () => {
     cargando.value = true;
+
+    // ==========================================
+    // LÓGICA DE TRANSFERENCIA
+    // ==========================================
     if (tipoOperacion.value === "Transferencia") {
       if (
         !txTransf.value.origen_id ||
@@ -247,6 +244,38 @@ export function useFinanceData(
         mostrarToast("Cuentas iguales", "warning");
         cargando.value = false;
         return;
+      }
+
+      const cuentaOrigen = cuentas.value.find(
+        (c) => c.id_cuenta === parseInt(txTransf.value.origen_id),
+      );
+      const montoTransf = parseFloat(txTransf.value.monto);
+
+      // --- ESCUDO DE SEGURIDAD: Validación de Fondos ---
+      if (cuentaOrigen) {
+        if (
+          ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
+        ) {
+          if (montoTransf > cuentaOrigen.saldo_actual) {
+            mostrarToast(
+              `Fondos insuficientes. Solo tienes S/ ${cuentaOrigen.saldo_actual.toFixed(2)}`,
+              "warning",
+            );
+            cargando.value = false;
+            return;
+          }
+        } else if (cuentaOrigen.tipo_cuenta === "Credito") {
+          const disponible =
+            (cuentaOrigen.limite || 0) - Math.abs(cuentaOrigen.saldo_actual);
+          if (montoTransf > disponible) {
+            mostrarToast(
+              `Línea insuficiente. Disponible: S/ ${disponible.toFixed(2)}`,
+              "warning",
+            );
+            cargando.value = false;
+            return;
+          }
+        }
       }
 
       let catSalida = categorias.value.find(
@@ -283,7 +312,7 @@ export function useFinanceData(
             cuenta_id: parseInt(txTransf.value.origen_id),
             categoria_id: catSalida.id,
             etiqueta_id: null,
-            monto: parseFloat(txTransf.value.monto),
+            monto: montoTransf,
             cashback: 0,
             fecha: txTransf.value.fecha,
             descripcion: concepto,
@@ -292,7 +321,7 @@ export function useFinanceData(
             cuenta_id: parseInt(txTransf.value.destino_id),
             categoria_id: catEntrada.id,
             etiqueta_id: null,
-            monto: parseFloat(txTransf.value.monto),
+            monto: montoTransf,
             cashback: 0,
             fecha: txTransf.value.fecha,
             descripcion: concepto,
@@ -302,6 +331,10 @@ export function useFinanceData(
       } catch (error) {
         mostrarToast("Error servidor", "error");
       }
+
+      // ==========================================
+      // LÓGICA DE INGRESO / GASTO
+      // ==========================================
     } else {
       if (
         !tx.value.cuenta_id ||
@@ -315,6 +348,9 @@ export function useFinanceData(
       }
 
       const montoOriginal = parseFloat(tx.value.monto);
+      const montoWarda = parseFloat(tx.value.monto_warda) || 0;
+      const montoTotalGasto = montoOriginal + montoWarda;
+
       if (
         isRescateCashback.value &&
         !editandoTx.value.estado &&
@@ -326,6 +362,38 @@ export function useFinanceData(
         );
         cargando.value = false;
         return;
+      }
+
+      // --- ESCUDO DE SEGURIDAD: Validación de Fondos (Gastos Nuevos) ---
+      if (tipoOperacion.value === "Egreso" && !editandoTx.value.estado) {
+        const cuentaOrigen = cuentas.value.find(
+          (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
+        );
+        if (cuentaOrigen) {
+          if (
+            ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
+          ) {
+            if (montoTotalGasto > cuentaOrigen.saldo_actual) {
+              mostrarToast(
+                `Fondos insuficientes. Solo tienes S/ ${cuentaOrigen.saldo_actual.toFixed(2)}`,
+                "warning",
+              );
+              cargando.value = false;
+              return;
+            }
+          } else if (cuentaOrigen.tipo_cuenta === "Credito") {
+            const disponible =
+              (cuentaOrigen.limite || 0) - Math.abs(cuentaOrigen.saldo_actual);
+            if (montoTotalGasto > disponible) {
+              mostrarToast(
+                `Línea insuficiente. Disponible: S/ ${disponible.toFixed(2)}`,
+                "warning",
+              );
+              cargando.value = false;
+              return;
+            }
+          }
+        }
       }
 
       try {
@@ -347,7 +415,6 @@ export function useFinanceData(
           await api.guardarTransaccion(datosParaBD);
           mostrarToast("Operación registrada", "success");
 
-          const montoWarda = parseFloat(tx.value.monto_warda);
           if (
             tipoOperacion.value === "Egreso" &&
             montoWarda > 0 &&
@@ -416,7 +483,11 @@ export function useFinanceData(
     cargando.value = false;
   };
 
-  // LÓGICA MODALES DE PAGOS FIJOS
+  const abrirModalPagoFijo = (pagoAEditar) => {
+    editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
+    nuevoPagoFijo.value = { ...pagoAEditar };
+    showModalPagoFijo.value = true;
+  };
   const abrirModalNuevoPagoFijo = () => {
     editandoPagoFijo.value = { estado: false, id: null };
     nuevoPagoFijo.value = {
@@ -428,11 +499,18 @@ export function useFinanceData(
     };
     showModalPagoFijo.value = true;
   };
-  const abrirModalPagoFijo = (pagoAEditar) => {
-    editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
-    nuevoPagoFijo.value = { ...pagoAEditar };
-    showModalPagoFijo.value = true;
+  const cancelarEdicionPago = () => {
+    editandoPagoFijo.value = { estado: false, id: null };
+    nuevoPagoFijo.value = {
+      nombre: "",
+      monto: "",
+      tipo_flujo: "Egreso",
+      dia_cobro: "",
+      moneda: "PEN",
+    };
+    showModalPagoFijo.value = false;
   };
+
   const guardarPagoFijo = async () => {
     if (
       !nuevoPagoFijo.value.nombre ||
@@ -455,33 +533,11 @@ export function useFinanceData(
       else await api.guardarPagoFijo(payload);
       showModalPagoFijo.value = false;
       await cargarDatos();
-      mostrarToast("Proyección guardada", "success");
+      mostrarToast("Guardado", "success");
     } catch (error) {}
     cargando.value = false;
   };
 
-  // LÓGICA MODALES DE CUENTAS
-  const abrirModalNuevaCuenta = () => {
-    editandoCuenta.value = {
-      estado: false,
-      id: null,
-      saldo_inicial_orig: 0,
-      saldo_actual_orig: 0,
-    };
-    nuevaCuenta.value = {
-      nombre: "",
-      tipo_cuenta: "Debito",
-      moneda: "PEN",
-      saldo_inicial: "",
-      limite: "",
-      dia_corte: "",
-      dia_pago: "",
-      pago_del_mes: "",
-      banco: "Otro",
-      es_warda: false,
-    };
-    showModalCuenta.value = true;
-  };
   const abrirModalCuenta = (c) => {
     editandoCuenta.value = {
       estado: true,
@@ -503,6 +559,49 @@ export function useFinanceData(
     };
     showModalCuenta.value = true;
   };
+  const abrirModalNuevaCuenta = () => {
+    editandoCuenta.value = {
+      estado: false,
+      id: null,
+      saldo_inicial_orig: 0,
+      saldo_actual_orig: 0,
+    };
+    nuevaCuenta.value = {
+      nombre: "",
+      tipo_cuenta: "Debito",
+      moneda: "PEN",
+      saldo_inicial: "",
+      limite: "",
+      dia_corte: "",
+      dia_pago: "",
+      pago_del_mes: "",
+      banco: "Otro",
+      es_warda: false,
+    };
+    showModalCuenta.value = true;
+  };
+  const cancelarEdicionCuenta = () => {
+    editandoCuenta.value = {
+      estado: false,
+      id: null,
+      saldo_inicial_orig: 0,
+      saldo_actual_orig: 0,
+    };
+    nuevaCuenta.value = {
+      nombre: "",
+      tipo_cuenta: "Debito",
+      moneda: "PEN",
+      saldo_inicial: "",
+      limite: "",
+      dia_corte: "",
+      dia_pago: "",
+      pago_del_mes: "",
+      banco: "Otro",
+      es_warda: false,
+    };
+    showModalCuenta.value = false;
+  };
+
   const guardarCuenta = async () => {
     if (!nuevaCuenta.value.nombre) return;
     cargando.value = true;
@@ -548,14 +647,13 @@ export function useFinanceData(
       else await api.guardarCuenta(payload);
       showModalCuenta.value = false;
       await cargarDatos();
-      mostrarToast("Cuenta guardada", "success");
+      mostrarToast("Guardado", "success");
     } catch (error) {
-      mostrarToast("Error al guardar", "error");
+      mostrarToast("Error al guardar cuenta", "error");
     }
     cargando.value = false;
   };
 
-  // LÓGICA MODALES CATEGORÍAS
   const abrirModalNuevaCategoria = () => {
     editandoCat.value = { estado: false, id: null };
     nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
@@ -568,6 +666,11 @@ export function useFinanceData(
       tipo_flujo: catAEditar.tipo_flujo,
     };
     showModalCat.value = true;
+  };
+  const cancelarEdicionCategoria = () => {
+    editandoCat.value = { estado: false, id: null };
+    nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
+    showModalCat.value = false;
   };
   const guardarCategoria = async () => {
     if (!nuevaCat.value.nombre) return;
@@ -583,7 +686,6 @@ export function useFinanceData(
     cargando.value = false;
   };
 
-  // LÓGICA MODALES ETIQUETAS
   const abrirModalNuevaEtiqueta = () => {
     editandoEtiq.value = { estado: false, id: null };
     nuevaEtiq.value = { nombre: "" };
@@ -593,6 +695,11 @@ export function useFinanceData(
     editandoEtiq.value = { estado: true, id: etiqAEditar.id };
     nuevaEtiq.value = { nombre: etiqAEditar.nombre };
     showModalEtiq.value = true;
+  };
+  const cancelarEdicionEtiqueta = () => {
+    editandoEtiq.value = { estado: false, id: null };
+    nuevaEtiq.value = { nombre: "" };
+    showModalEtiq.value = false;
   };
   const guardarEtiqueta = async () => {
     if (!nuevaEtiq.value.nombre) return;
@@ -661,15 +768,19 @@ export function useFinanceData(
     abrirModalTransaccion,
     abrirModalNuevaCuenta,
     abrirModalCuenta,
+    cancelarEdicionCuenta,
     guardarCuenta,
     abrirModalNuevoPagoFijo,
     abrirModalPagoFijo,
+    cancelarEdicionPago,
     guardarPagoFijo,
     abrirModalNuevaCategoria,
     abrirModalCategoria,
+    cancelarEdicionCategoria,
     guardarCategoria,
     abrirModalNuevaEtiqueta,
     abrirModalEtiqueta,
+    cancelarEdicionEtiqueta,
     guardarEtiqueta,
   };
 }
