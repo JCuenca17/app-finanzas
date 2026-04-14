@@ -2,7 +2,7 @@
 // ÁREA: Ingeniería de Sistemas / Operaciones
 
 import { api } from "../api.js";
-const { ref } = window.Vue;
+import { ref } from "vue";
 
 export function useFinanceData(
   currentUserId,
@@ -25,10 +25,8 @@ export function useFinanceData(
     disponible: 0,
   });
 
-  // VARIABLE MAESTRA DE VIAJE EN EL TIEMPO (Formato YYYY-MM)
   const fechaGlobal = ref(new Date().toISOString().slice(0, 7));
 
-  // ESTADOS DE EDICIÓN
   const editandoTx = ref({ estado: false, id: null });
   const editandoPagoFijo = ref({ estado: false, id: null });
   const editandoCuenta = ref({
@@ -40,25 +38,27 @@ export function useFinanceData(
   const editandoCat = ref({ estado: false, id: null });
   const editandoEtiq = ref({ estado: false, id: null });
 
-  // ESTADOS DE MODALES
   const showModalCuenta = ref(false);
   const showModalPagoFijo = ref(false);
   const showModalCat = ref(false);
   const showModalEtiq = ref(false);
   const isRescateCashback = ref(false);
 
-  // FORMULARIOS
   const tx = ref({
-    monto: "",
-    cashback: "",
-    descripcion: "",
-    fecha: new Date().toISOString().split("T")[0],
     cuenta_id: "",
     categoria_id: "",
     etiqueta_id: "",
-    monto_warda: "",
+    monto: null,
+    fecha: new Date().toISOString().split("T")[0],
+    descripcion: "",
+    cashback: null,
+    monto_warda: null,
     warda_cuenta_id: "",
+    cuotas: 1,
+    tiene_interes: false,
+    cuota_banco: null,
   });
+
   const txTransf = ref({
     origen_id: "",
     destino_id: "",
@@ -66,7 +66,15 @@ export function useFinanceData(
     fecha: new Date().toISOString().split("T")[0],
     descripcion: "",
   });
-  const nuevaCat = ref({ nombre: "", tipo_flujo: "Egreso" });
+
+  // AQUÍ ESTÁ LA CLAVE PARA QUE LAS CATEGORÍAS NAZCAN BIEN
+  const nuevaCat = ref({
+    nombre: "",
+    tipo_flujo: "Egreso",
+    nivel_necesidad: "Necesario",
+    icono: "🏷️",
+  });
+
   const nuevaEtiq = ref({ nombre: "" });
   const nuevaCuenta = ref({
     nombre: "",
@@ -119,7 +127,7 @@ export function useFinanceData(
       }));
       if (onDatosActualizados) onDatosActualizados();
     } catch (error) {
-      mostrarToast("Error de conexión con el servidor", "error");
+      mostrarToast("Error de conexión", "error");
     }
   };
 
@@ -139,7 +147,7 @@ export function useFinanceData(
           await cargarDatos();
           mostrarToast("Cashback actualizado", "success");
         } catch (e) {
-          mostrarToast("Error al guardar", "error");
+          mostrarToast("Error", "error");
         }
         cargando.value = false;
       }
@@ -165,6 +173,8 @@ export function useFinanceData(
       await api.guardarCategoria({
         nombre: "Rescate Cashback",
         tipo_flujo: "Ingreso",
+        nivel_necesidad: null,
+        icono: "💎",
       });
       await cargarDatos();
       catRescate = categorias.value.find(
@@ -186,6 +196,9 @@ export function useFinanceData(
       etiqueta_id: "",
       monto_warda: "",
       warda_cuenta_id: "",
+      cuotas: 1,
+      tiene_interes: false,
+      cuota_banco: null,
     };
     showModal.value = true;
   };
@@ -206,6 +219,9 @@ export function useFinanceData(
         etiqueta_id: itemAEditar.etiqueta_id || "",
         monto_warda: "",
         warda_cuenta_id: "",
+        cuotas: itemAEditar.cuotas || 1,
+        tiene_interes: false,
+        cuota_banco: null,
       };
     } else {
       editandoTx.value = { estado: false, id: null };
@@ -221,6 +237,9 @@ export function useFinanceData(
         etiqueta_id: "",
         monto_warda: "",
         warda_cuenta_id: "",
+        cuotas: 1,
+        tiene_interes: false,
+        cuota_banco: null,
       };
       txTransf.value = {
         origen_id: "",
@@ -235,18 +254,25 @@ export function useFinanceData(
 
   const ejecutarOperacion = async () => {
     cargando.value = true;
+
     if (tipoOperacion.value === "Transferencia") {
-      if (
-        !txTransf.value.origen_id ||
-        !txTransf.value.destino_id ||
-        !txTransf.value.monto
-      ) {
-        mostrarToast("Faltan datos", "warning");
+      if (!txTransf.value.origen_id) {
+        mostrarToast("Falta seleccionar la cuenta de origen", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (!txTransf.value.destino_id) {
+        mostrarToast("Falta seleccionar la cuenta de destino", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (!txTransf.value.monto || parseFloat(txTransf.value.monto) <= 0) {
+        mostrarToast("Ingresa un monto a transferir válido", "warning");
         cargando.value = false;
         return;
       }
       if (txTransf.value.origen_id === txTransf.value.destino_id) {
-        mostrarToast("Cuentas iguales", "warning");
+        mostrarToast("No puedes transferir a la misma cuenta", "warning");
         cargando.value = false;
         return;
       }
@@ -262,18 +288,7 @@ export function useFinanceData(
         ) {
           if (montoTransf > cuentaOrigen.saldo_actual) {
             mostrarToast(
-              `Fondos insuficientes. Solo tienes S/ ${cuentaOrigen.saldo_actual.toFixed(2)}`,
-              "warning",
-            );
-            cargando.value = false;
-            return;
-          }
-        } else if (cuentaOrigen.tipo_cuenta === "Credito") {
-          const disponible =
-            (cuentaOrigen.limite || 0) - Math.abs(cuentaOrigen.saldo_actual);
-          if (montoTransf > disponible) {
-            mostrarToast(
-              `Línea insuficiente. Disponible: S/ ${disponible.toFixed(2)}`,
+              `Fondos insuficientes (Tienes S/ ${cuentaOrigen.saldo_actual})`,
               "warning",
             );
             cargando.value = false;
@@ -292,6 +307,8 @@ export function useFinanceData(
         await api.guardarCategoria({
           nombre: "Transferencia Saliente",
           tipo_flujo: "Egreso",
+          nivel_necesidad: null,
+          icono: "🔄",
         });
         await cargarDatos();
         catSalida = categorias.value.find(
@@ -302,6 +319,8 @@ export function useFinanceData(
         await api.guardarCategoria({
           nombre: "Transferencia Entrante",
           tipo_flujo: "Ingreso",
+          nivel_necesidad: null,
+          icono: "🔄",
         });
         await cargarDatos();
         catEntrada = categorias.value.find(
@@ -320,6 +339,9 @@ export function useFinanceData(
             cashback: 0,
             fecha: txTransf.value.fecha,
             descripcion: concepto,
+            compra_id: null,
+            numero_cuota: 1,
+            total_cuotas: 1,
           }),
           api.guardarTransaccion({
             cuenta_id: parseInt(txTransf.value.destino_id),
@@ -329,6 +351,9 @@ export function useFinanceData(
             cashback: 0,
             fecha: txTransf.value.fecha,
             descripcion: concepto,
+            compra_id: null,
+            numero_cuota: 1,
+            total_cuotas: 1,
           }),
         ]);
         mostrarToast("Transferencia registrada", "success");
@@ -336,58 +361,66 @@ export function useFinanceData(
         mostrarToast("Error servidor", "error");
       }
     } else {
-      if (
-        !tx.value.cuenta_id ||
-        !tx.value.categoria_id ||
-        !tx.value.monto ||
-        !tx.value.descripcion
-      ) {
-        mostrarToast("Llenar campos obligatorios", "warning");
+      if (!tx.value.cuenta_id) {
+        mostrarToast("Por favor selecciona una cuenta", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (!tx.value.categoria_id) {
+        mostrarToast("Por favor elige una categoría", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (!tx.value.monto || parseFloat(tx.value.monto) <= 0) {
+        mostrarToast("Ingresa un monto válido mayor a 0", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (!tx.value.descripcion || tx.value.descripcion.trim() === "") {
+        mostrarToast("Escribe un concepto o descripción", "warning");
         cargando.value = false;
         return;
       }
 
       const montoOriginal = parseFloat(tx.value.monto);
-      const montoWarda = parseFloat(tx.value.monto_warda) || 0;
-      const montoTotalGasto = montoOriginal + montoWarda;
+      const numCuotas = parseInt(tx.value.cuotas) || 1;
+      const cuentaOrigen = cuentas.value.find(
+        (c) => c.id_cuenta == tx.value.cuenta_id,
+      );
+
+      let montoPorCuota = montoOriginal / numCuotas;
+      let deudaTotalAdquirida = montoOriginal;
 
       if (
-        isRescateCashback.value &&
-        !editandoTx.value.estado &&
-        montoOriginal > bolsaCashback.value.disponible
+        cuentaOrigen?.tipo_cuenta === "Credito" &&
+        tx.value.tiene_interes &&
+        numCuotas > 1
       ) {
-        mostrarToast(
-          `Solo S/ ${bolsaCashback.value.disponible.toFixed(2)} disponibles`,
-          "warning",
-        );
-        cargando.value = false;
-        return;
+        const cuotaBanco = parseFloat(tx.value.cuota_banco);
+        if (!cuotaBanco || cuotaBanco <= 0) {
+          mostrarToast("Debes ingresar la cuota con intereses.", "warning");
+          cargando.value = false;
+          return;
+        }
+        montoPorCuota = cuotaBanco;
+        deudaTotalAdquirida = cuotaBanco * numCuotas;
       }
 
       if (tipoOperacion.value === "Egreso" && !editandoTx.value.estado) {
-        const cuentaOrigen = cuentas.value.find(
-          (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
-        );
         if (cuentaOrigen) {
           if (
             ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
           ) {
-            if (montoTotalGasto > cuentaOrigen.saldo_actual) {
-              mostrarToast(
-                `Fondos insuficientes. Solo tienes S/ ${cuentaOrigen.saldo_actual.toFixed(2)}`,
-                "warning",
-              );
+            if (montoOriginal > cuentaOrigen.saldo_actual) {
+              mostrarToast(`Fondos insuficientes.`, "warning");
               cargando.value = false;
               return;
             }
           } else if (cuentaOrigen.tipo_cuenta === "Credito") {
             const disponible =
               (cuentaOrigen.limite || 0) - Math.abs(cuentaOrigen.saldo_actual);
-            if (montoTotalGasto > disponible) {
-              mostrarToast(
-                `Línea insuficiente. Disponible: S/ ${disponible.toFixed(2)}`,
-                "warning",
-              );
+            if (deudaTotalAdquirida > disponible) {
+              mostrarToast(`Línea insuficiente.`, "warning");
               cargando.value = false;
               return;
             }
@@ -396,79 +429,70 @@ export function useFinanceData(
       }
 
       try {
-        const datosParaBD = {
-          ...tx.value,
-          cuenta_id: parseInt(tx.value.cuenta_id),
-          categoria_id: parseInt(tx.value.categoria_id),
-          etiqueta_id: tx.value.etiqueta_id
-            ? parseInt(tx.value.etiqueta_id)
-            : null,
-          monto: montoOriginal,
-          cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
-        };
         if (editandoTx.value.estado) {
+          const datosParaBD = {
+            ...tx.value,
+            cuenta_id: parseInt(tx.value.cuenta_id),
+            categoria_id: parseInt(tx.value.categoria_id),
+            etiqueta_id: tx.value.etiqueta_id
+              ? parseInt(tx.value.etiqueta_id)
+              : null,
+            monto: montoOriginal,
+            cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
+          };
           await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
           mostrarToast("Operación actualizada", "success");
         } else {
-          await api.guardarTransaccion(datosParaBD);
-          mostrarToast("Operación registrada", "success");
           if (
-            tipoOperacion.value === "Egreso" &&
-            montoWarda > 0 &&
-            tx.value.warda_cuenta_id
+            cuentaOrigen?.tipo_cuenta === "Credito" &&
+            numCuotas > 1 &&
+            tipoOperacion.value === "Egreso"
           ) {
-            const cuentaOrigen = cuentas.value.find(
-              (c) => c.id_cuenta === parseInt(tx.value.cuenta_id),
-            );
-            if (cuentaOrigen && cuentaOrigen.tipo_cuenta === "Debito") {
-              let catSalida = categorias.value.find(
-                (c) => c.nombre === "Transferencia Saliente",
-              );
-              let catEntrada = categorias.value.find(
-                (c) => c.nombre === "Transferencia Entrante",
-              );
-              if (!catSalida) {
-                await api.guardarCategoria({
-                  nombre: "Transferencia Saliente",
-                  tipo_flujo: "Egreso",
-                });
-                await cargarDatos();
-                catSalida = categorias.value.find(
-                  (c) => c.nombre === "Transferencia Saliente",
-                );
-              }
-              if (!catEntrada) {
-                await api.guardarCategoria({
-                  nombre: "Transferencia Entrante",
-                  tipo_flujo: "Ingreso",
-                });
-                await cargarDatos();
-                catEntrada = categorias.value.find(
-                  (c) => c.nombre === "Transferencia Entrante",
-                );
-              }
-              await Promise.all([
+            const promesasCuotas = [];
+            let fechaBase = new Date(tx.value.fecha + "T12:00:00");
+            const idDeCompra =
+              typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : Date.now().toString();
+
+            for (let i = 0; i < numCuotas; i++) {
+              let fechaCuota = new Date(fechaBase);
+              fechaCuota.setMonth(fechaBase.getMonth() + i);
+              promesasCuotas.push(
                 api.guardarTransaccion({
-                  cuenta_id: cuentaOrigen.id_cuenta,
-                  categoria_id: catSalida.id,
-                  etiqueta_id: null,
-                  monto: montoWarda,
-                  cashback: 0,
-                  fecha: tx.value.fecha,
-                  descripcion: `Warda Vuelto (${tx.value.descripcion})`,
+                  cuenta_id: parseInt(tx.value.cuenta_id),
+                  categoria_id: parseInt(tx.value.categoria_id),
+                  etiqueta_id: tx.value.etiqueta_id
+                    ? parseInt(tx.value.etiqueta_id)
+                    : null,
+                  monto: montoPorCuota,
+                  fecha: fechaCuota.toISOString().split("T")[0],
+                  descripcion: `${tx.value.descripcion} (Cuota ${i + 1}/${numCuotas})`,
+                  cashback: i === 0 ? parseFloat(tx.value.cashback) || 0 : 0,
+                  compra_id: idDeCompra,
+                  numero_cuota: i + 1,
+                  total_cuotas: numCuotas,
                 }),
-                api.guardarTransaccion({
-                  cuenta_id: parseInt(tx.value.warda_cuenta_id),
-                  categoria_id: catEntrada.id,
-                  etiqueta_id: null,
-                  monto: montoWarda,
-                  cashback: 0,
-                  fecha: tx.value.fecha,
-                  descripcion: `Warda Vuelto (${tx.value.descripcion})`,
-                }),
-              ]);
+              );
             }
+            await Promise.all(promesasCuotas);
+          } else {
+            await api.guardarTransaccion({
+              cuenta_id: parseInt(tx.value.cuenta_id),
+              categoria_id: parseInt(tx.value.categoria_id),
+              etiqueta_id: tx.value.etiqueta_id
+                ? parseInt(tx.value.etiqueta_id)
+                : null,
+              monto: montoOriginal,
+              fecha: tx.value.fecha,
+              descripcion: tx.value.descripcion,
+              cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
+              compra_id: null,
+              numero_cuota: 1,
+              total_cuotas: 1,
+            });
           }
+          mostrarToast("Operación registrada", "success");
         }
       } catch (error) {
         mostrarToast("Error servidor", "error");
@@ -476,6 +500,79 @@ export function useFinanceData(
     }
     showModal.value = false;
     await cargarDatos();
+    cargando.value = false;
+  };
+
+  const guardarCuenta = async () => {
+    if (!nuevaCuenta.value.nombre) return;
+    cargando.value = true;
+    try {
+      let saldoDeseado = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
+      if (
+        ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.value.tipo_cuenta)
+      )
+        saldoDeseado = -Math.abs(saldoDeseado);
+
+      let saldoAEnviar = saldoDeseado;
+      if (editandoCuenta.value.estado) {
+        const sumaTransacciones =
+          editandoCuenta.value.saldo_actual_orig -
+          editandoCuenta.value.saldo_inicial_orig;
+        saldoAEnviar = saldoDeseado - sumaTransacciones;
+      }
+
+      const payload = {
+        usuario_id: currentUserId.value,
+        nombre: nuevaCuenta.value.nombre,
+        tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
+        moneda: nuevaCuenta.value.moneda,
+        saldo_inicial: saldoAEnviar,
+        saldo_actual: saldoDeseado,
+        limite:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseFloat(nuevaCuenta.value.limite || 0)
+            : null,
+        dia_corte:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseInt(nuevaCuenta.value.dia_corte || 0)
+            : null,
+        dia_pago:
+          nuevaCuenta.value.tipo_cuenta === "Credito"
+            ? parseInt(nuevaCuenta.value.dia_pago || 0)
+            : null,
+        pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
+        es_warda: nuevaCuenta.value.es_warda || false,
+        banco: nuevaCuenta.value.banco || "Otro",
+      };
+
+      if (editandoCuenta.value.estado)
+        await api.actualizarCuenta(editandoCuenta.value.id, payload);
+      else await api.guardarCuenta(payload);
+
+      showModalCuenta.value = false;
+      await cargarDatos();
+      mostrarToast("Cuenta guardada", "success");
+    } catch (error) {
+      mostrarToast("Error", "error");
+    }
+    cargando.value = false;
+  };
+
+  const eliminarRegistro = async (tipo, id) => {
+    if (!confirm("¿Seguro de eliminar este registro?")) return;
+    cargando.value = true;
+    try {
+      if (tipo === "transaccion") await api.eliminarTransaccion(id);
+      else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
+      else if (tipo === "cuenta") await api.eliminarCuenta(id);
+      else if (tipo === "categoria") await api.eliminarCategoria(id);
+      else if (tipo === "etiqueta") await api.eliminarEtiqueta(id);
+
+      await cargarDatos();
+      mostrarToast("Eliminado", "success");
+    } catch (error) {
+      mostrarToast("Error", "error");
+    }
     cargando.value = false;
   };
 
@@ -596,74 +693,43 @@ export function useFinanceData(
     };
     showModalCuenta.value = false;
   };
-  const guardarCuenta = async () => {
-    if (!nuevaCuenta.value.nombre) return;
-    cargando.value = true;
-    try {
-      let saldoDeseado = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
-      if (
-        ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.value.tipo_cuenta)
-      )
-        saldoDeseado = -Math.abs(saldoDeseado);
-      let saldoAEnviar = saldoDeseado;
-      if (editandoCuenta.value.estado) {
-        const sumaTransacciones =
-          editandoCuenta.value.saldo_actual_orig -
-          editandoCuenta.value.saldo_inicial_orig;
-        saldoAEnviar = saldoDeseado - sumaTransacciones;
-      }
-      const payload = {
-        usuario_id: currentUserId.value,
-        nombre: nuevaCuenta.value.nombre,
-        tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
-        moneda: nuevaCuenta.value.moneda,
-        saldo_inicial: saldoAEnviar,
-        limite:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseFloat(nuevaCuenta.value.limite || 0)
-            : null,
-        dia_corte:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseInt(nuevaCuenta.value.dia_corte || 0)
-            : null,
-        dia_pago:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseInt(nuevaCuenta.value.dia_pago || 0)
-            : null,
-        pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
-        es_warda: nuevaCuenta.value.es_warda || false,
-        banco: nuevaCuenta.value.banco || "Otro",
-      };
-      if (editandoCuenta.value.estado)
-        await api.actualizarCuenta(editandoCuenta.value.id, payload);
-      else await api.guardarCuenta(payload);
-      showModalCuenta.value = false;
-      await cargarDatos();
-      mostrarToast("Guardado", "success");
-    } catch (error) {
-      mostrarToast("Error al guardar cuenta", "error");
-    }
-    cargando.value = false;
-  };
 
+  // ==========================================
+  // FUNCIONES DE CATEGORÍAS (100% CORREGIDAS)
+  // ==========================================
   const abrirModalNuevaCategoria = () => {
     editandoCat.value = { estado: false, id: null };
-    nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
+    nuevaCat.value = {
+      nombre: "",
+      tipo_flujo: "Egreso",
+      nivel_necesidad: "Necesario",
+      icono: "🏷️",
+    };
     showModalCat.value = true;
   };
+
   const abrirModalCategoria = (catAEditar) => {
     editandoCat.value = { estado: true, id: catAEditar.id };
     nuevaCat.value = {
       nombre: catAEditar.nombre,
       tipo_flujo: catAEditar.tipo_flujo,
+      nivel_necesidad: catAEditar.nivel_necesidad || "Necesario",
+      icono: catAEditar.icono || "🏷️",
     };
     showModalCat.value = true;
   };
+
   const cancelarEdicionCategoria = () => {
     editandoCat.value = { estado: false, id: null };
-    nuevaCat.value = { nombre: "", tipo_flujo: "Egreso" };
+    nuevaCat.value = {
+      nombre: "",
+      tipo_flujo: "Egreso",
+      nivel_necesidad: "Necesario",
+      icono: "🏷️",
+    };
     showModalCat.value = false;
   };
+
   const guardarCategoria = async () => {
     if (!nuevaCat.value.nombre) return;
     cargando.value = true;
@@ -673,10 +739,13 @@ export function useFinanceData(
       else await api.guardarCategoria(nuevaCat.value);
       showModalCat.value = false;
       await cargarDatos();
-      mostrarToast("Guardado", "success");
-    } catch (e) {}
+      mostrarToast("Categoría guardada", "success");
+    } catch (e) {
+      mostrarToast("Error guardando categoría", "error");
+    }
     cargando.value = false;
   };
+  // ==========================================
 
   const abrirModalNuevaEtiqueta = () => {
     editandoEtiq.value = { estado: false, id: null };
@@ -708,23 +777,6 @@ export function useFinanceData(
       await cargarDatos();
       mostrarToast("Guardado", "success");
     } catch (e) {}
-    cargando.value = false;
-  };
-
-  const eliminarRegistro = async (tipo, id) => {
-    if (!confirm("¿Seguro de eliminar?")) return;
-    cargando.value = true;
-    try {
-      if (tipo === "transaccion") await api.eliminarTransaccion(id);
-      else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
-      else if (tipo === "cuenta") await api.eliminarCuenta(id);
-      else if (tipo === "categoria") await api.eliminarCategoria(id);
-      else if (tipo === "etiqueta") await api.eliminarEtiqueta(id);
-      await cargarDatos();
-      mostrarToast("Eliminado", "success");
-    } catch (error) {
-      mostrarToast("Error al eliminar", "error");
-    }
     cargando.value = false;
   };
 

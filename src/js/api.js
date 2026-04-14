@@ -1,7 +1,7 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
 
-const API_URL = "https://finanzas-backend-dgv5.onrender.com";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export const api = {
   async obtenerDatosCompletos(userId) {

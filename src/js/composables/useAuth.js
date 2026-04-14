@@ -2,12 +2,16 @@
 // ÁREA: Ingeniería de Sistemas / Operaciones
 // ARCHIVO: Composable de Autenticación
 
-const { ref } = window.Vue;
+import { ref } from "vue";
+// IMPORTACIÓN NUEVA Y PROFESIONAL DESDE NPM
+import { createClient } from "@supabase/supabase-js";
 
 export function useAuth() {
   const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
   const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // AHORA USA LA FUNCIÓN IMPORTADA DIRECTAMENTE
+  const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const isLoggedIn = ref(false);
   const currentUserId = ref("");

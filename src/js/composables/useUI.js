@@ -2,7 +2,7 @@
 // ÁREA: Ingeniería de Sistemas / Operaciones
 // ARCHIVO: Composable de Interfaz de Usuario (UI)
 
-const { ref, computed } = window.Vue;
+import { ref, computed } from "vue";
 
 export function useUI() {
   const cargando = ref(true);

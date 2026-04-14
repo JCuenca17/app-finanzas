@@ -1,7 +1,7 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
 
-const { computed } = window.Vue;
+import { computed } from "vue";
 
 export function useCalculations(data, ui) {
   const {
@@ -67,7 +67,7 @@ export function useCalculations(data, ui) {
 
   const historialFiltrado = computed(() => {
     return historial.value.filter((tx) => {
-      const f = new Date(tx.fecha + "T00:00:00");
+      const f = new Date(tx.fecha + "T12:00:00");
       return (
         f.getFullYear() === anioGlobal.value && f.getMonth() === mesGlobal.value
       );
@@ -81,23 +81,76 @@ export function useCalculations(data, ui) {
       mesGlobal.value === hoy.getMonth();
 
     return cuentas.value.map((c) => {
-      if (esMesActual) return { ...c };
-
       let saldoRevertido = c.saldo_actual;
-      historial.value.forEach((tx) => {
-        const f = new Date(tx.fecha + "T00:00:00");
-        if (
-          f.getFullYear() > anioGlobal.value ||
-          (f.getFullYear() === anioGlobal.value &&
-            f.getMonth() > mesGlobal.value)
-        ) {
-          if (tx.cuenta_id === c.id_cuenta) {
-            if (tx.tipo_flujo === "Ingreso") saldoRevertido -= tx.monto || 0;
-            if (tx.tipo_flujo === "Egreso") saldoRevertido += tx.monto || 0;
+
+      if (!esMesActual) {
+        historial.value.forEach((tx) => {
+          const f = new Date(tx.fecha + "T12:00:00");
+          if (
+            f.getFullYear() > anioGlobal.value ||
+            (f.getFullYear() === anioGlobal.value &&
+              f.getMonth() > mesGlobal.value)
+          ) {
+            if (tx.cuenta_id === c.id_cuenta) {
+              if (tx.tipo_flujo === "Ingreso") saldoRevertido -= tx.monto || 0;
+              if (tx.tipo_flujo === "Egreso") saldoRevertido += tx.monto || 0;
+            }
           }
+        });
+      }
+
+      let pagoMesDinamico = parseFloat(c.pago_del_mes) || 0;
+
+      if (c.tipo_cuenta === "Credito" && c.dia_corte) {
+        const anioCorte = anioGlobal.value;
+        const mesCorte = mesGlobal.value;
+        const diaCorte = parseInt(c.dia_corte);
+
+        let mesInicio = mesCorte - 1;
+        let anioInicio = anioCorte;
+
+        if (mesInicio < 0) {
+          mesInicio = 11;
+          anioInicio--;
         }
-      });
-      return { ...c, saldo_actual: saldoRevertido };
+
+        const fechaInicio = new Date(
+          anioInicio,
+          mesInicio,
+          diaCorte + 1,
+          0,
+          0,
+          0,
+        );
+        const fechaFin = new Date(anioCorte, mesCorte, diaCorte, 23, 59, 59);
+
+        let txEnCiclo = 0;
+        historial.value.forEach((tx) => {
+          if (tx.cuenta_id === c.id_cuenta) {
+            const fTx = new Date(tx.fecha + "T12:00:00");
+            if (fTx >= fechaInicio && fTx <= fechaFin) {
+              if (tx.tipo_flujo === "Egreso")
+                txEnCiclo += parseFloat(tx.monto || 0);
+              if (tx.tipo_flujo === "Ingreso")
+                txEnCiclo -= parseFloat(tx.monto || 0);
+            }
+          }
+        });
+
+        if (esMesActual) {
+          pagoMesDinamico = (parseFloat(c.pago_del_mes) || 0) + txEnCiclo;
+        } else {
+          pagoMesDinamico = txEnCiclo;
+        }
+
+        if (pagoMesDinamico < 0) pagoMesDinamico = 0;
+      }
+
+      return {
+        ...c,
+        saldo_actual: saldoRevertido,
+        pago_del_mes: pagoMesDinamico,
+      };
     });
   });
 
@@ -190,9 +243,9 @@ export function useCalculations(data, ui) {
         else cuotasOtros += pagoMes;
       });
 
-    const cashbackDisponible = bolsaCashback.value?.disponible || 0;
-    const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
-    const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
+    // YA NO DESCONTAMOS EL CASHBACK AUTOMÁTICAMENTE
+    const obligacionesNetasMes = cuotasTarjetas + cuotasOtros;
+
     return (
       liquidez +
       ahorro +
@@ -225,9 +278,8 @@ export function useCalculations(data, ui) {
         else cuotasOtros += pagoMes;
       });
 
-    const cashbackDisponible = bolsaCashback.value?.disponible || 0;
-    const pagoTarjetasNeto = Math.max(0, cuotasTarjetas - cashbackDisponible);
-    const obligacionesNetasMes = pagoTarjetasNeto + cuotasOtros;
+    // YA NO DESCONTAMOS EL CASHBACK AQUÍ (Se reflejará en 0 para apagar el texto verde)
+    const obligacionesNetasMes = cuotasTarjetas + cuotasOtros;
     const balanceNetoMes = poderAdquisitivoLibre - obligacionesNetasMes;
 
     let result = {
@@ -235,7 +287,7 @@ export function useCalculations(data, ui) {
       obligacionesNetasMes,
       cuotasOriginales: cuotasTarjetas + cuotasOtros,
       deudaTotalAbsoluta,
-      cashbackAplicado: Math.min(cuotasTarjetas, cashbackDisponible),
+      cashbackAplicado: 0, // Lo dejamos en 0 para que el UI muestre la deuda cruda
       estado: "",
       mensaje: "",
       textColor: "",
@@ -304,7 +356,6 @@ export function useCalculations(data, ui) {
     };
   });
 
-  // NUEVO: DATOS PARA EL GRÁFICO DE FLUJO (Ingresos vs Egresos del mes)
   const datosGraficoFlujo = computed(() => {
     let ingresos = 0;
     let egresos = 0;

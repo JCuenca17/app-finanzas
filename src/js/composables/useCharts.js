@@ -1,21 +1,19 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
 
-const { ref } = window.Vue;
+import { ref } from "vue";
 
 export function useCharts(data, calcs) {
   const chartCatRef = ref(null);
   const chartFlujoRef = ref(null);
   const chartContactoRef = ref(null);
-  const chartDeudaRef = ref(null);
 
-  let chartCat, chartFlujo, chartContacto, chartDeuda;
+  let chartCat, chartFlujo, chartContacto;
 
   const destruirGraficos = () => {
     if (chartCat) chartCat.destroy();
     if (chartFlujo) chartFlujo.destroy();
     if (chartContacto) chartContacto.destroy();
-    if (chartDeuda) chartDeuda.destroy();
   };
 
   const renderizarGraficosHistorial = () => {
@@ -49,7 +47,7 @@ export function useCharts(data, calcs) {
               },
             },
           },
-          legend: { position: "bottom" }, // SOLUCION RESPONSIVE: Abajo para que no achique el gráfico
+          legend: { position: "bottom" },
           tooltip: {
             theme: "light",
             y: { formatter: (v) => "S/ " + v.toFixed(2) },
@@ -158,46 +156,12 @@ export function useCharts(data, calcs) {
     }
   };
 
-  const renderizarGraficoDeuda = () => {
-    if (chartDeudaRef.value) {
-      if (chartDeuda) chartDeuda.destroy();
-      chartDeudaRef.value.innerHTML = "";
-
-      const diag = calcs.diagnosticoDeuda.value;
-      const optionsDeuda = {
-        series: [diag.porcentajeCobertura || 0],
-        chart: { type: "radialBar", height: 250, fontFamily: "inherit" },
-        plotOptions: {
-          radialBar: {
-            hollow: { size: "70%" },
-            track: { background: "#f1f5f9" },
-            dataLabels: {
-              name: { show: false },
-              value: {
-                fontSize: "24px",
-                fontWeight: 800,
-                color: "#0f172a",
-                formatter: (v) => v + "%",
-              },
-            },
-          },
-        },
-        colors: [diag.colorGrafico || "#10b981"],
-        stroke: { lineCap: "round" },
-      };
-      chartDeuda = new ApexCharts(chartDeudaRef.value, optionsDeuda);
-      chartDeuda.render();
-    }
-  };
-
   return {
     chartCatRef,
     chartFlujoRef,
     chartContactoRef,
-    chartDeudaRef,
     renderizarGraficosHistorial,
     renderizarGraficosContactos,
-    renderizarGraficoDeuda,
     destruirGraficos,
   };
 }
