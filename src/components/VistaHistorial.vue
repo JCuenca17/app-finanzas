@@ -113,8 +113,8 @@
                                     <span>{{ formatearFechaLocal(tx.fecha) }}</span>
 
                                     <span v-if="tx.cashback && parseFloat(tx.cashback) > 0"
-                                        class="flex items-center gap-0.5 bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-200 font-bold ml-1">
-                                        💎 +{{ formatoMoneda(tx.cashback, tx.moneda) }} CB
+                                        class="flex items-center px-1.5 py-0.5 rounded-md border border-emerald-100/60 bg-emerald-50 text-[9px] font-bold text-emerald-600 uppercase tracking-wide ml-1">
+                                        + {{ formatoMoneda(tx.cashback, tx.moneda) }} Cashback
                                     </span>
                                 </div>
                             </div>
@@ -171,7 +171,6 @@ const props = defineProps({
 
 defineEmits(['bind-ref', 'abrir-modal-tx', 'eliminar-registro'])
 
-// ESTADO DE LOS FILTROS
 const filtros = ref({
     texto: '',
     tipo: '',
@@ -183,7 +182,6 @@ const cuentasDisponibles = computed(() => {
     return props.cuentas.filter(c => c.tipo_cuenta !== 'Cobrar');
 })
 
-// MÚLTIPLE FILTRADO REACTIVO
 const transaccionesFiltradas = computed(() => {
     return props.historialFiltrado.filter(tx => {
         let pasaFiltro = true;
