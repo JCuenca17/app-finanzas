@@ -25,6 +25,8 @@ export function useFinanceData(
     disponible: 0,
   });
 
+  const operacionesTerceros = ref([]);
+
   const fechaGlobal = ref(new Date().toISOString().slice(0, 7));
 
   const editandoTx = ref({ estado: false, id: null });
@@ -117,6 +119,7 @@ export function useFinanceData(
       usado: 0,
       disponible: 0,
     };
+    operacionesTerceros.value = [];
   };
 
   const cargarDatos = async () => {
@@ -126,6 +129,7 @@ export function useFinanceData(
       categorias.value = datos.categorias;
       pagosFijos.value = datos.pagosFijos;
       etiquetas.value = datos.etiquetas;
+      operacionesTerceros.value = datos.operacionesTerceros;
       bolsaCashback.value = datos.bolsaCashback;
       historial.value = datos.historialRaw.map((h) => ({
         ...h,
@@ -883,6 +887,7 @@ export function useFinanceData(
     nuevaEtiq,
     nuevaCuenta,
     nuevoPagoFijo,
+    operacionesTerceros,
     limpiarDatos,
     cargarDatos,
     ejecutarOperacion,

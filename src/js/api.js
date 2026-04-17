@@ -12,6 +12,7 @@ export const api = {
       resPagosFijos,
       resEtiquetas,
       resCashback,
+      resOpsTerceros,
     ] = await Promise.all([
       fetch(`${API_URL}/cuentas/${userId}`),
       fetch(`${API_URL}/historial/${userId}`),
@@ -19,6 +20,7 @@ export const api = {
       fetch(`${API_URL}/pagos_fijos/${userId}`),
       fetch(`${API_URL}/etiquetas/${userId}`),
       fetch(`${API_URL}/bolsa_cashback/${userId}`),
+      fetch(`${API_URL}/operaciones_terceros/${userId}`),
     ]);
 
     return {
@@ -36,6 +38,9 @@ export const api = {
       bolsaCashback: resCashback.ok
         ? await resCashback.json()
         : { saldo_inicial: 0, generado: 0, usado: 0, disponible: 0 },
+      operacionesTerceros: resOpsTerceros.ok
+        ? (await resOpsTerceros.json()).operaciones_terceros
+        : [],
     };
   },
 

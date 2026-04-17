@@ -18,56 +18,168 @@
                 </div>
 
                 <div
-                    class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col max-h-[600px]">
+                    class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col max-h-[700px]">
                     <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
                         <div>
-                            <h3 class="font-bold text-slate-800 text-sm md:text-base">Directorio</h3>
-                            <p class="text-[10px] text-slate-500 mt-0.5">Personas o proyectos</p>
+                            <h3 class="font-bold text-slate-800 text-sm md:text-base">Contactos y Deudas</h3>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Saldos de amigos y proyectos</p>
                         </div>
                         <button @click="$emit('abrir-modal-nueva')"
-                            class="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition shadow-md">+
-                            Nuevo</button>
+                            class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition shadow-md active:scale-95">
+                            + Nuevo Contacto
+                        </button>
                     </div>
-                    <div class="flex-1 overflow-y-auto pr-1 space-y-2">
-                        <div v-if="etiquetas.length === 0" class="text-xs text-slate-500 py-6 text-center">No hay
-                            contactos registrados.</div>
-                        <div v-for="et in etiquetas" :key="et.id"
-                            class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100 hover:border-slate-200 transition group">
-                            <div class="flex items-center gap-3">
-                                <div
-                                    class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
-                                    {{ et.nombre.charAt(0).toUpperCase() }}</div>
-                                <span class="text-sm font-bold text-slate-700 truncate">@{{ et.nombre }}</span>
+
+                    <div class="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+                        <div v-if="contactosConSaldo.length === 0"
+                            class="text-xs text-slate-500 py-6 text-center bg-slate-50 rounded-xl border border-slate-100">
+                            No hay contactos registrados.
+                        </div>
+
+                        <div v-for="contacto in contactosConSaldo" :key="contacto.id"
+                            class="bg-white border border-slate-200 rounded-xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-md">
+
+                            <div @click="toggleExpand(contacto.id)"
+                                class="flex justify-between items-center p-3 md:p-4 hover:bg-slate-50 cursor-pointer transition">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition"
+                                        :class="contacto.saldo > 0 ? 'bg-emerald-100 text-emerald-700' : (contacto.saldo < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600')">
+                                        {{ contacto.nombre.charAt(0).toUpperCase() }}
+                                    </div>
+                                    <span class="text-sm font-bold text-slate-700 truncate">@{{ contacto.nombre
+                                    }}</span>
+                                </div>
+                                <div class="text-right">
+                                    <div v-if="contacto.saldo > 0"
+                                        class="text-sm md:text-base font-extrabold text-emerald-600">S/ {{
+                                            contacto.saldo.toFixed(2) }}</div>
+                                    <div v-else-if="contacto.saldo < 0"
+                                        class="text-sm md:text-base font-extrabold text-rose-600">-S/ {{
+                                            Math.abs(contacto.saldo).toFixed(2) }}</div>
+                                    <div v-else class="text-sm md:text-base font-bold text-slate-400">S/ 0.00</div>
+                                    <div class="text-[9px] font-bold uppercase text-slate-400 mt-0.5">
+                                        {{ contacto.saldo > 0 ? 'A tu favor' : (contacto.saldo < 0 ? 'En contra'
+                                            : 'Al día') }} </div>
+                                    </div>
+                                </div>
+
+                                <div v-if="contactoExpandido === contacto.id"
+                                    class="bg-slate-50 border-t border-slate-100 p-4 slide-down">
+                                    <div class="flex justify-end gap-3 mb-4 pb-2 border-b border-slate-200/60">
+                                        <button @click.stop="$emit('abrir-modal', contacto)"
+                                            class="text-[10px] font-bold text-blue-600 hover:text-blue-800 uppercase tracking-wide">Editar
+                                            Nombre</button>
+                                        <button @click.stop="$emit('eliminar-registro', 'etiqueta', contacto.id)"
+                                            class="text-[10px] font-bold text-rose-500 hover:text-rose-700 uppercase tracking-wide">Eliminar
+                                            Contacto</button>
+                                    </div>
+
+                                    <div v-if="contacto.operaciones.length === 0"
+                                        class="text-center text-[11px] text-slate-400 py-3 font-medium">
+                                        Historial limpio. No hay movimientos.
+                                    </div>
+                                    <ul v-else class="space-y-3">
+                                        <li v-for="op in contacto.operaciones" :key="op.id"
+                                            class="flex justify-between items-center text-xs bg-white p-2.5 rounded-lg border border-slate-100 shadow-sm">
+                                            <div>
+                                                <p class="font-bold text-slate-700">{{ op.descripcion }}</p>
+                                                <p class="text-[9px] text-slate-400 font-medium mt-0.5">{{
+                                                    formatearFecha(op.fecha) }}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <div class="font-extrabold"
+                                                    :class="op.tipo_operacion === 'me_deben' ? 'text-emerald-600' : 'text-slate-500'">
+                                                    {{ op.tipo_operacion === 'me_deben' ? '+' : '-' }} S/ {{
+                                                        parseFloat(op.monto).toFixed(2) }}
+                                                </div>
+                                                <div class="text-[8.5px] font-bold text-slate-400 uppercase mt-0.5">{{
+                                                    op.tipo_operacion === 'me_deben' ? 'Préstamo' : 'Cobro' }}</div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
-                            <div
-                                class="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
-                                <button @click="$emit('abrir-modal', et)"
-                                    class="p-1.5 text-slate-400 hover:text-blue-500 rounded-md hover:bg-white transition shadow-sm bg-white"><svg
-                                        class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z">
-                                        </path>
-                                    </svg></button>
-                                <button @click="$emit('eliminar-registro', 'etiqueta', et.id)"
-                                    class="p-1.5 text-slate-400 hover:text-rose-500 rounded-md hover:bg-white transition shadow-sm bg-white"><svg
-                                        class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                        </path>
-                                    </svg></button>
-                            </div>
+
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 </template>
 
 <script setup>
-defineProps({
+import { ref, computed } from 'vue'
+
+const props = defineProps({
     tagSearch: String,
-    etiquetas: Array
+    etiquetas: { type: Array, default: () => [] },
+    operacionesTerceros: { type: Array, default: () => [] } // NUEVA PROP: Recibe el historial desde useFinanceData
 })
+
 defineEmits(['update:tagSearch', 'bind-ref', 'abrir-modal-nueva', 'abrir-modal', 'eliminar-registro'])
+
+const contactoExpandido = ref(null)
+
+const toggleExpand = (id) => {
+    contactoExpandido.value = contactoExpandido.value === id ? null : id
+}
+
+// LÓGICA CORE: Calcula el saldo sumando "me_deben" y restando "me_pagan"
+const contactosConSaldo = computed(() => {
+    return props.etiquetas.map(et => {
+        // Filtramos solo las operaciones de este contacto
+        const ops = props.operacionesTerceros.filter(op => op.etiqueta_id === et.id);
+
+        let saldo = 0;
+        ops.forEach(op => {
+            if (op.tipo_operacion === 'me_deben') saldo += parseFloat(op.monto);
+            if (op.tipo_operacion === 'me_pagan') saldo -= parseFloat(op.monto);
+        });
+
+        return {
+            ...et,
+            saldo,
+            // Ordenamos el historial del más reciente al más antiguo
+            operaciones: ops.sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+        }
+    });
+})
+
+const formatearFecha = (fechaString) => {
+    if (!fechaString) return '';
+    const opciones = { day: '2-digit', month: 'short', year: 'numeric' };
+    const fecha = new Date(fechaString + 'T12:00:00'); // Evita desfase horario
+    return fecha.toLocaleDateString('es-ES', opciones).toUpperCase();
+}
 </script>
+
+<style scoped>
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.slide-down {
+    animation: slideDown 0.2s ease-out forwards;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>

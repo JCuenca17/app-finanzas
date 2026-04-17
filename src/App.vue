@@ -54,8 +54,8 @@
           :formatoMoneda="formatoMoneda" @bind-ref="bindChartRef" @abrir-modal-tx="abrirModalTransaccion"
           @eliminar-registro="eliminarRegistro" />
 
-        <VistaContactos v-show="tab === 'contactos'" :tagSearch="tagSearch" :etiquetas="etiquetas"
-          @update:tagSearch="tagSearch = $event" @bind-ref="bindChartRef" @abrir-modal-nueva="abrirModalNuevaEtiqueta"
+        <VistaContactos v-if="vistaActual === 'Contactos'" :etiquetas="etiquetas" v-model:tagSearch="tagSearch"
+          :operacionesTerceros="operacionesTerceros" @bind-ref="bindRef" @abrir-modal-nueva="abrirModalNuevaEtiqueta"
           @abrir-modal="abrirModalEtiqueta" @eliminar-registro="eliminarRegistro" />
 
         <VistaPerfil v-show="tab === 'perfil'" :userName="userName" :userAvatar="userAvatar" :userEmail="userEmail"
