@@ -67,7 +67,17 @@ export function useFinanceData(
     descripcion: "",
   });
 
-  // AQUÍ ESTÁ LA CLAVE PARA QUE LAS CATEGORÍAS NAZCAN BIEN
+  // NUEVO: Estado para gestionar Préstamos y Cobros a Terceros
+  const txTercero = ref({
+    tipo: "me_deben",
+    contacto_id: "",
+    cuenta_id: "",
+    afecta_liquidez: false,
+    monto: "",
+    fecha: new Date().toISOString().split("T")[0],
+    descripcion: "",
+  });
+
   const nuevaCat = ref({
     nombre: "",
     tipo_flujo: "Egreso",
@@ -248,6 +258,16 @@ export function useFinanceData(
         fecha: new Date().toISOString().split("T")[0],
         descripcion: "",
       };
+      // NUEVO: Resetear el formulario de terceros
+      txTercero.value = {
+        tipo: "me_deben",
+        contacto_id: "",
+        cuenta_id: "",
+        afecta_liquidez: false,
+        monto: "",
+        fecha: new Date().toISOString().split("T")[0],
+        descripcion: "",
+      };
     }
     showModal.value = true;
   };
@@ -360,7 +380,65 @@ export function useFinanceData(
       } catch (error) {
         mostrarToast("Error servidor", "error");
       }
-    } else {
+    }
+    // ==========================================
+    // NUEVA LÓGICA: OPERACIONES CON TERCEROS (PRÉSTAMOS/COBROS)
+    // ==========================================
+    else if (tipoOperacion.value === "Terceros") {
+      if (!txTercero.value.contacto_id) {
+        mostrarToast("Selecciona un contacto", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (!txTercero.value.monto || parseFloat(txTercero.value.monto) <= 0) {
+        mostrarToast("Ingresa un monto válido", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (txTercero.value.tipo === "me_pagan" && !txTercero.value.cuenta_id) {
+        mostrarToast("Selecciona a qué cuenta ingresó el dinero", "warning");
+        cargando.value = false;
+        return;
+      }
+      if (
+        txTercero.value.tipo === "me_deben" &&
+        txTercero.value.afecta_liquidez &&
+        !txTercero.value.cuenta_id
+      ) {
+        mostrarToast("Selecciona de qué cuenta salió el dinero", "warning");
+        cargando.value = false;
+        return;
+      }
+
+      try {
+        const payload = {
+          usuario_id: currentUserId.value,
+          tipo_operacion: txTercero.value.tipo,
+          etiqueta_id: parseInt(txTercero.value.contacto_id),
+          cuenta_id: txTercero.value.cuenta_id
+            ? parseInt(txTercero.value.cuenta_id)
+            : null,
+          afecta_liquidez: txTercero.value.afecta_liquidez,
+          monto: parseFloat(txTercero.value.monto),
+          fecha: txTercero.value.fecha,
+          descripcion:
+            txTercero.value.descripcion ||
+            (txTercero.value.tipo === "me_deben"
+              ? "Deuda a favor"
+              : "Cobro de deuda"),
+        };
+
+        await api.registrarOperacionTercero(payload);
+
+        mostrarToast("Registro de deuda actualizado", "success");
+      } catch (error) {
+        mostrarToast("Error. Asegúrate de actualizar tu backend.", "error");
+      }
+    }
+    // ==========================================
+    // FIN LÓGICA TERCEROS
+    // ==========================================
+    else {
       if (!tx.value.cuenta_id) {
         mostrarToast("Por favor selecciona una cuenta", "warning");
         cargando.value = false;
@@ -800,6 +878,7 @@ export function useFinanceData(
     showModalEtiq,
     tx,
     txTransf,
+    txTercero,
     nuevaCat,
     nuevaEtiq,
     nuevaCuenta,

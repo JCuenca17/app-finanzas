@@ -77,7 +77,8 @@
       :bolsaCashback="bolsaCashback" :tx="tx" :txTransf="txTransf" :cuentas="cuentas"
       :categoriasFiltradas="categoriasFiltradas" :etiquetas="etiquetas" @update:tipoOperacion="tipoOperacion = $event"
       @update-tx="(prop, val) => tx[prop] = val" @update-txTransf="(prop, val) => txTransf[prop] = val"
-      @ejecutar="ejecutarOperacion" @cancelar="showModal = false" />
+      @ejecutar="ejecutarOperacion" @cancelar="showModal = false" :txTercero="txTercero"
+      @update-txTercero="(prop, val) => txTercero[prop] = val" />
   </ModalBase>
 
   <ModalBase :show="showModalCuenta" :titulo="editandoCuenta.estado ? 'Editar Cuenta' : 'Nueva Cuenta'"
