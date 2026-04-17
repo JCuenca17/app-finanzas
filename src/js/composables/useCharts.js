@@ -110,48 +110,57 @@ export function useCharts(data, calcs) {
     }
   };
 
+  // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
+
   const renderizarGraficosContactos = () => {
     if (chartContactoRef.value) {
       if (chartContacto) chartContacto.destroy();
       chartContactoRef.value.innerHTML = "";
 
       const datos = calcs.datosGraficoContacto.value;
-      if (datos.hasData && datos.series.length > 0) {
+      if (datos.hasData) {
         const options = {
-          series: datos.series,
-          labels: datos.labels,
-          chart: { type: "donut", height: 320, fontFamily: "inherit" },
-          colors: ["#3b82f6", "#cbd5e1"],
-          dataLabels: { enabled: false },
-          stroke: { width: 0 },
+          series: [
+            {
+              name: "Monto (S/)",
+              data: datos.series,
+            },
+          ],
+          chart: {
+            type: "bar",
+            height: 320,
+            fontFamily: "inherit",
+            toolbar: { show: false },
+          },
+          colors: ["#10b981", "#f43f5e", "#3b82f6"], // Verde (Ingresos), Rojo (Gastos), Azul (Deuda)
           plotOptions: {
-            pie: {
-              donut: {
-                size: "70%",
-                labels: {
-                  show: true,
-                  name: { show: true },
-                  value: {
-                    show: true,
-                    formatter: (v) => "S/ " + parseFloat(v).toFixed(2),
-                    fontSize: "20px",
-                    fontWeight: 800,
-                  },
-                },
-              },
+            bar: { borderRadius: 6, distributed: true, columnWidth: "55%" },
+          },
+          dataLabels: { enabled: false },
+          xaxis: {
+            categories: datos.categorias,
+            labels: {
+              style: { colors: "#64748b", fontWeight: 600, fontSize: "11px" },
             },
           },
-          legend: { position: "bottom" },
+          yaxis: {
+            labels: {
+              formatter: (v) => "S/ " + v.toFixed(0),
+              style: { colors: "#64748b" },
+            },
+          },
+          grid: { borderColor: "#f1f5f9", strokeDashArray: 4 },
           tooltip: {
             theme: "light",
             y: { formatter: (v) => "S/ " + v.toFixed(2) },
           },
+          legend: { show: false },
         };
         chartContacto = new ApexCharts(chartContactoRef.value, options);
         chartContacto.render();
       } else {
         chartContactoRef.value.innerHTML =
-          '<div class="flex items-center justify-center h-[300px] text-slate-400 text-sm font-medium text-center px-4">Selecciona un contacto arriba para analizar los gastos compartidos del mes</div>';
+          '<div class="flex flex-col items-center justify-center h-[300px] text-slate-400 text-sm font-medium text-center px-4"><p>No hay actividad financiera con esta persona.</p><p class="text-xs mt-2">Registra un gasto o una deuda para ver su perfil.</p></div>';
       }
     }
   };

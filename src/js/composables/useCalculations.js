@@ -12,7 +12,9 @@ export function useCalculations(data, ui) {
     categorias,
     bolsaCashback,
     fechaGlobal,
+    operacionesTerceros, // <-- NUEVO: Importamos las operaciones
   } = data;
+
   const { tagSearch, tipoOperacion } = ui;
 
   const formatoMoneda = (monto, moneda) => {
@@ -167,9 +169,41 @@ export function useCalculations(data, ui) {
       ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
     ),
   );
-  const cuentasPorCobrar = computed(() =>
-    cuentasConSaldoHistorico.value.filter((c) => c.tipo_cuenta === "Cobrar"),
-  );
+
+  // ==========================================
+  // MAGIA 1: VIRTUALIZACIÓN DE DEUDAS
+  // ==========================================
+  const cuentasPorCobrar = computed(() => {
+    const deudasMap = {};
+    const operaciones = operacionesTerceros?.value || [];
+
+    // Sumar todo el historial de deudas agrupado por etiqueta
+    operaciones.forEach((op) => {
+      if (!deudasMap[op.etiqueta_id]) deudasMap[op.etiqueta_id] = 0;
+      if (op.tipo_operacion === "me_deben")
+        deudasMap[op.etiqueta_id] += parseFloat(op.monto);
+      if (op.tipo_operacion === "me_pagan")
+        deudasMap[op.etiqueta_id] -= parseFloat(op.monto);
+    });
+
+    const resultadoVirtual = [];
+    for (const [id, saldo] of Object.entries(deudasMap)) {
+      if (saldo > 0) {
+        // Solo mostrar personas que realmente nos deben
+        const contacto = etiquetas.value.find((e) => e.id == id);
+        resultadoVirtual.push({
+          id_cuenta: `virtual_${id}`, // ID falso para que Vue no se queje
+          nombre: contacto ? contacto.nombre : "Contacto Eliminado",
+          tipo_cuenta: "Cobrar",
+          saldo_actual: saldo,
+          moneda: "PEN",
+          banco: "Otro",
+        });
+      }
+    }
+    return resultadoVirtual;
+  });
+
   const deudasActivas = computed(() =>
     cuentasConSaldoHistorico.value.filter((c) =>
       ["Credito", "Prestamo", "Pagar"].includes(c.tipo_cuenta),
@@ -243,9 +277,7 @@ export function useCalculations(data, ui) {
         else cuotasOtros += pagoMes;
       });
 
-    // YA NO DESCONTAMOS EL CASHBACK AUTOMÁTICAMENTE
     const obligacionesNetasMes = cuotasTarjetas + cuotasOtros;
-
     return (
       liquidez +
       ahorro +
@@ -278,7 +310,6 @@ export function useCalculations(data, ui) {
         else cuotasOtros += pagoMes;
       });
 
-    // YA NO DESCONTAMOS EL CASHBACK AQUÍ (Se reflejará en 0 para apagar el texto verde)
     const obligacionesNetasMes = cuotasTarjetas + cuotasOtros;
     const balanceNetoMes = poderAdquisitivoLibre - obligacionesNetasMes;
 
@@ -287,7 +318,7 @@ export function useCalculations(data, ui) {
       obligacionesNetasMes,
       cuotasOriginales: cuotasTarjetas + cuotasOtros,
       deudaTotalAbsoluta,
-      cashbackAplicado: 0, // Lo dejamos en 0 para que el UI muestre la deuda cruda
+      cashbackAplicado: 0,
       estado: "",
       mensaje: "",
       textColor: "",
@@ -371,31 +402,53 @@ export function useCalculations(data, ui) {
     return { ingresos, egresos };
   });
 
+  // ==========================================
+  // MAGIA 2: PERFIL 360 DEL CONTACTO
+  // ==========================================
   const datosGraficoContacto = computed(() => {
-    let totalEgresos = 0;
-    let egresosContacto = 0;
     const idContacto = tagSearch.value ? parseInt(tagSearch.value) : null;
+    if (!idContacto) return { hasData: false, series: [] };
+
     const etiquetaObj = etiquetas.value.find((e) => e.id === idContacto);
     const nombreContacto = etiquetaObj ? etiquetaObj.nombre : "Seleccione";
 
+    let ingresos = 0;
+    let egresos = 0;
+    let meDebe = 0;
+
+    // 1. Calcular Flujo Real del mes (Historial)
     historialFiltrado.value.forEach((tx) => {
-      const esTransferencia = String(tx.categoria_nombre || "")
-        .toLowerCase()
-        .includes("transferencia");
-      if (tx.tipo_flujo === "Egreso" && !esTransferencia) {
-        totalEgresos += tx.monto || 0;
-        if (idContacto && tx.etiqueta_id === idContacto)
-          egresosContacto += tx.monto || 0;
+      if (tx.etiqueta_id === idContacto) {
+        const esTransferencia = String(tx.categoria_nombre || "")
+          .toLowerCase()
+          .includes("transferencia");
+        if (!esTransferencia) {
+          if (tx.tipo_flujo === "Ingreso") ingresos += tx.monto || 0;
+          if (tx.tipo_flujo === "Egreso") egresos += tx.monto || 0;
+        }
       }
     });
 
-    const otrosGastos = Math.max(0, totalEgresos - egresosContacto);
+    // 2. Calcular Deuda Total (Libro Mayor)
+    const operaciones = operacionesTerceros?.value || [];
+    operaciones.forEach((op) => {
+      if (op.etiqueta_id === idContacto) {
+        if (op.tipo_operacion === "me_deben") meDebe += parseFloat(op.monto);
+        if (op.tipo_operacion === "me_pagan") meDebe -= parseFloat(op.monto);
+      }
+    });
+
+    const hasData = ingresos > 0 || egresos > 0 || meDebe > 0;
+
     return {
-      hasData: totalEgresos > 0,
-      labels: idContacto ? [`Con @${nombreContacto}`, "Otros Gastos"] : [],
-      series: idContacto
-        ? [Number(egresosContacto.toFixed(2)), Number(otrosGastos.toFixed(2))]
-        : [],
+      hasData,
+      nombre: nombreContacto,
+      categorias: ["Ingresos (Mes)", "Gastos (Mes)", "Deuda a favor"],
+      series: [
+        Number(ingresos.toFixed(2)),
+        Number(egresos.toFixed(2)),
+        Number(Math.max(0, meDebe).toFixed(2)), // Solo mostramos si hay saldo a favor
+      ],
     };
   });
 
