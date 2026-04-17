@@ -418,7 +418,7 @@ export function useFinanceData(
           cuenta_id: txTercero.value.cuenta_id
             ? parseInt(txTercero.value.cuenta_id)
             : null,
-          // FIX: Si es un cobro, SIEMPRE afecta liquidez (entra al banco)
+          // FIX: Forzar siempre liquidez si es un pago entrante
           afecta_liquidez:
             txTercero.value.tipo === "me_pagan"
               ? true
@@ -432,10 +432,19 @@ export function useFinanceData(
               : "Cobro de deuda"),
         };
 
-        await api.registrarOperacionTercero(payload);
+        const respuesta = await api.registrarOperacionTercero(payload);
+
+        // FIX: Si el backend aborta la operación, detectarlo y avisar
+        if (!respuesta.ok) {
+          throw new Error("El servidor rechazó la base de datos.");
+        }
+
         mostrarToast("Registro de deuda actualizado", "success");
       } catch (error) {
-        mostrarToast("Error de conexión", "error");
+        mostrarToast(
+          "Error: Revisa que todos los campos estén llenos",
+          "error",
+        );
       }
     } else {
       // LOGICA DE INGRESOS Y EGRESOS NORMALES
