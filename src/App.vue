@@ -51,9 +51,8 @@
           @eliminar-registro="eliminarRegistro" />
 
         <VistaHistorial v-show="tab === 'historial'" :historialFiltrado="historialFiltrado"
-          :formatoMoneda="formatoMoneda" :cuentasActivas="cuentasActivas" :categorias="categorias"
-          :etiquetas="etiquetas" @bind-ref="bindChartRef" @abrir-modal-tx="abrirModalTransaccion"
-          @eliminar-registro="eliminarRegistro" />
+          :formatoMoneda="formatoMoneda" :cuentas="cuentas" :categorias="categorias" :etiquetas="etiquetas"
+          @bind-ref="bindChartRef" @abrir-modal-tx="abrirModalTransaccion" @eliminar-registro="eliminarRegistro" />
 
         <VistaContactos v-show="tab === 'contactos'" :etiquetas="etiquetas" v-model:tagSearch="tagSearch"
           :operacionesTerceros="operacionesTerceros" @bind-ref="bindChartRef"

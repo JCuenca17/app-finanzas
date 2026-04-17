@@ -2,6 +2,24 @@
     <div class="absolute inset-0 w-full h-full overflow-y-auto px-4 md:px-8 pb-40 md:pb-6 custom-scrollbar">
         <div class="max-w-5xl mx-auto space-y-6 mt-2 mb-8">
 
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div
+                    class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col">
+                    <h3 class="font-bold text-slate-800 text-sm md:text-base mb-1">Gastos por Categoría</h3>
+                    <p class="text-xs text-slate-500 mb-4">Distribución de egresos del mes</p>
+                    <div class="flex-1 w-full min-h-[300px] flex items-center justify-center"
+                        :ref="(el) => $emit('bind-ref', 'cat', el)"></div>
+                </div>
+
+                <div
+                    class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col">
+                    <h3 class="font-bold text-slate-800 text-sm md:text-base mb-1">Ingresos vs Gastos</h3>
+                    <p class="text-xs text-slate-500 mb-4">Balance general del mes</p>
+                    <div class="flex-1 w-full min-h-[300px] flex items-center justify-center"
+                        :ref="(el) => $emit('bind-ref', 'flujo', el)"></div>
+                </div>
+            </div>
+
             <div
                 class="bg-white p-5 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col space-y-4">
                 <div class="flex justify-between items-center mb-1">
@@ -28,9 +46,9 @@
                     <div>
                         <select v-model="filtros.tipo"
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-300 font-medium text-slate-600 cursor-pointer">
-                            <option value="">Todos los tipos</option>
-                            <option value="Ingreso">Ingresos</option>
-                            <option value="Egreso">Gastos</option>
+                            <option value="">Todos los flujos</option>
+                            <option value="Ingreso">Solo Ingresos</option>
+                            <option value="Egreso">Solo Gastos</option>
                             <option value="Transferencia">Transferencias</option>
                         </select>
                     </div>
@@ -39,7 +57,8 @@
                         <select v-model="filtros.cuenta"
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-300 font-medium text-slate-600 cursor-pointer">
                             <option value="">Todas las cuentas</option>
-                            <option v-for="c in cuentasActivas" :key="c.id_cuenta" :value="c.id_cuenta">{{ c.nombre }}
+                            <option v-for="c in cuentasDisponibles" :key="c.id_cuenta" :value="c.id_cuenta">
+                                {{ c.nombre }} {{ c.tipo_cuenta === 'Credito' ? '(TC)' : '' }}
                             </option>
                         </select>
                     </div>
@@ -55,11 +74,11 @@
             </div>
 
             <div
-                class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col min-h-[500px]">
+                class="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col min-h-[400px]">
                 <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-3">
-                    <h3 class="font-bold text-slate-800 text-sm md:text-base">Resultados del Mes</h3>
+                    <h3 class="font-bold text-slate-800 text-sm md:text-base">Movimientos Registrados</h3>
                     <span class="text-xs font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">{{
-                        transaccionesFiltradas.length }} registros</span>
+                        transaccionesFiltradas.length }} resultados</span>
                 </div>
 
                 <div v-if="transaccionesFiltradas.length === 0"
@@ -142,7 +161,7 @@ import { ref, computed } from 'vue'
 const props = defineProps({
     historialFiltrado: { type: Array, default: () => [] },
     formatoMoneda: Function,
-    cuentasActivas: { type: Array, default: () => [] },
+    cuentas: { type: Array, default: () => [] }, // AHORA RECIBE TODAS LAS CUENTAS
     categorias: { type: Array, default: () => [] },
     etiquetas: { type: Array, default: () => [] }
 })
@@ -155,6 +174,11 @@ const filtros = ref({
     tipo: '',
     cuenta: '',
     etiqueta: ''
+})
+
+// Filtramos internamente para que en el select no salgan las cuentas de "Deuda virtual" si las hubiera
+const cuentasDisponibles = computed(() => {
+    return props.cuentas.filter(c => c.tipo_cuenta !== 'Cobrar');
 })
 
 // MÚLTIPLE FILTRADO REACTIVO
