@@ -1,904 +1,447 @@
 // DESARROLLADO POR: JOSE LUIS CUENCA GUTIERREZ
 // ÁREA: Ingeniería de Sistemas / Operaciones
 
-import { api } from "../api.js";
-import { ref } from "vue";
+import { computed } from "vue";
 
-export function useFinanceData(
-  currentUserId,
-  cargando,
-  mostrarToast,
-  showModal,
-  tipoOperacion,
-  tab,
-  onDatosActualizados,
-) {
-  const cuentas = ref([]);
-  const categorias = ref([]);
-  const etiquetas = ref([]);
-  const historial = ref([]);
-  const pagosFijos = ref([]);
-  const operacionesTerceros = ref([]); // HISTORIAL DE DEUDAS
-  const bolsaCashback = ref({
-    saldo_inicial: 0,
-    generado: 0,
-    usado: 0,
-    disponible: 0,
-  });
-
-  const fechaGlobal = ref(new Date().toISOString().slice(0, 7));
-
-  const editandoTx = ref({ estado: false, id: null });
-  const editandoPagoFijo = ref({ estado: false, id: null });
-  const editandoCuenta = ref({
-    estado: false,
-    id: null,
-    saldo_inicial_orig: 0,
-    saldo_actual_orig: 0,
-  });
-  const editandoCat = ref({ estado: false, id: null });
-  const editandoEtiq = ref({ estado: false, id: null });
-
-  const showModalCuenta = ref(false);
-  const showModalPagoFijo = ref(false);
-  const showModalCat = ref(false);
-  const showModalEtiq = ref(false);
-  const isRescateCashback = ref(false);
-
-  const tx = ref({
-    cuenta_id: "",
-    categoria_id: "",
-    etiqueta_id: "",
-    monto: null,
-    fecha: new Date().toISOString().split("T")[0],
-    descripcion: "",
-    cashback: null,
-    monto_warda: null,
-    warda_cuenta_id: "",
-    cuotas: 1,
-    tiene_interes: false,
-    cuota_banco: null,
-  });
-
-  const txTransf = ref({
-    origen_id: "",
-    destino_id: "",
-    monto: "",
-    fecha: new Date().toISOString().split("T")[0],
-    descripcion: "",
-  });
-
-  const txTercero = ref({
-    tipo: "me_deben",
-    contacto_id: "",
-    cuenta_id: "",
-    afecta_liquidez: false,
-    monto: "",
-    fecha: new Date().toISOString().split("T")[0],
-    descripcion: "",
-  });
-
-  const nuevaCat = ref({
-    nombre: "",
-    tipo_flujo: "Egreso",
-    nivel_necesidad: "Necesario",
-    icono: "🏷️",
-  });
-  const nuevaEtiq = ref({ nombre: "" });
-  const nuevaCuenta = ref({
-    nombre: "",
-    tipo_cuenta: "Debito",
-    moneda: "PEN",
-    saldo_inicial: "",
-    limite: "",
-    dia_corte: "",
-    dia_pago: "",
-    pago_del_mes: "",
-    banco: "Otro",
-    es_warda: false,
-  });
-  const nuevoPagoFijo = ref({
-    nombre: "",
-    monto: "",
-    tipo_flujo: "Egreso",
-    dia_cobro: "",
-    moneda: "PEN",
-  });
-
-  const limpiarDatos = () => {
-    cuentas.value = [];
-    historial.value = [];
-    pagosFijos.value = [];
-    etiquetas.value = [];
-    operacionesTerceros.value = [];
-    bolsaCashback.value = {
-      saldo_inicial: 0,
-      generado: 0,
-      usado: 0,
-      disponible: 0,
-    };
-  };
-
-  const cargarDatos = async () => {
-    try {
-      const datos = await api.obtenerDatosCompletos(currentUserId.value);
-      cuentas.value = datos.cuentas;
-      categorias.value = datos.categorias;
-      pagosFijos.value = datos.pagosFijos;
-      etiquetas.value = datos.etiquetas;
-      operacionesTerceros.value = datos.operacionesTerceros;
-      bolsaCashback.value = datos.bolsaCashback;
-      historial.value = datos.historialRaw.map((h) => ({
-        ...h,
-        categoria_nombre: String(
-          categorias.value.find((c) => c.id == h.categoria)?.nombre ||
-            h.categoria_nombre ||
-            "Sin Categoría",
-        ),
-      }));
-      if (onDatosActualizados) onDatosActualizados();
-    } catch (error) {
-      mostrarToast("Error de conexión", "error");
-    }
-  };
-
-  const editarCashbackInicial = async () => {
-    const input = window.prompt(
-      "Ingresa tu Cashback Histórico acumulado (S/):",
-      bolsaCashback.value.saldo_inicial,
-    );
-    if (input !== null) {
-      const monto = parseFloat(input);
-      if (!isNaN(monto) && monto >= 0) {
-        cargando.value = true;
-        try {
-          await api.actualizarBolsaCashback(currentUserId.value, {
-            saldo_inicial: monto,
-          });
-          await cargarDatos();
-          mostrarToast("Cashback actualizado", "success");
-        } catch (e) {
-          mostrarToast("Error", "error");
-        }
-        cargando.value = false;
-      }
-    }
-  };
-
-  const prepararRescateCashback = async () => {
-    const tarjetas = cuentas.value.filter((c) => c.tipo_cuenta === "Credito");
-    if (tarjetas.length === 0) {
-      mostrarToast("Debes registrar una Tarjeta de Crédito", "warning");
-      return;
-    }
-    if (bolsaCashback.value.disponible <= 0) {
-      mostrarToast("No tienes saldo de Cashback", "warning");
-      return;
-    }
-
-    let catRescate = categorias.value.find(
-      (c) => c.nombre === "Rescate Cashback" && c.tipo_flujo === "Ingreso",
-    );
-    if (!catRescate) {
-      cargando.value = true;
-      await api.guardarCategoria({
-        nombre: "Rescate Cashback",
-        tipo_flujo: "Ingreso",
-        nivel_necesidad: null,
-        icono: "💎",
-      });
-      await cargarDatos();
-      catRescate = categorias.value.find(
-        (c) => c.nombre === "Rescate Cashback",
-      );
-      cargando.value = false;
-    }
-
-    editandoTx.value = { estado: false, id: null };
-    tipoOperacion.value = "Ingreso";
-    isRescateCashback.value = true;
-    tx.value = {
-      monto: "",
-      cashback: "",
-      descripcion: "Abono a Tarjeta con Cashback",
-      fecha: new Date().toISOString().split("T")[0],
-      cuenta_id: "",
-      categoria_id: catRescate.id,
-      etiqueta_id: "",
-      monto_warda: "",
-      warda_cuenta_id: "",
-      cuotas: 1,
-      tiene_interes: false,
-      cuota_banco: null,
-    };
-    showModal.value = true;
-  };
-
-  const abrirModalTransaccion = (itemAEditar = null) => {
-    if (itemAEditar) {
-      editandoTx.value = { estado: true, id: itemAEditar.id };
-      tipoOperacion.value = itemAEditar.tipo_flujo;
-      isRescateCashback.value =
-        itemAEditar.categoria_nombre === "Rescate Cashback";
-      tx.value = {
-        monto: itemAEditar.monto,
-        cashback: itemAEditar.cashback || "",
-        descripcion: itemAEditar.descripcion,
-        fecha: itemAEditar.fecha,
-        cuenta_id: itemAEditar.cuenta_id,
-        categoria_id: itemAEditar.categoria,
-        etiqueta_id: itemAEditar.etiqueta_id || "",
-        monto_warda: "",
-        warda_cuenta_id: "",
-        cuotas: itemAEditar.cuotas || 1,
-        tiene_interes: false,
-        cuota_banco: null,
-      };
-    } else {
-      editandoTx.value = { estado: false, id: null };
-      tipoOperacion.value = "Egreso";
-      isRescateCashback.value = false;
-      tx.value = {
-        monto: "",
-        cashback: "",
-        descripcion: "",
-        fecha: new Date().toISOString().split("T")[0],
-        cuenta_id: "",
-        categoria_id: "",
-        etiqueta_id: "",
-        monto_warda: "",
-        warda_cuenta_id: "",
-        cuotas: 1,
-        tiene_interes: false,
-        cuota_banco: null,
-      };
-      txTransf.value = {
-        origen_id: "",
-        destino_id: "",
-        monto: "",
-        fecha: new Date().toISOString().split("T")[0],
-        descripcion: "",
-      };
-      txTercero.value = {
-        tipo: "me_deben",
-        contacto_id: "",
-        cuenta_id: "",
-        afecta_liquidez: false,
-        monto: "",
-        fecha: new Date().toISOString().split("T")[0],
-        descripcion: "",
-      };
-    }
-    showModal.value = true;
-  };
-
-  const ejecutarOperacion = async () => {
-    cargando.value = true;
-
-    if (tipoOperacion.value === "Transferencia") {
-      if (!txTransf.value.origen_id) {
-        mostrarToast("Falta seleccionar la cuenta de origen", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (!txTransf.value.destino_id) {
-        mostrarToast("Falta seleccionar la cuenta de destino", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (!txTransf.value.monto || parseFloat(txTransf.value.monto) <= 0) {
-        mostrarToast("Ingresa un monto válido", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (txTransf.value.origen_id === txTransf.value.destino_id) {
-        mostrarToast("No puedes transferir a la misma cuenta", "warning");
-        cargando.value = false;
-        return;
-      }
-
-      const cuentaOrigen = cuentas.value.find(
-        (c) => c.id_cuenta === parseInt(txTransf.value.origen_id),
-      );
-      const montoTransf = parseFloat(txTransf.value.monto);
-
-      if (
-        cuentaOrigen &&
-        ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
-      ) {
-        if (montoTransf > cuentaOrigen.saldo_actual) {
-          mostrarToast(
-            `Fondos insuficientes (Tienes S/ ${cuentaOrigen.saldo_actual})`,
-            "warning",
-          );
-          cargando.value = false;
-          return;
-        }
-      }
-
-      let catSalida = categorias.value.find(
-        (c) => c.nombre === "Transferencia Saliente",
-      );
-      let catEntrada = categorias.value.find(
-        (c) => c.nombre === "Transferencia Entrante",
-      );
-
-      if (!catSalida) {
-        await api.guardarCategoria({
-          nombre: "Transferencia Saliente",
-          tipo_flujo: "Egreso",
-          nivel_necesidad: null,
-          icono: "🔄",
-        });
-        await cargarDatos();
-        catSalida = categorias.value.find(
-          (c) => c.nombre === "Transferencia Saliente",
-        );
-      }
-      if (!catEntrada) {
-        await api.guardarCategoria({
-          nombre: "Transferencia Entrante",
-          tipo_flujo: "Ingreso",
-          nivel_necesidad: null,
-          icono: "🔄",
-        });
-        await cargarDatos();
-        catEntrada = categorias.value.find(
-          (c) => c.nombre === "Transferencia Entrante",
-        );
-      }
-
-      const concepto = txTransf.value.descripcion || "Transferencia";
-      try {
-        await Promise.all([
-          api.guardarTransaccion({
-            cuenta_id: parseInt(txTransf.value.origen_id),
-            categoria_id: catSalida.id,
-            etiqueta_id: null,
-            monto: montoTransf,
-            cashback: 0,
-            fecha: txTransf.value.fecha,
-            descripcion: concepto,
-            compra_id: null,
-            numero_cuota: 1,
-            total_cuotas: 1,
-          }),
-          api.guardarTransaccion({
-            cuenta_id: parseInt(txTransf.value.destino_id),
-            categoria_id: catEntrada.id,
-            etiqueta_id: null,
-            monto: montoTransf,
-            cashback: 0,
-            fecha: txTransf.value.fecha,
-            descripcion: concepto,
-            compra_id: null,
-            numero_cuota: 1,
-            total_cuotas: 1,
-          }),
-        ]);
-        mostrarToast("Transferencia registrada", "success");
-      } catch (error) {
-        mostrarToast("Error servidor", "error");
-      }
-    }
-    // ==========================================
-    // OPERACIONES CON TERCEROS (CON FIX DE LIQUIDEZ)
-    // ==========================================
-    else if (tipoOperacion.value === "Terceros") {
-      if (!txTercero.value.contacto_id) {
-        mostrarToast("Selecciona un contacto", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (!txTercero.value.monto || parseFloat(txTercero.value.monto) <= 0) {
-        mostrarToast("Ingresa un monto válido", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (txTercero.value.tipo === "me_pagan" && !txTercero.value.cuenta_id) {
-        mostrarToast("Selecciona a qué cuenta ingresó el dinero", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (
-        txTercero.value.tipo === "me_deben" &&
-        txTercero.value.afecta_liquidez &&
-        !txTercero.value.cuenta_id
-      ) {
-        mostrarToast("Selecciona de qué cuenta salió el dinero", "warning");
-        cargando.value = false;
-        return;
-      }
-
-      try {
-        const payload = {
-          usuario_id: currentUserId.value,
-          tipo_operacion: txTercero.value.tipo,
-          etiqueta_id: parseInt(txTercero.value.contacto_id),
-          cuenta_id: txTercero.value.cuenta_id
-            ? parseInt(txTercero.value.cuenta_id)
-            : null,
-          // FIX: Si es un cobro, SIEMPRE afecta liquidez (entra al banco)
-          afecta_liquidez:
-            txTercero.value.tipo === "me_pagan"
-              ? true
-              : txTercero.value.afecta_liquidez,
-          monto: parseFloat(txTercero.value.monto),
-          fecha: txTercero.value.fecha,
-          descripcion:
-            txTercero.value.descripcion ||
-            (txTercero.value.tipo === "me_deben"
-              ? "Deuda a favor"
-              : "Cobro de deuda"),
-        };
-
-        await api.registrarOperacionTercero(payload);
-        mostrarToast("Registro de deuda actualizado", "success");
-      } catch (error) {
-        mostrarToast("Error de conexión", "error");
-      }
-    } else {
-      // LOGICA DE INGRESOS Y EGRESOS NORMALES
-      if (!tx.value.cuenta_id) {
-        mostrarToast("Por favor selecciona una cuenta", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (!tx.value.categoria_id) {
-        mostrarToast("Por favor elige una categoría", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (!tx.value.monto || parseFloat(tx.value.monto) <= 0) {
-        mostrarToast("Ingresa un monto válido", "warning");
-        cargando.value = false;
-        return;
-      }
-      if (!tx.value.descripcion || tx.value.descripcion.trim() === "") {
-        mostrarToast("Escribe un concepto", "warning");
-        cargando.value = false;
-        return;
-      }
-
-      const montoOriginal = parseFloat(tx.value.monto);
-      const numCuotas = parseInt(tx.value.cuotas) || 1;
-      const cuentaOrigen = cuentas.value.find(
-        (c) => c.id_cuenta == tx.value.cuenta_id,
-      );
-
-      let montoPorCuota = montoOriginal / numCuotas;
-      let deudaTotalAdquirida = montoOriginal;
-
-      if (
-        cuentaOrigen?.tipo_cuenta === "Credito" &&
-        tx.value.tiene_interes &&
-        numCuotas > 1
-      ) {
-        const cuotaBanco = parseFloat(tx.value.cuota_banco);
-        if (!cuotaBanco || cuotaBanco <= 0) {
-          mostrarToast("Ingresa la cuota con intereses.", "warning");
-          cargando.value = false;
-          return;
-        }
-        montoPorCuota = cuotaBanco;
-        deudaTotalAdquirida = cuotaBanco * numCuotas;
-      }
-
-      if (tipoOperacion.value === "Egreso" && !editandoTx.value.estado) {
-        if (cuentaOrigen) {
-          if (
-            ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
-          ) {
-            if (montoOriginal > cuentaOrigen.saldo_actual) {
-              mostrarToast(`Fondos insuficientes.`, "warning");
-              cargando.value = false;
-              return;
-            }
-          } else if (cuentaOrigen.tipo_cuenta === "Credito") {
-            const disponible =
-              (cuentaOrigen.limite || 0) - Math.abs(cuentaOrigen.saldo_actual);
-            if (deudaTotalAdquirida > disponible) {
-              mostrarToast(`Línea insuficiente.`, "warning");
-              cargando.value = false;
-              return;
-            }
-          }
-        }
-      }
-
-      try {
-        if (editandoTx.value.estado) {
-          const datosParaBD = {
-            ...tx.value,
-            cuenta_id: parseInt(tx.value.cuenta_id),
-            categoria_id: parseInt(tx.value.categoria_id),
-            etiqueta_id: tx.value.etiqueta_id
-              ? parseInt(tx.value.etiqueta_id)
-              : null,
-            monto: montoOriginal,
-            cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
-          };
-          await api.actualizarTransaccion(editandoTx.value.id, datosParaBD);
-          mostrarToast("Operación actualizada", "success");
-        } else {
-          if (
-            cuentaOrigen?.tipo_cuenta === "Credito" &&
-            numCuotas > 1 &&
-            tipoOperacion.value === "Egreso"
-          ) {
-            const promesasCuotas = [];
-            let fechaBase = new Date(tx.value.fecha + "T12:00:00");
-            const idDeCompra =
-              typeof crypto !== "undefined" && crypto.randomUUID
-                ? crypto.randomUUID()
-                : Date.now().toString();
-
-            for (let i = 0; i < numCuotas; i++) {
-              let fechaCuota = new Date(fechaBase);
-              fechaCuota.setMonth(fechaBase.getMonth() + i);
-              promesasCuotas.push(
-                api.guardarTransaccion({
-                  cuenta_id: parseInt(tx.value.cuenta_id),
-                  categoria_id: parseInt(tx.value.categoria_id),
-                  etiqueta_id: tx.value.etiqueta_id
-                    ? parseInt(tx.value.etiqueta_id)
-                    : null,
-                  monto: montoPorCuota,
-                  fecha: fechaCuota.toISOString().split("T")[0],
-                  descripcion: `${tx.value.descripcion} (Cuota ${i + 1}/${numCuotas})`,
-                  cashback: i === 0 ? parseFloat(tx.value.cashback) || 0 : 0,
-                  compra_id: idDeCompra,
-                  numero_cuota: i + 1,
-                  total_cuotas: numCuotas,
-                }),
-              );
-            }
-            await Promise.all(promesasCuotas);
-          } else {
-            await api.guardarTransaccion({
-              cuenta_id: parseInt(tx.value.cuenta_id),
-              categoria_id: parseInt(tx.value.categoria_id),
-              etiqueta_id: tx.value.etiqueta_id
-                ? parseInt(tx.value.etiqueta_id)
-                : null,
-              monto: montoOriginal,
-              fecha: tx.value.fecha,
-              descripcion: tx.value.descripcion,
-              cashback: tx.value.cashback ? parseFloat(tx.value.cashback) : 0,
-              compra_id: null,
-              numero_cuota: 1,
-              total_cuotas: 1,
-            });
-          }
-          mostrarToast("Operación registrada", "success");
-        }
-      } catch (error) {
-        mostrarToast("Error servidor", "error");
-      }
-    }
-    showModal.value = false;
-    await cargarDatos();
-    cargando.value = false;
-  };
-
-  const guardarCuenta = async () => {
-    if (!nuevaCuenta.value.nombre) return;
-    cargando.value = true;
-    try {
-      let saldoDeseado = parseFloat(nuevaCuenta.value.saldo_inicial || 0);
-      if (
-        ["Credito", "Prestamo", "Pagar"].includes(nuevaCuenta.value.tipo_cuenta)
-      )
-        saldoDeseado = -Math.abs(saldoDeseado);
-
-      let saldoAEnviar = saldoDeseado;
-      if (editandoCuenta.value.estado) {
-        const sumaTransacciones =
-          editandoCuenta.value.saldo_actual_orig -
-          editandoCuenta.value.saldo_inicial_orig;
-        saldoAEnviar = saldoDeseado - sumaTransacciones;
-      }
-
-      const payload = {
-        usuario_id: currentUserId.value,
-        nombre: nuevaCuenta.value.nombre,
-        tipo_cuenta: nuevaCuenta.value.tipo_cuenta,
-        moneda: nuevaCuenta.value.moneda,
-        saldo_inicial: saldoAEnviar,
-        saldo_actual: saldoDeseado,
-        limite:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseFloat(nuevaCuenta.value.limite || 0)
-            : null,
-        dia_corte:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseInt(nuevaCuenta.value.dia_corte || 0)
-            : null,
-        dia_pago:
-          nuevaCuenta.value.tipo_cuenta === "Credito"
-            ? parseInt(nuevaCuenta.value.dia_pago || 0)
-            : null,
-        pago_del_mes: parseFloat(nuevaCuenta.value.pago_del_mes || 0),
-        es_warda: nuevaCuenta.value.es_warda || false,
-        banco: nuevaCuenta.value.banco || "Otro",
-      };
-
-      if (editandoCuenta.value.estado)
-        await api.actualizarCuenta(editandoCuenta.value.id, payload);
-      else await api.guardarCuenta(payload);
-
-      showModalCuenta.value = false;
-      await cargarDatos();
-      mostrarToast("Cuenta guardada", "success");
-    } catch (error) {
-      mostrarToast("Error", "error");
-    }
-    cargando.value = false;
-  };
-
-  const eliminarRegistro = async (tipo, id) => {
-    if (!confirm("¿Seguro de eliminar este registro?")) return;
-    cargando.value = true;
-    try {
-      if (tipo === "transaccion") await api.eliminarTransaccion(id);
-      else if (tipo === "proyeccion") await api.eliminarPagoFijo(id);
-      else if (tipo === "cuenta") await api.eliminarCuenta(id);
-      else if (tipo === "categoria") await api.eliminarCategoria(id);
-      else if (tipo === "etiqueta") await api.eliminarEtiqueta(id);
-
-      await cargarDatos();
-      mostrarToast("Eliminado", "success");
-    } catch (error) {
-      mostrarToast("Error", "error");
-    }
-    cargando.value = false;
-  };
-
-  const abrirModalPagoFijo = (pagoAEditar) => {
-    editandoPagoFijo.value = { estado: true, id: pagoAEditar.id };
-    nuevoPagoFijo.value = { ...pagoAEditar };
-    showModalPagoFijo.value = true;
-  };
-  const abrirModalNuevoPagoFijo = () => {
-    editandoPagoFijo.value = { estado: false, id: null };
-    nuevoPagoFijo.value = {
-      nombre: "",
-      monto: "",
-      tipo_flujo: "Egreso",
-      dia_cobro: "",
-      moneda: "PEN",
-    };
-    showModalPagoFijo.value = true;
-  };
-  const cancelarEdicionPago = () => {
-    editandoPagoFijo.value = { estado: false, id: null };
-    nuevoPagoFijo.value = {
-      nombre: "",
-      monto: "",
-      tipo_flujo: "Egreso",
-      dia_cobro: "",
-      moneda: "PEN",
-    };
-    showModalPagoFijo.value = false;
-  };
-  const guardarPagoFijo = async () => {
-    if (
-      !nuevoPagoFijo.value.nombre ||
-      !nuevoPagoFijo.value.monto ||
-      !nuevoPagoFijo.value.dia_cobro
-    )
-      return;
-    cargando.value = true;
-    try {
-      const payload = {
-        usuario_id: currentUserId.value,
-        nombre: nuevoPagoFijo.value.nombre,
-        monto: parseFloat(nuevoPagoFijo.value.monto),
-        tipo_flujo: nuevoPagoFijo.value.tipo_flujo,
-        dia_cobro: parseInt(nuevoPagoFijo.value.dia_cobro),
-        moneda: nuevoPagoFijo.value.moneda,
-      };
-      if (editandoPagoFijo.value.estado)
-        await api.actualizarPagoFijo(editandoPagoFijo.value.id, payload);
-      else await api.guardarPagoFijo(payload);
-      showModalPagoFijo.value = false;
-      await cargarDatos();
-      mostrarToast("Guardado", "success");
-    } catch (error) {}
-    cargando.value = false;
-  };
-
-  const abrirModalCuenta = (c) => {
-    editandoCuenta.value = {
-      estado: true,
-      id: c.id_cuenta,
-      saldo_inicial_orig: c.saldo_inicial,
-      saldo_actual_orig: c.saldo_actual,
-    };
-    nuevaCuenta.value = {
-      nombre: c.nombre,
-      tipo_cuenta: c.tipo_cuenta,
-      moneda: c.moneda,
-      saldo_inicial: Math.abs(c.saldo_actual),
-      limite: c.limite || "",
-      dia_corte: c.dia_corte || "",
-      dia_pago: c.dia_pago || "",
-      pago_del_mes: c.pago_del_mes || "",
-      banco: c.banco || "Otro",
-      es_warda: c.es_warda || false,
-    };
-    showModalCuenta.value = true;
-  };
-  const abrirModalNuevaCuenta = () => {
-    editandoCuenta.value = {
-      estado: false,
-      id: null,
-      saldo_inicial_orig: 0,
-      saldo_actual_orig: 0,
-    };
-    nuevaCuenta.value = {
-      nombre: "",
-      tipo_cuenta: "Debito",
-      moneda: "PEN",
-      saldo_inicial: "",
-      limite: "",
-      dia_corte: "",
-      dia_pago: "",
-      pago_del_mes: "",
-      banco: "Otro",
-      es_warda: false,
-    };
-    showModalCuenta.value = true;
-  };
-  const cancelarEdicionCuenta = () => {
-    editandoCuenta.value = {
-      estado: false,
-      id: null,
-      saldo_inicial_orig: 0,
-      saldo_actual_orig: 0,
-    };
-    nuevaCuenta.value = {
-      nombre: "",
-      tipo_cuenta: "Debito",
-      moneda: "PEN",
-      saldo_inicial: "",
-      limite: "",
-      dia_corte: "",
-      dia_pago: "",
-      pago_del_mes: "",
-      banco: "Otro",
-      es_warda: false,
-    };
-    showModalCuenta.value = false;
-  };
-
-  const abrirModalNuevaCategoria = () => {
-    editandoCat.value = { estado: false, id: null };
-    nuevaCat.value = {
-      nombre: "",
-      tipo_flujo: "Egreso",
-      nivel_necesidad: "Necesario",
-      icono: "🏷️",
-    };
-    showModalCat.value = true;
-  };
-  const abrirModalCategoria = (catAEditar) => {
-    editandoCat.value = { estado: true, id: catAEditar.id };
-    nuevaCat.value = {
-      nombre: catAEditar.nombre,
-      tipo_flujo: catAEditar.tipo_flujo,
-      nivel_necesidad: catAEditar.nivel_necesidad || "Necesario",
-      icono: catAEditar.icono || "🏷️",
-    };
-    showModalCat.value = true;
-  };
-  const cancelarEdicionCategoria = () => {
-    editandoCat.value = { estado: false, id: null };
-    nuevaCat.value = {
-      nombre: "",
-      tipo_flujo: "Egreso",
-      nivel_necesidad: "Necesario",
-      icono: "🏷️",
-    };
-    showModalCat.value = false;
-  };
-  const guardarCategoria = async () => {
-    if (!nuevaCat.value.nombre) return;
-    cargando.value = true;
-    try {
-      if (editandoCat.value.estado)
-        await api.actualizarCategoria(editandoCat.value.id, nuevaCat.value);
-      else await api.guardarCategoria(nuevaCat.value);
-      showModalCat.value = false;
-      await cargarDatos();
-      mostrarToast("Categoría guardada", "success");
-    } catch (e) {
-      mostrarToast("Error", "error");
-    }
-    cargando.value = false;
-  };
-
-  const abrirModalNuevaEtiqueta = () => {
-    editandoEtiq.value = { estado: false, id: null };
-    nuevaEtiq.value = { nombre: "" };
-    showModalEtiq.value = true;
-  };
-  const abrirModalEtiqueta = (etiqAEditar) => {
-    editandoEtiq.value = { estado: true, id: etiqAEditar.id };
-    nuevaEtiq.value = { nombre: etiqAEditar.nombre };
-    showModalEtiq.value = true;
-  };
-  const cancelarEdicionEtiqueta = () => {
-    editandoEtiq.value = { estado: false, id: null };
-    nuevaEtiq.value = { nombre: "" };
-    showModalEtiq.value = false;
-  };
-  const guardarEtiqueta = async () => {
-    if (!nuevaEtiq.value.nombre) return;
-    cargando.value = true;
-    try {
-      const payload = {
-        usuario_id: currentUserId.value,
-        nombre: nuevaEtiq.value.nombre,
-      };
-      if (editandoEtiq.value.estado)
-        await api.actualizarEtiqueta(editandoEtiq.value.id, payload);
-      else await api.guardarEtiqueta(payload);
-      showModalEtiq.value = false;
-      await cargarDatos();
-      mostrarToast("Guardado", "success");
-    } catch (e) {}
-    cargando.value = false;
-  };
-
-  return {
-    fechaGlobal,
+export function useCalculations(data, ui) {
+  const {
     cuentas,
-    categorias,
-    etiquetas,
     historial,
     pagosFijos,
+    etiquetas,
+    categorias,
     bolsaCashback,
-    isRescateCashback,
-    editandoTx,
-    editandoPagoFijo,
-    editandoCuenta,
-    editandoCat,
-    editandoEtiq,
-    showModalCuenta,
-    showModalPagoFijo,
-    showModalCat,
-    showModalEtiq,
-    tx,
-    txTransf,
-    txTercero,
+    fechaGlobal,
     operacionesTerceros,
-    nuevaCat,
-    nuevaEtiq,
-    nuevaCuenta,
-    nuevoPagoFijo,
-    limpiarDatos,
-    cargarDatos,
-    ejecutarOperacion,
-    eliminarRegistro,
-    editarCashbackInicial,
-    prepararRescateCashback,
-    abrirModalTransaccion,
-    abrirModalNuevaCuenta,
-    abrirModalCuenta,
-    cancelarEdicionCuenta,
-    guardarCuenta,
-    abrirModalNuevoPagoFijo,
-    abrirModalPagoFijo,
-    cancelarEdicionPago,
-    guardarPagoFijo,
-    abrirModalNuevaCategoria,
-    abrirModalCategoria,
-    cancelarEdicionCategoria,
-    guardarCategoria,
-    abrirModalNuevaEtiqueta,
-    abrirModalEtiqueta,
-    cancelarEdicionEtiqueta,
-    guardarEtiqueta,
+  } = data;
+  const { tagSearch, tipoOperacion } = ui;
+
+  const formatoMoneda = (monto, moneda) => {
+    const simbolo = moneda === "USD" ? "$" : "S/";
+    return `${simbolo} ${Number(Math.abs(monto || 0)).toFixed(2)}`;
+  };
+
+  const formatoMes = (yyyyMM) => {
+    if (!yyyyMM) return "";
+    const [y, m] = yyyyMM.split("-");
+    const meses = [
+      "ENE",
+      "FEB",
+      "MAR",
+      "ABR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AGO",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DIC",
+    ];
+    return `${meses[parseInt(m) - 1]} ${y}`;
+  };
+
+  const getClaseColorBanco = (banco) => {
+    const clases = {
+      BCP: "bg-bank-bcp",
+      BBVA: "bg-bank-bbva",
+      Interbank: "bg-bank-interbank",
+      Scotiabank: "bg-bank-scotiabank",
+      Otro: "bg-card-neutral",
+    };
+    return clases[banco] || clases["Otro"];
+  };
+
+  const getClaseColorPasivo = (cuenta) => {
+    if (cuenta.tipo_cuenta === "Credito")
+      return getClaseColorBanco(cuenta.banco);
+    if (cuenta.tipo_cuenta === "Prestamo") return "bg-bank-bbva";
+    return "bg-card-debt";
+  };
+
+  const getClasePuntoEstado = (cuenta) => "bg-emerald-400";
+
+  const anioGlobal = computed(() => parseInt(fechaGlobal.value.split("-")[0]));
+  const mesGlobal = computed(
+    () => parseInt(fechaGlobal.value.split("-")[1]) - 1,
+  );
+
+  const historialFiltrado = computed(() => {
+    return historial.value.filter((tx) => {
+      const f = new Date(tx.fecha + "T12:00:00");
+      return (
+        f.getFullYear() === anioGlobal.value && f.getMonth() === mesGlobal.value
+      );
+    });
+  });
+
+  const cuentasConSaldoHistorico = computed(() => {
+    const hoy = new Date();
+    const esMesActual =
+      anioGlobal.value === hoy.getFullYear() &&
+      mesGlobal.value === hoy.getMonth();
+
+    return cuentas.value.map((c) => {
+      let saldoRevertido = c.saldo_actual;
+      if (!esMesActual) {
+        historial.value.forEach((tx) => {
+          const f = new Date(tx.fecha + "T12:00:00");
+          if (
+            f.getFullYear() > anioGlobal.value ||
+            (f.getFullYear() === anioGlobal.value &&
+              f.getMonth() > mesGlobal.value)
+          ) {
+            if (tx.cuenta_id === c.id_cuenta) {
+              if (tx.tipo_flujo === "Ingreso") saldoRevertido -= tx.monto || 0;
+              if (tx.tipo_flujo === "Egreso") saldoRevertido += tx.monto || 0;
+            }
+          }
+        });
+      }
+
+      let pagoMesDinamico = parseFloat(c.pago_del_mes) || 0;
+      if (c.tipo_cuenta === "Credito" && c.dia_corte) {
+        const anioCorte = anioGlobal.value;
+        const mesCorte = mesGlobal.value;
+        const diaCorte = parseInt(c.dia_corte);
+        let mesInicio = mesCorte - 1;
+        let anioInicio = anioCorte;
+        if (mesInicio < 0) {
+          mesInicio = 11;
+          anioInicio--;
+        }
+        const fechaInicio = new Date(
+          anioInicio,
+          mesInicio,
+          diaCorte + 1,
+          0,
+          0,
+          0,
+        );
+        const fechaFin = new Date(anioCorte, mesCorte, diaCorte, 23, 59, 59);
+
+        let txEnCiclo = 0;
+        historial.value.forEach((tx) => {
+          if (tx.cuenta_id === c.id_cuenta) {
+            const fTx = new Date(tx.fecha + "T12:00:00");
+            if (fTx >= fechaInicio && fTx <= fechaFin) {
+              if (tx.tipo_flujo === "Egreso")
+                txEnCiclo += parseFloat(tx.monto || 0);
+              if (tx.tipo_flujo === "Ingreso")
+                txEnCiclo -= parseFloat(tx.monto || 0);
+            }
+          }
+        });
+        pagoMesDinamico = esMesActual
+          ? (parseFloat(c.pago_del_mes) || 0) + txEnCiclo
+          : txEnCiclo;
+        if (pagoMesDinamico < 0) pagoMesDinamico = 0;
+      }
+      return {
+        ...c,
+        saldo_actual: saldoRevertido,
+        pago_del_mes: pagoMesDinamico,
+      };
+    });
+  });
+
+  const categoriasFiltradas = computed(() =>
+    categorias.value.filter(
+      (c) =>
+        c.tipo_flujo === tipoOperacion.value &&
+        !String(c.nombre || "").includes("Transferencia"),
+    ),
+  );
+  const cuentasActivas = computed(() =>
+    cuentasConSaldoHistorico.value.filter((c) =>
+      ["Debito", "Efectivo", "Ahorro"].includes(c.tipo_cuenta),
+    ),
+  );
+  const deudasActivas = computed(() =>
+    cuentasConSaldoHistorico.value.filter((c) =>
+      ["Credito", "Prestamo", "Pagar"].includes(c.tipo_cuenta),
+    ),
+  );
+
+  // MAGIA VIRTUAL DE DEUDAS
+  const cuentasPorCobrar = computed(() => {
+    const deudasMap = {};
+    const operaciones = operacionesTerceros?.value || [];
+
+    operaciones.forEach((op) => {
+      if (!deudasMap[op.etiqueta_id]) deudasMap[op.etiqueta_id] = 0;
+      if (op.tipo_operacion === "me_deben")
+        deudasMap[op.etiqueta_id] += parseFloat(op.monto);
+      if (op.tipo_operacion === "me_pagan")
+        deudasMap[op.etiqueta_id] -= parseFloat(op.monto);
+    });
+
+    const resultadoVirtual = [];
+    for (const [id, saldo] of Object.entries(deudasMap)) {
+      if (saldo > 0) {
+        const contacto = etiquetas.value.find((e) => e.id == id);
+        resultadoVirtual.push({
+          id_cuenta: `virtual_${id}`,
+          nombre: contacto ? contacto.nombre : "Contacto Eliminado",
+          tipo_cuenta: "Cobrar",
+          saldo_actual: saldo,
+          moneda: "PEN",
+          banco: "Otro",
+        });
+      }
+    }
+    return resultadoVirtual;
+  });
+
+  const pagosFijosIngresos = computed(() =>
+    pagosFijos.value.filter((p) => p.tipo_flujo === "Ingreso"),
+  );
+  const pagosFijosEgresos = computed(() =>
+    pagosFijos.value.filter((p) => p.tipo_flujo === "Egreso"),
+  );
+  const totalIngresosFijos = computed(() =>
+    pagosFijosIngresos.value.reduce((a, b) => a + (b.monto || 0), 0),
+  );
+  const totalGastosFijos = computed(() =>
+    pagosFijosEgresos.value.reduce((a, b) => a + (b.monto || 0), 0),
+  );
+  const flujoNetoMensual = computed(
+    () => totalIngresosFijos.value - totalGastosFijos.value,
+  );
+
+  const saldosLiquidos = computed(() => {
+    const saldos = { PEN: 0, USD: 0 };
+    cuentasActivas.value
+      .filter((c) => c.tipo_cuenta !== "Ahorro")
+      .forEach((c) => {
+        if (c.moneda) saldos[c.moneda] += c.saldo_actual || 0;
+      });
+    return saldos;
+  });
+  const saldosAhorro = computed(() => {
+    const saldos = { PEN: 0, USD: 0 };
+    cuentasActivas.value
+      .filter((c) => c.tipo_cuenta === "Ahorro")
+      .forEach((c) => {
+        if (c.moneda) saldos[c.moneda] += c.saldo_actual || 0;
+      });
+    return saldos;
+  });
+  const creditoDisponible = computed(() => {
+    let disponible = 0;
+    deudasActivas.value
+      .filter((c) => c.tipo_cuenta === "Credito" && c.moneda === "PEN")
+      .forEach((c) => {
+        disponible += (c.limite || 0) - Math.abs(c.saldo_actual || 0);
+      });
+    return { PEN: disponible };
+  });
+
+  const proyeccionProximoMes = computed(() => {
+    const liquidez = saldosLiquidos.value.PEN || 0;
+    const ahorro = saldosAhorro.value.PEN || 0;
+    const ingresosProyectados = pagosFijosIngresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+    const gastosProyectados = pagosFijosEgresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+    let cuotasTarjetas = 0;
+    let cuotasOtros = 0;
+    deudasActivas.value
+      .filter((c) => c.moneda === "PEN")
+      .forEach((c) => {
+        const pagoMes = parseFloat(c.pago_del_mes) || 0;
+        if (c.tipo_cuenta === "Credito") cuotasTarjetas += pagoMes;
+        else cuotasOtros += pagoMes;
+      });
+    return (
+      liquidez +
+      ahorro +
+      ingresosProyectados -
+      (gastosProyectados + cuotasTarjetas + cuotasOtros)
+    );
+  });
+
+  const diagnosticoDeuda = computed(() => {
+    const liquidez = saldosLiquidos.value.PEN || 0;
+    const ahorro = saldosAhorro.value.PEN || 0;
+    const ingresosProyectados = pagosFijosIngresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+    const gastosProyectados = pagosFijosEgresos.value
+      .filter((p) => p.moneda === "PEN")
+      .reduce((acc, p) => acc + (p.monto || 0), 0);
+    const poderAdquisitivoLibre =
+      liquidez + ingresosProyectados - gastosProyectados;
+    let cuotasTarjetas = 0;
+    let cuotasOtros = 0;
+    let deudaTotalAbsoluta = 0;
+    deudasActivas.value
+      .filter((c) => c.moneda === "PEN")
+      .forEach((c) => {
+        deudaTotalAbsoluta += Math.abs(c.saldo_actual || 0);
+        const pagoMes = parseFloat(c.pago_del_mes) || 0;
+        if (c.tipo_cuenta === "Credito") cuotasTarjetas += pagoMes;
+        else cuotasOtros += pagoMes;
+      });
+
+    const obligacionesNetasMes = cuotasTarjetas + cuotasOtros;
+    const balanceNetoMes = poderAdquisitivoLibre - obligacionesNetasMes;
+    let result = {
+      poderAdquisitivoLibre,
+      obligacionesNetasMes,
+      cuotasOriginales: obligacionesNetasMes,
+      deudaTotalAbsoluta,
+      cashbackAplicado: 0,
+      estado: "",
+      mensaje: "",
+      textColor: "",
+      iconBg: "",
+      borderColor: "",
+      alertBoxClasses: "",
+      porcentajeCobertura: 0,
+      colorGrafico: "",
+    };
+
+    if (obligacionesNetasMes === 0) {
+      result.estado = "Mes Despejado";
+      result.textColor = "text-emerald-600";
+      result.iconBg = "bg-emerald-500";
+      result.alertBoxClasses =
+        "bg-emerald-50 border-emerald-200 text-emerald-800";
+      result.colorGrafico = "#10b981";
+      result.mensaje =
+        "Excelente. No tienes cuotas programadas para pagar este mes.";
+    } else {
+      let cob = (poderAdquisitivoLibre / obligacionesNetasMes) * 100;
+      result.porcentajeCobertura = Math.round(Math.max(0, Math.min(cob, 100)));
+      if (balanceNetoMes >= 0) {
+        result.estado = "Cobertura Segura";
+        result.textColor = "text-emerald-600";
+        result.iconBg = "bg-emerald-500";
+        result.alertBoxClasses =
+          "bg-emerald-50 border-emerald-200 text-emerald-800";
+        result.colorGrafico = "#10b981";
+        result.mensaje = `Tras pagar las cuotas de este mes, te sobrarán S/ ${balanceNetoMes.toFixed(2)} libres.`;
+      } else if (balanceNetoMes + ahorro >= 0) {
+        result.estado = "Alerta Amarilla";
+        result.textColor = "text-amber-600";
+        result.iconBg = "bg-amber-500";
+        result.alertBoxClasses = "bg-amber-50 border-amber-200 text-amber-800";
+        result.colorGrafico = "#f59e0b";
+        result.mensaje = `Déficit de S/ ${Math.abs(balanceNetoMes).toFixed(2)} para cubrir tus cuotas. Tendrás que retirar dinero de tus Ahorros.`;
+      } else {
+        result.estado = "Riesgo de Mora";
+        result.textColor = "text-rose-600";
+        result.iconBg = "bg-rose-500";
+        result.alertBoxClasses = "bg-rose-50 border-rose-200 text-rose-800";
+        result.colorGrafico = "#f43f5e";
+        result.mensaje = `Tus ahorros no alcanzan. Te faltan S/ ${Math.abs(balanceNetoMes + ahorro).toFixed(2)} para cubrir las cuotas.`;
+      }
+    }
+    return result;
+  });
+
+  const datosGraficoCat = computed(() => {
+    const gastosPorCat = {};
+    historialFiltrado.value.forEach((tx) => {
+      const esTransferencia = String(tx.categoria_nombre || "")
+        .toLowerCase()
+        .includes("transferencia");
+      if (tx.tipo_flujo === "Egreso" && !esTransferencia) {
+        const catNombre = tx.categoria_nombre || "Otros";
+        if (!gastosPorCat[catNombre]) gastosPorCat[catNombre] = 0;
+        gastosPorCat[catNombre] += tx.monto || 0;
+      }
+    });
+    return {
+      labels: Object.keys(gastosPorCat),
+      series: Object.values(gastosPorCat).map((v) => Number(v.toFixed(2))),
+    };
+  });
+
+  const datosGraficoFlujo = computed(() => {
+    let ingresos = 0;
+    let egresos = 0;
+    historialFiltrado.value.forEach((tx) => {
+      const esTransferencia = String(tx.categoria_nombre || "")
+        .toLowerCase()
+        .includes("transferencia");
+      if (!esTransferencia) {
+        if (tx.tipo_flujo === "Ingreso") ingresos += tx.monto || 0;
+        if (tx.tipo_flujo === "Egreso") egresos += tx.monto || 0;
+      }
+    });
+    return { ingresos, egresos };
+  });
+
+  // MAGIA PERFIL 360
+  const datosGraficoContacto = computed(() => {
+    const idContacto = tagSearch.value ? parseInt(tagSearch.value) : null;
+    if (!idContacto) return { hasData: false, series: [] };
+
+    const etiquetaObj = etiquetas.value.find((e) => e.id === idContacto);
+    let ingresos = 0;
+    let egresos = 0;
+    let meDebe = 0;
+
+    historialFiltrado.value.forEach((tx) => {
+      if (tx.etiqueta_id === idContacto) {
+        const esTransferencia = String(tx.categoria_nombre || "")
+          .toLowerCase()
+          .includes("transferencia");
+        if (!esTransferencia) {
+          if (tx.tipo_flujo === "Ingreso") ingresos += tx.monto || 0;
+          if (tx.tipo_flujo === "Egreso") egresos += tx.monto || 0;
+        }
+      }
+    });
+
+    const operaciones = operacionesTerceros?.value || [];
+    operaciones.forEach((op) => {
+      if (op.etiqueta_id === idContacto) {
+        if (op.tipo_operacion === "me_deben") meDebe += parseFloat(op.monto);
+        if (op.tipo_operacion === "me_pagan") meDebe -= parseFloat(op.monto);
+      }
+    });
+
+    const hasData = ingresos > 0 || egresos > 0 || meDebe > 0;
+    return {
+      hasData,
+      nombre: etiquetaObj ? etiquetaObj.nombre : "Seleccione",
+      categorias: ["Ingresos (Mes)", "Gastos (Mes)", "Deuda a favor"],
+      series: [
+        Number(ingresos.toFixed(2)),
+        Number(egresos.toFixed(2)),
+        Number(Math.max(0, meDebe).toFixed(2)),
+      ],
+    };
+  });
+
+  return {
+    formatoMoneda,
+    formatoMes,
+    categoriasFiltradas,
+    historialFiltrado,
+    cuentasActivas,
+    cuentasPorCobrar,
+    deudasActivas,
+    pagosFijosIngresos,
+    pagosFijosEgresos,
+    totalIngresosFijos,
+    totalGastosFijos,
+    flujoNetoMensual,
+    saldosLiquidos,
+    saldosAhorro,
+    creditoDisponible,
+    proyeccionProximoMes,
+    diagnosticoDeuda,
+    getClaseColorBanco,
+    getClaseColorPasivo,
+    getClasePuntoEstado,
+    datosGraficoCat,
+    datosGraficoFlujo,
+    datosGraficoContacto,
   };
 }
