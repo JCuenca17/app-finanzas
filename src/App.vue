@@ -54,7 +54,7 @@
           :formatoMoneda="formatoMoneda" @bind-ref="bindChartRef" @abrir-modal-tx="abrirModalTransaccion"
           @eliminar-registro="eliminarRegistro" />
 
-        <VistaContactos v-if="vistaActual === 'Contactos'" :etiquetas="etiquetas" v-model:tagSearch="tagSearch"
+        <VistaContactos v-show="tab === 'contactos'" :etiquetas="etiquetas" v-model:tagSearch="tagSearch"
           :operacionesTerceros="operacionesTerceros" @bind-ref="bindRef" @abrir-modal-nueva="abrirModalNuevaEtiqueta"
           @abrir-modal="abrirModalEtiqueta" @eliminar-registro="eliminarRegistro" />
 
