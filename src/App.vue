@@ -55,8 +55,9 @@
           @eliminar-registro="eliminarRegistro" />
 
         <VistaContactos v-show="tab === 'contactos'" :etiquetas="etiquetas" v-model:tagSearch="tagSearch"
-          :operacionesTerceros="operacionesTerceros" @bind-ref="bindRef" @abrir-modal-nueva="abrirModalNuevaEtiqueta"
-          @abrir-modal="abrirModalEtiqueta" @eliminar-registro="eliminarRegistro" />
+          :operacionesTerceros="operacionesTerceros" @bind-ref="bindChartRef"
+          @abrir-modal-nueva="abrirModalNuevaEtiqueta" @abrir-modal="abrirModalEtiqueta"
+          @eliminar-registro="eliminarRegistro" />
 
         <VistaPerfil v-show="tab === 'perfil'" :userName="userName" :userAvatar="userAvatar" :userEmail="userEmail"
           @cerrar-sesion="cerrarSesion" />
