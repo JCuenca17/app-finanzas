@@ -67,12 +67,21 @@ export function useCalculations(data, ui) {
   );
 
   const historialFiltrado = computed(() => {
-    return historial.value.filter((tx) => {
-      const f = new Date(tx.fecha + "T12:00:00");
-      return (
-        f.getFullYear() === anioGlobal.value && f.getMonth() === mesGlobal.value
-      );
-    });
+    return (
+      historial.value
+        .filter((tx) => {
+          const f = new Date(tx.fecha + "T12:00:00");
+          return (
+            f.getFullYear() === anioGlobal.value &&
+            f.getMonth() === mesGlobal.value
+          );
+        })
+        // FIX: Ordenar cronológicamente (Más recientes arriba)
+        .sort(
+          (a, b) =>
+            new Date(b.fecha + "T12:00:00") - new Date(a.fecha + "T12:00:00"),
+        )
+    );
   });
 
   const cuentasConSaldoHistorico = computed(() => {
