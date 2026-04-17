@@ -100,6 +100,7 @@ export function useCalculations(data, ui) {
       }
 
       let pagoMesDinamico = parseFloat(c.pago_del_mes) || 0;
+
       if (c.tipo_cuenta === "Credito" && c.dia_corte) {
         const anioCorte = anioGlobal.value;
         const mesCorte = mesGlobal.value;
@@ -135,8 +136,15 @@ export function useCalculations(data, ui) {
         pagoMesDinamico = esMesActual
           ? (parseFloat(c.pago_del_mes) || 0) + txEnCiclo
           : txEnCiclo;
-        if (pagoMesDinamico < 0) pagoMesDinamico = 0;
       }
+
+      // Evitamos que salgan pagos negativos
+      if (pagoMesDinamico < 0) pagoMesDinamico = 0;
+
+      if (["Credito", "Prestamo", "Pagar"].includes(c.tipo_cuenta)) {
+        pagoMesDinamico = Math.min(pagoMesDinamico, Math.abs(saldoRevertido));
+      }
+
       return {
         ...c,
         saldo_actual: saldoRevertido,
