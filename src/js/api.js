@@ -132,4 +132,15 @@ export const api = {
   async eliminarEtiqueta(id) {
     return await fetch(`${API_URL}/etiquetas/${id}`, { method: "DELETE" });
   },
+
+  // ==========================================
+  // NUEVO: ENDPOINT DE TERCEROS (PRÉSTAMOS/COBROS)
+  // ==========================================
+  async registrarOperacionTercero(datos) {
+    return await fetch(`${API_URL}/operaciones_terceros/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    });
+  },
 };
