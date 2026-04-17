@@ -42,7 +42,6 @@
                         <input type="text" v-model="filtros.texto" placeholder="Buscar por concepto..."
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition">
                     </div>
-
                     <div>
                         <select v-model="filtros.tipo"
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-300 font-medium text-slate-600 cursor-pointer">
@@ -52,7 +51,6 @@
                             <option value="Transferencia">Transferencias</option>
                         </select>
                     </div>
-
                     <div>
                         <select v-model="filtros.cuenta"
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-300 font-medium text-slate-600 cursor-pointer">
@@ -62,7 +60,6 @@
                             </option>
                         </select>
                     </div>
-
                     <div>
                         <select v-model="filtros.etiqueta"
                             class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-300 font-medium text-slate-600 cursor-pointer">
@@ -108,11 +105,17 @@
                                         @{{ tx.etiqueta_nombre }}
                                     </span>
                                 </div>
-                                <div class="text-[10px] text-slate-400 font-medium flex items-center gap-1.5 mt-1">
+                                <div
+                                    class="text-[10px] text-slate-400 font-medium flex items-center flex-wrap gap-1.5 mt-1">
                                     <span class="bg-white px-1.5 py-0.5 rounded border border-slate-200">{{ tx.cuenta
                                     }}</span>
                                     <span>•</span>
                                     <span>{{ formatearFechaLocal(tx.fecha) }}</span>
+
+                                    <span v-if="tx.cashback && parseFloat(tx.cashback) > 0"
+                                        class="flex items-center gap-0.5 bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-200 font-bold ml-1">
+                                        💎 +{{ formatoMoneda(tx.cashback, tx.moneda) }} CB
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -161,7 +164,7 @@ import { ref, computed } from 'vue'
 const props = defineProps({
     historialFiltrado: { type: Array, default: () => [] },
     formatoMoneda: Function,
-    cuentas: { type: Array, default: () => [] }, // AHORA RECIBE TODAS LAS CUENTAS
+    cuentas: { type: Array, default: () => [] },
     categorias: { type: Array, default: () => [] },
     etiquetas: { type: Array, default: () => [] }
 })
@@ -176,7 +179,6 @@ const filtros = ref({
     etiqueta: ''
 })
 
-// Filtramos internamente para que en el select no salgan las cuentas de "Deuda virtual" si las hubiera
 const cuentasDisponibles = computed(() => {
     return props.cuentas.filter(c => c.tipo_cuenta !== 'Cobrar');
 })
@@ -186,20 +188,14 @@ const transaccionesFiltradas = computed(() => {
     return props.historialFiltrado.filter(tx => {
         let pasaFiltro = true;
 
-        // 1. Filtro por Texto (Concepto)
         if (filtros.value.texto) {
             const busqueda = filtros.value.texto.toLowerCase();
             const descripcion = (tx.descripcion || '').toLowerCase();
             if (!descripcion.includes(busqueda)) pasaFiltro = false;
         }
 
-        // 2. Filtro por Tipo de Flujo
         if (filtros.value.tipo && tx.tipo_flujo !== filtros.value.tipo) pasaFiltro = false;
-
-        // 3. Filtro por Cuenta
         if (filtros.value.cuenta && tx.cuenta_id !== filtros.value.cuenta) pasaFiltro = false;
-
-        // 4. Filtro por Etiqueta/Contacto
         if (filtros.value.etiqueta && tx.etiqueta_id !== filtros.value.etiqueta) pasaFiltro = false;
 
         return pasaFiltro;
@@ -217,7 +213,6 @@ const limpiarFiltros = () => {
     filtros.value = { texto: '', tipo: '', cuenta: '', etiqueta: '' };
 }
 
-// UTILIDADES VISUALES
 const getIconoCategoria = (catId) => {
     const cat = props.categorias.find(c => c.id === catId);
     return cat && cat.icono ? cat.icono : '📄';
