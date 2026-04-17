@@ -18,14 +18,13 @@ export function useFinanceData(
   const etiquetas = ref([]);
   const historial = ref([]);
   const pagosFijos = ref([]);
+  const operacionesTerceros = ref([]); // HISTORIAL DE DEUDAS
   const bolsaCashback = ref({
     saldo_inicial: 0,
     generado: 0,
     usado: 0,
     disponible: 0,
   });
-
-  const operacionesTerceros = ref([]);
 
   const fechaGlobal = ref(new Date().toISOString().slice(0, 7));
 
@@ -69,7 +68,6 @@ export function useFinanceData(
     descripcion: "",
   });
 
-  // NUEVO: Estado para gestionar Préstamos y Cobros a Terceros
   const txTercero = ref({
     tipo: "me_deben",
     contacto_id: "",
@@ -86,7 +84,6 @@ export function useFinanceData(
     nivel_necesidad: "Necesario",
     icono: "🏷️",
   });
-
   const nuevaEtiq = ref({ nombre: "" });
   const nuevaCuenta = ref({
     nombre: "",
@@ -113,13 +110,13 @@ export function useFinanceData(
     historial.value = [];
     pagosFijos.value = [];
     etiquetas.value = [];
+    operacionesTerceros.value = [];
     bolsaCashback.value = {
       saldo_inicial: 0,
       generado: 0,
       usado: 0,
       disponible: 0,
     };
-    operacionesTerceros.value = [];
   };
 
   const cargarDatos = async () => {
@@ -262,7 +259,6 @@ export function useFinanceData(
         fecha: new Date().toISOString().split("T")[0],
         descripcion: "",
       };
-      // NUEVO: Resetear el formulario de terceros
       txTercero.value = {
         tipo: "me_deben",
         contacto_id: "",
@@ -291,7 +287,7 @@ export function useFinanceData(
         return;
       }
       if (!txTransf.value.monto || parseFloat(txTransf.value.monto) <= 0) {
-        mostrarToast("Ingresa un monto a transferir válido", "warning");
+        mostrarToast("Ingresa un monto válido", "warning");
         cargando.value = false;
         return;
       }
@@ -306,18 +302,17 @@ export function useFinanceData(
       );
       const montoTransf = parseFloat(txTransf.value.monto);
 
-      if (cuentaOrigen) {
-        if (
-          ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
-        ) {
-          if (montoTransf > cuentaOrigen.saldo_actual) {
-            mostrarToast(
-              `Fondos insuficientes (Tienes S/ ${cuentaOrigen.saldo_actual})`,
-              "warning",
-            );
-            cargando.value = false;
-            return;
-          }
+      if (
+        cuentaOrigen &&
+        ["Debito", "Efectivo", "Ahorro"].includes(cuentaOrigen.tipo_cuenta)
+      ) {
+        if (montoTransf > cuentaOrigen.saldo_actual) {
+          mostrarToast(
+            `Fondos insuficientes (Tienes S/ ${cuentaOrigen.saldo_actual})`,
+            "warning",
+          );
+          cargando.value = false;
+          return;
         }
       }
 
@@ -327,6 +322,7 @@ export function useFinanceData(
       let catEntrada = categorias.value.find(
         (c) => c.nombre === "Transferencia Entrante",
       );
+
       if (!catSalida) {
         await api.guardarCategoria({
           nombre: "Transferencia Saliente",
@@ -386,7 +382,7 @@ export function useFinanceData(
       }
     }
     // ==========================================
-    // NUEVA LÓGICA: OPERACIONES CON TERCEROS (PRÉSTAMOS/COBROS)
+    // OPERACIONES CON TERCEROS (CON FIX DE LIQUIDEZ)
     // ==========================================
     else if (tipoOperacion.value === "Terceros") {
       if (!txTercero.value.contacto_id) {
@@ -422,7 +418,11 @@ export function useFinanceData(
           cuenta_id: txTercero.value.cuenta_id
             ? parseInt(txTercero.value.cuenta_id)
             : null,
-          afecta_liquidez: txTercero.value.afecta_liquidez,
+          // FIX: Si es un cobro, SIEMPRE afecta liquidez (entra al banco)
+          afecta_liquidez:
+            txTercero.value.tipo === "me_pagan"
+              ? true
+              : txTercero.value.afecta_liquidez,
           monto: parseFloat(txTercero.value.monto),
           fecha: txTercero.value.fecha,
           descripcion:
@@ -433,16 +433,12 @@ export function useFinanceData(
         };
 
         await api.registrarOperacionTercero(payload);
-
         mostrarToast("Registro de deuda actualizado", "success");
       } catch (error) {
-        mostrarToast("Error. Asegúrate de actualizar tu backend.", "error");
+        mostrarToast("Error de conexión", "error");
       }
-    }
-    // ==========================================
-    // FIN LÓGICA TERCEROS
-    // ==========================================
-    else {
+    } else {
+      // LOGICA DE INGRESOS Y EGRESOS NORMALES
       if (!tx.value.cuenta_id) {
         mostrarToast("Por favor selecciona una cuenta", "warning");
         cargando.value = false;
@@ -454,12 +450,12 @@ export function useFinanceData(
         return;
       }
       if (!tx.value.monto || parseFloat(tx.value.monto) <= 0) {
-        mostrarToast("Ingresa un monto válido mayor a 0", "warning");
+        mostrarToast("Ingresa un monto válido", "warning");
         cargando.value = false;
         return;
       }
       if (!tx.value.descripcion || tx.value.descripcion.trim() === "") {
-        mostrarToast("Escribe un concepto o descripción", "warning");
+        mostrarToast("Escribe un concepto", "warning");
         cargando.value = false;
         return;
       }
@@ -480,7 +476,7 @@ export function useFinanceData(
       ) {
         const cuotaBanco = parseFloat(tx.value.cuota_banco);
         if (!cuotaBanco || cuotaBanco <= 0) {
-          mostrarToast("Debes ingresar la cuota con intereses.", "warning");
+          mostrarToast("Ingresa la cuota con intereses.", "warning");
           cargando.value = false;
           return;
         }
@@ -776,9 +772,6 @@ export function useFinanceData(
     showModalCuenta.value = false;
   };
 
-  // ==========================================
-  // FUNCIONES DE CATEGORÍAS (100% CORREGIDAS)
-  // ==========================================
   const abrirModalNuevaCategoria = () => {
     editandoCat.value = { estado: false, id: null };
     nuevaCat.value = {
@@ -789,7 +782,6 @@ export function useFinanceData(
     };
     showModalCat.value = true;
   };
-
   const abrirModalCategoria = (catAEditar) => {
     editandoCat.value = { estado: true, id: catAEditar.id };
     nuevaCat.value = {
@@ -800,7 +792,6 @@ export function useFinanceData(
     };
     showModalCat.value = true;
   };
-
   const cancelarEdicionCategoria = () => {
     editandoCat.value = { estado: false, id: null };
     nuevaCat.value = {
@@ -811,7 +802,6 @@ export function useFinanceData(
     };
     showModalCat.value = false;
   };
-
   const guardarCategoria = async () => {
     if (!nuevaCat.value.nombre) return;
     cargando.value = true;
@@ -823,11 +813,10 @@ export function useFinanceData(
       await cargarDatos();
       mostrarToast("Categoría guardada", "success");
     } catch (e) {
-      mostrarToast("Error guardando categoría", "error");
+      mostrarToast("Error", "error");
     }
     cargando.value = false;
   };
-  // ==========================================
 
   const abrirModalNuevaEtiqueta = () => {
     editandoEtiq.value = { estado: false, id: null };
@@ -883,11 +872,11 @@ export function useFinanceData(
     tx,
     txTransf,
     txTercero,
+    operacionesTerceros,
     nuevaCat,
     nuevaEtiq,
     nuevaCuenta,
     nuevoPagoFijo,
-    operacionesTerceros,
     limpiarDatos,
     cargarDatos,
     ejecutarOperacion,
