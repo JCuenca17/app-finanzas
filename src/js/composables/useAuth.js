@@ -7,8 +7,8 @@ import { ref } from "vue";
 import { createClient } from "@supabase/supabase-js";
 
 export function useAuth() {
-  const SUPABASE_URL = "https://TU_PROYECTO.supabase.co";
-  const SUPABASE_KEY = "TU_SUPABASE_PUBLISHABLE_KEY";
+  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+  const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
 
   // AHORA USA LA FUNCIÓN IMPORTADA DIRECTAMENTE
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
